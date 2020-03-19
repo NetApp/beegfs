@@ -1,0 +1,71 @@
+- name: Ensure software properties common package is installed (Debian/Ubuntu).
+  apt:
+    state: latest
+    name: software-properties-common
+
+- name: Add BeeGFS apt respository (Debian/Ubuntu).
+  apt_key:
+    url: "{{ beegfs_debian_repository_gpgkey }}"
+    state: present
+  become: yes
+- apt_repository:
+    state: present
+    repo: "deb [arch=amd64] {{ beegfs_debian_repository_base_url }} stretch non-free"
+    update_cache: yes
+  become: yes
+
+- name: Ensure the BeeGFS management package is installed (Debian/Ubuntu - Management).
+  apt:
+    state: |-
+      {%- if beegfs_force_beegfs_upgrade %}latest{%- else %}present{%- endif %}
+    name: beegfs-mgmtd
+  become: yes
+  when: '"management" in beegfs_node_roles'
+
+- name: Ensure the BeeGFS metadata package is installed (Debian/Ubuntu - Metadata).
+  apt:
+    state: |-
+      {%- if beegfs_force_beegfs_upgrade %}latest{%- else %}present{%- endif %}
+    name:
+      - beegfs-meta
+  become: yes
+  when: '"metadata" in beegfs_node_roles'
+
+- name: Ensure the BeeGFS storage package is installed (Debian/Ubuntu - Storage).
+  apt:
+    state: |-
+      {%- if beegfs_force_beegfs_upgrade %}latest{%- else %}present{%- endif %}
+    name:
+      - beegfs-storage
+  become: yes
+  when: '"storage" in beegfs_node_roles'
+
+- name: Ensure BeeGFS infiniband package is installed (Debian/Ubuntu - Metadata/Storage).
+  apt:
+    state: |-
+      {%- if beegfs_force_beegfs_upgrade %}latest{%- else %}present{%- endif %}
+    name: libbeegfs-ib
+  when: '("storage" in beegfs_node_roles or "metadata" in beegfs_node_roles) and beegfs_enable_rdma'
+
+- name: Ensure BeeGFS client package is installed (Debian/Ubuntu - Client).
+  apt:
+    state: |-
+      {%- if beegfs_force_beegfs_upgrade %}latest{%- else %}present{%- endif %}
+    name:
+      - beegfs-client
+      - beegfs-helperd
+      - beegfs-utils
+      - libelf-dev
+  when: '"client" in beegfs_node_roles'
+
+- name: Ensure NTP is installed (Debian/Ubuntu).
+  apt:
+    state: latest
+    name: ntp
+  when: beegfs_ntp_enabled == True
+
+- name: Ensure Chrony is uninstalled (Debian/Ubuntu).
+  apt:
+    state: absent
+    name: chrony
+  when: beegfs_ntp_enabled == True

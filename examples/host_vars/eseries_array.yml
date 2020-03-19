@@ -1,0 +1,40 @@
+# The following information provides the E-Series array connection.
+series_ssid: 1                                                # Storage array identifier.
+eseries_api_url: https://192.168.xx.xxx:8443/devmgr/v2         # Url for the SANtricity Web Service Proxy. Example: https://192.168.10.100/devmgr/v2
+eseries_api_username: <eseries_array_username>                # Username for the web services proxy.
+eseries_api_password: <eseries_array_password>                # Password for the web services proxy.
+eseries_validate_certs: False                                 # Whether the SSL certificates should be verified. (boolean)
+
+
+# NOTE: The following information is to create and map volumes to the BeeGFS Storage and Metadata nodes.  If storage and metadata volumes are already created with the beegfs_metadata and beegfs_storage workload_name
+# and mapped to the beegfs nodes, this volume configuration below is not needed.
+eseries_storage_pool_configuration:
+  - name: metadata_vg                           # Name or name scheme for the storage pool.
+    state: present                              # Specifies whether the storage pool should exist (present, absent).
+    raid_level: raid1                           # Volume group raid level. Choices: raid0, raid1, raid5, raid6, raidDiskPool (Default: raidDiskPool)
+    secure_pool: no                             # Default for storage pool drive security. This flag will enable the security at rest feature. There must be sufficient FDE or FIPS security capable drives. Type: boolean
+    criteria_drive_count: 2                     # Drive count depends on the Default storage pool drive count.
+    volumes:                                    # List of volumes to associated the storage pool.
+      - state:  present                         # Specifies whether the volume should exist (present, absent)
+        name:   metadata                        # (required) Name or name scheme (see above) for the volume(s) to be created in the storage pool(s)
+        host:   hostname_2                      # host or host group for the volume should be mapped to.
+        host_type:  linux dm-mp                 # Only required when using something other than Linux kernel 3.10 or later with DM-MP, non-clustered Windows,
+                                                #    or the storage system default host type is not correct.
+        size:   1600                            # Size of the volume or presented size of the thinly provisioned volume.
+        size_unit: gb                           # Unit size for the size, thin_volume_repo_size, and thin_volume_max_repo_size. Choices: bytes, b, kb, mb, gb, tb, pb, eb, zb, yb
+        workload_name: beegfs_metadata          # Name of the volume's workload.
+
+  - name: storage_vg                            # Name or name scheme for the storage pool.
+    state: present                              # Specifies whether the storage pool should exist (present, absent).
+    raid_level: raid1                           # Volume group raid level. Choices: raid0, raid1, raid5, raid6, raidDiskPool (Default: raidDiskPool)
+    secure_pool: no                             # Default for storage pool drive security. This flag will enable the security at rest feature. There must be sufficient FDE or FIPS security capable drives. Type: boolean
+    criteria_drive_count: 2                     # Default storage pool drive count.
+    volumes:                                    # List of volumes to associated the storage pool.
+      - state:  present                         # Specifies whether the volume should exist (present, absent)
+        name:   storage                         # (required) Name or name scheme (see above) for the volume(s) to be created in the storage pool(s)
+        host:   hostname_3                      # host or host group for the volume should be mapped to.
+        host_type:  linux dm-mp                 # Only required when using something other than Linux kernel 3.10 or later with DM-MP, non-clustered Windows,
+                                                #    or the storage system default host type is not correct.
+        size:   1600                            # Size of the volume or presented size of the thinly provisioned volume.
+        size_unit: gb                           # Unit size for the size, thin_volume_repo_size, and thin_volume_max_repo_size. Choices: bytes, b, kb, mb, gb, tb, pb, eb, zb, yb
+        workload_name: beegfs_storage           # Name of the volume's workload.

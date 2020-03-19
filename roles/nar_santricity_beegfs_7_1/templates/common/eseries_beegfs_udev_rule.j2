@@ -1,0 +1,16 @@
+ACTION=="add|change",\
+KERNEL=="dm-*",\
+RUN+="/bin/bash -c 'export DEV=`/bin/basename $env{DEVNAME} || /usr/bin/basename $env{DEVNAME}`; export MPATH=`cat /sys/block/$DEV/slaves/sd*/device/model`; \
+if [[ $MPATH == *INF-01-00* ]] && [[ -f /sys$env{DEVPATH}/queue/scheduler ]]; then \
+echo {{ beegfs_eseries_scheduler }} > /sys$env{DEVPATH}/queue/scheduler; \
+echo {{ beegfs_eseries_nr_requests }} > /sys$env{DEVPATH}/queue/nr_requests; \
+echo {{ beegfs_eseries_read_ahead_kb }} > /sys$env{DEVPATH}/queue/read_ahead_kb; \
+echo {{ beegfs_eseries_max_sectors_kb }} > /sys$env{DEVPATH}/queue/max_sectors_kb; fi'"
+
+ACTION=="add|change", \
+KERNEL=="sd[a-z]", \
+ATTRS{model}=="INF-01-00       ", \
+ATTR{queue/scheduler}="{{ beegfs_eseries_scheduler }}" , \
+ATTR{queue/nr_requests}="{{ beegfs_eseries_nr_requests }}", \
+ATTR{queue/read_ahead_kb}="{{ beegfs_eseries_read_ahead_kb }}", \
+ATTR{queue/max_sectors_kb}="{{ beegfs_eseries_max_sectors_kb }}"

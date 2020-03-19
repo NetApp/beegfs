@@ -1,0 +1,95 @@
+- name: Capture service facts (All).
+  service_facts:
+  register: beegfs_services_facts
+  tags:
+    - beegfs_uninstall
+
+- name: Unconfigure BeeGFS client services.
+  import_tasks: unconfigure/client.yml
+  become: True
+  when: ansible_facts.services['beegfs-client.service']['state'] is defined
+  tags:
+    - beegfs_uninstall
+
+- name: Unconfigure BeeGFS storage services.
+  import_tasks: unconfigure/storage.yml
+  become: True
+  when: ansible_facts.services['beegfs-storage.service']['state'] is defined
+  tags:
+    - beegfs_uninstall
+
+- name: Unconfigure BeeGFS metadata services.
+  import_tasks: unconfigure/metadata.yml
+  become: True
+  when: ansible_facts.services['beegfs-meta.service']['state'] is defined
+  tags:
+    - beegfs_uninstall
+
+- name: Unconfigure BeeGFS management service.
+  import_tasks: unconfigure/management.yml
+  become: True
+  when: ansible_facts.services['beegfs-mgmtd.service']['state'] is defined
+  tags:
+    - beegfs_uninstall
+
+- name: Uninstall BeeGFS packages (RedHat/CentOS).
+  yum:
+    state: absent
+    name:
+      - beegfs-client
+      - beegfs-helperd
+      - beegfs-utils
+      - beegfs-storage
+      - beegfs-common
+      - beegfs-meta
+      - beegfs-mgmtd
+      - libbeegfs-ib
+  become: True
+  when: ansible_facts['os_family'] | lower == 'redhat' and beegfs_delete_data_and_uninstall_beegfs == True
+  tags:
+    - beegfs_uninstall
+
+- name: Uninstall BeeGFS packages (SUSE).
+  zypper:
+    state: absent
+    name:
+      - beegfs-client
+      - beegfs-helperd
+      - beegfs-utils
+      - beegfs-storage
+      - beegfs-common
+      - beegfs-meta
+      - beegfs-mgmtd
+      - libbeegfs-ib
+  become: True
+  when: ansible_facts['os_family'] | lower == 'suse' and beegfs_delete_data_and_uninstall_beegfs == True
+  tags:
+    - beegfs_uninstall
+
+- name: Uninstall BeeGFS packages (Debian/Ubuntu).
+  apt:
+    state: absent
+    name:
+      - beegfs-client
+      - beegfs-helperd
+      - beegfs-utils
+      - beegfs-common
+      - libbeegfs-ib
+    purge: True
+  become: True
+  when: ansible_facts['os_family'] | lower == 'debian' and beegfs_delete_data_and_uninstall_beegfs == True
+  tags:
+    - beegfs_uninstall
+
+- name: Remove NTP if configured by the BeeGFS role.
+  import_tasks: unconfigure/ntp.yml
+  become: True
+  when: beegfs_ntp_enabled == True and ansible_facts.services[beegfs_ntp_service]['state'] is defined
+  tags:
+    - beegfs_uninstall
+
+- name: Execute remaining configuration cleanup tasks.
+  import_tasks: unconfigure/common.yml
+  become: True
+  tags:
+    - beegfs_uninstall

@@ -1,0 +1,20 @@
+galaxy_info:
+  author: NetApp
+  description: Configures BeeGFS parallel file system with NetApp E-Series storage systems.
+  company: NetApp
+  license: BSD-3-Clause
+  min_ansible_version: 2.9
+  platforms:
+    - name: EL
+      versions:
+        - 7
+    - name: SLES
+      versions:
+        - 12
+  galaxy_tags:
+    - eseries
+    - beegfs
+    - storage
+
+dependencies: []
+
