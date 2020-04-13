@@ -1,0 +1,90 @@
+- name: Selecting a client for each management service for deployment validation.
+  set_fact:
+    expected_servers: |-
+      {%- set expected_servers = {} -%}
+      {%- for host in ansible_play_hosts_all -%}
+        {%- if "management" in hostvars[host]["beegfs_node_roles"] and expected_servers.update({hostvars[host]["beegfs_mgmt_node_ip"]: {"management": host, "metadata": [], "storage": [], "client": []}}) -%}{%- endif -%}
+      {%- endfor -%}
+      {%- for host in ansible_play_hosts_all -%}
+        {%- if "client" in hostvars[host]["beegfs_node_roles"] and expected_servers[hostvars[host]["beegfs_mgmt_node_ip"]]["client"].append({"ansible_hostname": host, "possible_hostnames": [hostvars[host]['ansible_facts']['hostname'], hostvars[host]['ansible_facts']['fqdn']]}) -%}{%- endif -%}
+        {%- if "metadata" in hostvars[host]["beegfs_node_roles"] and expected_servers[hostvars[host]["beegfs_mgmt_node_ip"]]["metadata"].append({"ansible_hostname": host, "possible_hostnames": [hostvars[host]['ansible_facts']['hostname'], hostvars[host]['ansible_facts']['fqdn']]}) -%}{%- endif -%}
+        {%- if "storage" in hostvars[host]["beegfs_node_roles"] and expected_servers[hostvars[host]["beegfs_mgmt_node_ip"]]["storage"].append({"ansible_hostname": host, "possible_hostnames": [hostvars[host]['ansible_facts']['hostname'], hostvars[host]['ansible_facts']['fqdn']]}) -%}{%- endif -%}
+      {%- endfor -%}
+      {{ expected_servers }}
+
+- name: Run beegfs-check-servers command on selected client.
+  shell: "beegfs-check-servers"
+  register: beegfs_check_servers_status
+  failed_when: "beegfs_check_servers_status.rc != 0"
+  changed_when: false
+  ignore_errors: true
+  delegate_to: "{{ expected_servers[item]['client'][0]['ansible_hostname'] }}"
+  loop: "{{ lookup('list', (expected_servers.keys() | list)) }}"
+  when: expected_servers[item]['client'] | length > 0
+
+- name: Parse beegfs-check-servers output.
+  set_fact:
+    available_servers: |-
+      {%- set servers = {} -%}
+      {%- set vars = {"server_key": ""} -%}
+      {%- set management_keys = expected_servers.keys() | list -%}
+      {%- for index in range(management_keys | length) -%}
+        {%- set server = {"management": [], "metadata": [], "storage": []} -%}
+        {%- if expected_servers[management_keys[index]]["client"] | length > 0 -%}
+          {%- for line in (beegfs_check_servers_status["results"][index]["stdout_lines"] | list) -%}
+            {%- if (line | lower) in ["management", "metadata", "storage"] -%}
+              {%- if vars.update({"server_key": (line | lower)}) -%}{%- endif -%}
+            {%- elif (line | regex_search('^.*\[ID:.*\]: reachable at.*\(protocol:.*\)$')) -%}
+              {%- if server[vars["server_key"]].append(line.split()[0]) -%}{%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- if servers.update({management_keys[index]: server}) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ servers }}
+
+- name: Check for missing metadata and storage servers defined in the inventory.
+  set_fact:
+    missing_servers: |-
+      {%- set servers = {} -%}
+      {%- set vars = {"found": False} -%}
+      {%- set management_keys = expected_servers.keys() | list -%}
+      {%- for index in range(management_keys | length) -%}
+        {%- set server = {"server_missing": False, "management": expected_servers[management_keys[index]]["management"], "metadata": [], "storage": []} -%}
+
+        {#- Determine whether any metadata servers are missing -#}
+        {%- for expected_host in expected_servers[management_keys[index]]["metadata"] -%}
+          {%- if vars.update({"found": False}) -%}{%- endif -%}
+          {%- for available_host in available_servers[management_keys[index]]["metadata"] -%}
+            {%- if available_host in expected_host["possible_hostnames"] and vars.update({"found": True}) -%}{%- endif -%}
+          {%- endfor -%}
+          {%- if not vars["found"] -%}
+            {%- if server.update({"server_missing": True}) -%}{%- endif -%}
+            {%- if server["metadata"].append(expected_host["ansible_hostname"]) -%}{%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+
+        {#- Determine whether any storage servers are missing -#}
+        {%- for expected_host in expected_servers[management_keys[index]]["storage"] -%}
+          {%- if vars.update({"found": False}) -%}{%- endif -%}
+          {%- for available_host in available_servers[management_keys[index]]["storage"] -%}
+            {%- if available_host in expected_host["possible_hostnames"] and vars.update({"found": True}) -%}{%- endif -%}
+          {%- endfor -%}
+          {%- if not vars["found"] -%}
+            {%- if server.update({"server_missing": True}) -%}{%- endif -%}
+            {%- if server["storage"].append(expected_host["ansible_hostname"]) -%}{%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+
+        {#- Add server information to the missing servers dictionary -#}
+        {%- if server["server_missing"] -%}
+          {%- if servers.update({management_keys[index]: server}) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ servers }}
+
+- name: Fail if any metadata or storage servers are missing.
+  fail:
+    msg: "There are expected server(s) missing from the management server {{ missing_servers[item]['management'] }} ({{ item }}): metadata: {{ missing_servers[item]['metadata'] }}. storage {{ missing_servers[item]['storage'] }}."
+  loop: "{{ lookup('list', (missing_servers.keys() | list)) }}"
+  ignore_errors: True

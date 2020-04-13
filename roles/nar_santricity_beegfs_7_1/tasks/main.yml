@@ -81,6 +81,12 @@
     msg: "Systemd reported one or more BeeGFS services are not in a started state. Please manually verify the health of all BeeGFS services and the overall file system."
   when: beegfs_check_systemd_status.changed
 
+- name: Validate all management, storage, and metadata servers.
+  import_tasks: validate.yml
+  run_once: True
+  tags:
+    - beegfs_validate_deployment
+
 - name: Delete all BeeGFS data and uninstall BeeGFS services (if required tag and variable are set).
   import_tasks: packages/beegfs_removal_packages.yml
   when: beegfs_delete_data_and_uninstall_beegfs == True

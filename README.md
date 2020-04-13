@@ -1,5 +1,7 @@
 NetApp E-Series BeeGFS Collection - netapp_eseries.beegfs
 =========================================================
+Traditionally NetApp publishes recommended steps to deploy parallel file systems using E-Series storage as one or more technical reports. To ensure the success of customers looking to use E-Series storage behind BeeGFS, we’ve now automated these deployment steps using a BeeGFS role for Ansible. This approach strives to simplify deploying solutions on E-Series by delivering them using an infrastructure as code (IaC) model. 
+
 Currently this collection contains a single role `roles/nar_santricity_beegfs_7_1` that can be used to deploy a BeeGFS parallel file system on hosts using NetApp E-Series storage. This role was designed and developed for the BeeGFS v7.1 release family. To avoid backwards compatibility issues, if support is added for a new version of BeeGFS it will be implemented as a new role (example: `roles/nar_santricity_beegfs_7_2`).
 
 As Ansible Galaxy currently provides limited visibility to README files provided for roles contained within a collection, going forward this README will only contain documentation for the latest role released for BeeGFS. As this is the initial release of the BeeGFS Collection, all documentation currently exists in this file. In future documentation for legacy roles will be accessible at `roles/nar_santricity_beegfs_<version>/README.md`. 
@@ -19,10 +21,10 @@ Support Matrix:
 --------------
 The BeeGFS role has been tested with the following BeeGFS versions, operating systems, and backend/frontend protocols:
 
-| Component              | BeeGFS Version | Operating System        | Storage Protocols    | Client Protocols    |
-| ---------------------- | -------------- | ----------------------- | -------------------- | ------------------- |
-| BeeGFS Client service  | 7.1.4          | RedHat 7.7, SLES 12 SP4 | N/A                  | TCP/UDP and RDMA    |
-| BeeGFS Server services | 7.1.4          | RedHat 7.7, SLES 12 SP4 | IB-iSER, SAS, iSCSI  | N/A                 |
+| Component              | BeeGFS Version | Operating System        | Storage Protocols             | Client Protocols    |
+| ---------------------- | -------------- | ----------------------- | ----------------------------- | ------------------- |
+| BeeGFS Client service  | 7.1.4          | RedHat 7.7, SLES 12 SP4 | N/A                           | TCP/UDP and RDMA    |
+| BeeGFS Server services | 7.1.4          | RedHat 7.7, SLES 12 SP4 | IB-iSER, SAS, iSCSI, NVMe/IB  | N/A                 |
 
 Notes:
 - BeeGFS Server services include BeeGFS management, metadata and storage services.
@@ -35,10 +37,10 @@ The BeeGFS role has been tested with the following E-Series storage systems and 
 | Platform | Firmware | Protocols           |
 | -------- | -------- | ------------------- |
 | E5700    | 11.52    | iSCSI, SAS, IB-iSER |
+| EF600    | 11.61    | NVMe/IB             | 
 
 Notes: 
-- While not explicitly included in testing, other storage systems including the E2800 and SAN protocols including IB-SRP and FCP are expected to work.
-- There is currently no support for the EF600 or NVMe.
+- While not explicitly included in testing, other firmware versions and storage systems including the E2800 and SAN protocols including IB-SRP, FCP, and NVMe/FC are expected to work.
 
 Instructions (quick start):
 --------------------------
@@ -48,7 +50,7 @@ On your Ansible control node:
 2. Create a directory that will contain the inventory and playbook files to use with the BeeGFS role.
 3. Use the example files from the `examples/` directory to help build your playbook and inventory files in the newly created directory from step 2.
 4. When you have the desired BeeGFS configuration described in your inventory and related files, run the playbook and deploy BeeGFS using: `ansible-playbook -i beegfs_inventory.yml beegfs_playbook.yml`.
-    * While in theory one could describe multiple BeeGFS filesystems in the same inventory file, this has not been tested extensively to date, and thus is not currently recommended. 
+    * Note you can define/deploy multiple BeeGFS file systems using the same inventory. The only limitation is that each Ansible host can only be included in one of the file system instances. For example the role does not currently support deploying a BeeGFS client that mounts two different BeeGFS file systems. 
 
 Please refer to the sections below for guidance setting up required and optional variables to describe your desired BeeGFS configuration.
 
@@ -121,15 +123,12 @@ When setting up the inventory file for use with the BeeGFS role, you must list a
 
 At minimum you must provide the following details for each Ansible host representing an E-Series storage system:
 
-    eseries_ssid: 1                           # This value will be 1 for storage systems with embedded web services (example: E2800 and E5700).
-                                                # Otherwise specify the appropriate SSID from the web services proxy managing the storage system.         
-    eseries_api_url: https://<url>/devmgr/v2  # For storage systems with embedded web services this will be the IP/hostname of one controller.
-                                                # Otherwise specify the URL to the web services proxy managing the storage system.
-    eseries_api_username: admin               # Username for the storage system or web services proxy.
-    eseries_api_password: useansiblevault     # Password for the storage system or web services proxy. 
-                                                # Use of Ansible Vault over storing passwords in plaintext is strongly recommended.
-    eseries_validate_certs: [true|false]      # Set "true" to verify SSL certificates or "false" to disable.
-                                                # This would typically be set to "false" if you get certificate errors using the above URL in a browser.
+    eseries_system_api_url: https://<url>/devmgr/v2             # For storage systems with embedded web services this will be the IP/hostname of one controller.
+                                                                   # Otherwise specify the URL to the web services proxy managing the storage system.
+    eseries_system_password: <eseries_array_admin_password>     # Admin password for the storage system or web services proxy.
+                                                                    # Use of Ansible Vault over storing passwords in plaintext is strongly recommended.
+    eseries_validate_certs:  [true|false]                       # Set "true" to verify SSL certificates or "false" to disable.
+                                                                    # This would typically be set to "false" if you get certificate errors using the above URL in a browser.
           
 When the BeeGFS role is executed it will reach out to each of these E-Series storage systems to collect a list of which BeeGFS nodes in the inventory have volumes mapped with the workload name `beegfs_storage` or `beegfs_metadata`. The role will subsequently verify all required volumes are visible on each host, and will attempt to rescan and reboot hosts as needed to ensure all newly mapped volumes are present.
 
@@ -258,7 +257,7 @@ Known Issues/Limitations of the BeeGFS Role
 
 
 Troubleshooting
----------------    
+---------------
 * When deploying the BeeGFS client service on SLES, the client service may fail to start and indicate the BeeGFS kernel module is unsupported.
     * Solution: You can set the variable `beegfs_allow_unsupported_module: True` on any affected hosts. This will set `allow_unsupported_modules: 1` in `/etc/modprobe.d/10-unsupported-modules.conf` the next time the BeeGFS role is executed. Please note this will allow all unsupported modules, not just the ones required for BeeGFS.
 * BeeGFS client fails to start and `journalctl -xe` indicates `kernel: beegfs: mount(2630): App (init local node info): Couldn't find any usable NIC`.
@@ -266,6 +265,8 @@ Troubleshooting
 * Issues using a non-root user to deploy BeeGFS using Ansible.
     * If you are planning to use a non-root user to deploy BeeGFS using Ansible ensure you have passwordless SSH setup for this user, and you override the `ansible_user` variable. 
     * Depending on how this user is setup to run privileged commands you may also need to set additional variables. See https://docs.ansible.com/ansible/latest/user_guide/become.html for additional details.
+
+Tip: Run your beegfs playbook with --tags=beegfs_validate_deployment to validate your management server can communicate with all the expected inventory BeeGFS nodes. This will also provide a report in the failed messages should any node be missing.
 
 
 Uninstalling BeeGFS and Cleaning Up Configuration
