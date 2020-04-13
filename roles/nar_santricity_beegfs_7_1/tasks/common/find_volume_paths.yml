@@ -1,0 +1,51 @@
+- name: Find mapped storage volumes.
+  find:
+    paths: "/dev/mapper/"
+    patterns:
+      - "*{{ item['wwn'] | lower }}"
+      - "*{{ item['eui'] | lower }}"
+    file_type: link
+  loop: "{{ lookup('list', storage_volumes) }}"
+  register: storage_volume_paths
+- name: Find mapped metadata volumes.
+  find:
+    paths: "/dev/mapper/"
+    patterns:
+      - "*{{ item['wwn'] | lower }}"
+      - "*{{ item['eui'] | lower }}"
+    file_type: link
+  loop: "{{ lookup('list', metadata_volumes) }}"
+  register: metadata_volume_paths
+
+- name: Determine whether mapped storage volumes are missing.
+  set_fact:
+    storage_rescan: |-
+      {%- set rescan = {"nvme": False, "scsi": False} -%}
+      {%- for index in range(storage_volumes | length) -%}
+        {%- if storage_volume_paths["results"][index]["matched"] == 0 and "storage" in beegfs_node_roles -%}
+          {%- if "nvmeof" in storage_volumes[index]["host_types"] -%}
+             {%- if rescan.update({"nvme": True}) -%}{%- endif -%}
+          {%- endif %}
+          {%- if "iscsi" in storage_volumes[index]["host_types"] or "fc" in storage_volumes[index]["host_types"] or
+                 "sas" in storage_volumes[index]["host_types"] or "ib" in storage_volumes[index]["host_types"] -%}
+             {%- if rescan.update({"scsi": True}) -%}{%- endif -%}
+          {%- endif %}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ rescan }}
+- name: Determine whether mapped metadata volumes are missing.
+  set_fact:
+    metadata_rescan: |-
+      {%- set rescan = {"nvme": False, "scsi": False} -%}
+      {%- for index in range(metadata_volumes | length) -%}
+        {%- if metadata_volume_paths["results"][index]["matched"] == 0 and "metadata" in beegfs_node_roles -%}
+          {%- if "nvmeof" in metadata_volumes[index]["host_types"] -%}
+             {%- if rescan.update({"nvme": True}) -%}{%- endif -%}
+          {%- endif %}
+          {%- if "iscsi" in metadata_volumes[index]["host_types"] or "fc" in metadata_volumes[index]["host_types"] or
+                 "sas" in metadata_volumes[index]["host_types"] or "ib" in metadata_volumes[index]["host_types"] -%}
+             {%- if rescan.update({"scsi": True}) -%}{%- endif -%}
+          {%- endif %}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ rescan }}
