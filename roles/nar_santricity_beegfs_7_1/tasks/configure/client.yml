@@ -1,0 +1,49 @@
+- name: Ensure beegfs-client.conf is properly configured (Client).
+  template:
+    src: client/beegfs_client_conf.j2
+    dest: "{{ beegfs_configuration_directory }}beegfs-client.conf"
+  register: beegfs_client_conf
+
+- name: Ensure beegfs-client-connInterfaces.conf is properly configured (Client).
+  template:
+    src: common/beegfs_connection_interfaces.j2
+    dest: "{{ beegfs_configuration_directory }}beegfs-client-connInterfaces.conf"
+    owner: root
+    group: root
+    mode: 0644
+  register: beegfs_client_interfaces_conf
+
+- name: Ensure beegfs-client-autobuild.conf is properly configured (Client).
+  template:
+    src: client/beegfs_client_autobuild_conf.j2
+    dest: "{{ beegfs_configuration_directory }}beegfs-client-autobuild.conf"
+  register: beegfs_client_autobuild_conf
+
+- name: Start BeeGFS Helper Daemon (Client).
+  systemd:
+    name: beegfs-helperd.service
+    state: started
+    daemon-reload: yes
+    enabled: yes
+
+- name: Rebuild the BeeGFS client kernel module if needed (Client).
+  shell: "/etc/init.d/beegfs-client rebuild"
+  become: yes
+  when: beegfs_client_autobuild_conf.changed
+
+- name: Start BeeGFS Client Service (restart if connInterfaces or autobuild file changed).
+  systemd:
+    name: beegfs-client.service
+    state: |-
+      {%- if beegfs_client_conf.changed or beegfs_client_interfaces_conf.changed or beegfs_client_autobuild_conf.changed %}
+      restarted
+      {%- else %}
+      started
+      {%- endif %}
+    daemon-reload: yes
+    enabled: yes
+
+- name: Run beegfs-check-servers (Client).
+  shell: "beegfs-check-servers"
+  register: beegfs_check_servers
+  changed_when: "beegfs_check_servers.rc != 0"

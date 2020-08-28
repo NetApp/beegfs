@@ -1,0 +1,66 @@
+- name: Ensure beegfs-client.conf is properly configured (Client).
+  template:
+    src: client/beegfs_client_conf.j2
+    dest: "{{ beegfs_ha_client_configuration_directory }}beegfs-client.conf"
+  register: client_conf
+
+- name: Ensure beegfs-client-connInterfaces.conf is properly configured (Client).
+  template:
+    src: client/beegfs_client_connInterfacesFile_conf.j2
+    dest: "{{ beegfs_ha_client_configuration_directory }}beegfs-client-connInterfaces.conf"
+    owner: root
+    group: root
+    mode: 0644
+  register: client_interfaces_conf
+
+- name: Ensure beegfs-client-autobuild.conf is properly configured (Client).
+  template:
+    src: client/beegfs_client_autobuild_conf.j2
+    dest: "{{ beegfs_ha_client_configuration_directory }}beegfs-client-autobuild.conf"
+  register: client_autobuild_conf
+
+- name: Ensure helperd service is running.
+  systemd:
+    name: beegfs-helperd.service
+    state: started
+    daemon-reload: true
+    enabled: true
+
+- name: Ensure the BeeGFS client kernel module is updated (Client).
+  shell: "/etc/init.d/beegfs-client rebuild"
+  become: true
+  when: client_autobuild_conf['changed']
+
+- name: Ensure client service is running.
+  systemd:
+    name: beegfs-client.service
+    state: "{%- if client_conf['changed'] or client_interfaces_conf['changed'] or client_autobuild_conf['changed'] %}restarted{%- else %}started{%- endif %}"
+    daemon-reload: true
+    enabled: true
+
+- name: Ensure locate system scan will not scan beegfs.
+  lineinfile:
+    state: present
+    dest: "{{ beegfs_ha_client_updatedb_conf_path }}"
+    backup: true
+    backrefs: true
+    regexp: "^PRUNEFS = \".*\"$"
+    line: "PRUNEFS = \"{{ prunefs_list | join(' ') }}\""
+  when: prunefs_list | length > 0
+  become: true
+  vars:
+    prunefs_list: |-
+      {%- set prunefs_list = [] -%}
+      {%- for line in lookup('file', '/etc/updatedb.conf').split('\n') if line | regex_search("PRUNEFS=\".*\"") -%}
+        {%- set current_entries = (line | regex_replace("PRUNEFS=|\"", "")).split(" ") -%}
+        {%- if "beegfs" not in current_entries -%}
+          {%- if prunefs_list.extend(current_entries) -%}{%- endif -%}
+          {%- if prunefs_list.append("beegfs") -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- prunefs_list -}}
+
+- name: Validate BeeGFS service servers.
+  shell: "beegfs-check-servers"
+  register: beegfs_check_servers
+  changed_when: "beegfs_check_servers['rc'] != 0"

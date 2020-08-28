@@ -1,0 +1,13 @@
+- name: Ensure NTP is properly configured.
+  template:
+    src: common/ntp_conf.j2
+    dest: "{{ beegfs_ha_ntp_configuration_file }}"
+  register: beegfs_ha_ntp_conf
+  become: true
+- name: Start ntp service.
+  systemd:
+    name: "{{ beegfs_ha_ntp_service }}"
+    state: "{%- if beegfs_ha_ntp_conf['changed'] %}restarted{%- else %}started{%- endif %}"
+    daemon-reload: true
+    enabled: true
+  become: true

@@ -1,0 +1,98 @@
+- name: Gather facts about E-Series storage systems.
+  setup:
+  delegate_to: localhost
+  delegate_facts: true
+  loop: "{{ lookup('list', groups[beegfs_eseries_group] | default(beegfs_eseries_group)) }}"
+
+- name: Retrieve initiator volume list from E-Series storage systems (All).
+  netapp_eseries.santricity.na_santricity_facts:
+    ssid: "{{ hostvars[item]['current_eseries_ssid'] | default(hostvars[item]['eseries_ssid']) }}"
+    api_url: "{{ hostvars[item]['current_eseries_api_url'] | default(hostvars[item]['eseries_api_url']) }}"
+    api_username: "{{ hostvars[item]['current_eseries_api_username'] | default(hostvars[item]['eseries_api_username']) }}"
+    api_password: "{{ hostvars[item]['current_eseries_api_password'] | default(hostvars[item]['eseries_api_password']) }}"
+    validate_certs: "{{ hostvars[item]['current_eseries_validate_certs'] | default(hostvars[item]['eseries_validate_certs']) }}"
+  loop: "{{ lookup('list', groups[beegfs_eseries_group] | default(beegfs_eseries_group)) }}"
+  register: storage_array_facts
+
+- name: Populate eseries_volumes variable for each host (All).
+  set_fact:
+    eseries_volumes: |
+      {%- set volumes = [] %}
+      {%- for result in storage_array_facts["results"] %}
+        {%- if "storage_array_facts" in (result.keys() | list) and
+               "netapp_volumes_by_initiators" in (result["storage_array_facts"].keys() | list) %}
+          {%- if inventory_hostname in (result["storage_array_facts"]["netapp_volumes_by_initiators"].keys() | list) %}
+            {%- if volumes.extend(result["storage_array_facts"]["netapp_volumes_by_initiators"][inventory_hostname]) %}{%- endif %}
+          {%- endif %}
+        {%- endif %}
+      {%- endfor %}
+      {{ volumes }}
+
+- name: Determine volumes tagged as BeeGFS storage volumes (All).
+  set_fact:
+    storage_volumes: |
+      {%- set volumes = [] %}
+      {%- for volume in eseries_volumes %}
+        {%- if volume["workload_name"] == "beegfs_storage" %}
+          {%- if volumes.append(volume) %}{%- endif %}
+        {%- endif %}
+      {%- endfor %}
+      {{ volumes }}
+
+- name: Determine volumes tagged as BeeGFS metadata volumes (All).
+  set_fact:
+    metadata_volumes: |
+      {%- set volumes = [] %}
+      {%- for volume in eseries_volumes %}
+        {%- if volume["workload_name"] == "beegfs_metadata" %}
+          {%- if volumes.append(volume) %}{%- endif %}
+        {%- endif %}
+      {%- endfor %}
+      {{ volumes }}
+
+- name: Discover volume paths (Storage/Metadata).
+  block:
+    - name: Find all mapped storage/metadata volumes.
+      import_tasks: common/find_volume_paths.yml
+
+    - name: Force a rescue when volumes are not available (Storage/Metadata).
+      block:
+        - name: Rescan for all SCSI devices (Storage/Metadata).
+          shell: "{{ item }}"
+          become: true
+          failed_when: false
+          loop:
+            - "for x in $(ls /sys/class/scsi_host); do echo '- - -' > /sys/class/scsi_host/$x/scan; done &> /dev/null"
+            - "for x in $(ls /sys/block); do echo 1 > /sys/block/$x/device/rescan; done &> /dev/null"
+          when: (storage_rescan is defined and storage_rescan['scsi'] == True) or (metadata_rescan is defined and metadata_rescan['scsi'] == True)
+        - name: Reload multipath service (Storage/Metadata).
+          systemd:
+            name: multipathd.service
+            state: restarted
+            daemon_reload: true
+          become: true
+          when: (storage_rescan is defined and storage_rescan['scsi'] == True) or (metadata_rescan is defined and metadata_rescan['scsi'] == True)
+
+        - name: Find all mapped storage/metadata volume paths.
+          import_tasks: common/find_volume_paths.yml
+        - name: Reboot BeeGFS nodes with missing volumes (Storage/Metadata).
+          reboot:
+            test_command: "systemctl is-active --quiet remote-fs.target"
+          become: true
+          when: ((storage_rescan is defined and (storage_rescan['nvme'] == True or storage_rescan['scsi'] == True)) or
+                 (metadata_rescan is defined and (metadata_rescan['nvme'] == True or metadata_rescan['scsi'] == True)))
+
+        - name: Find all mapped storage/metadata volume paths.
+          import_tasks: common/find_volume_paths.yml
+        - name: Fail when volumes are not available (Storage/Metadata).
+          fail:
+            msg: "Failed to discover storage or metadata volumes!"
+          when: ((storage_rescan is defined and (storage_rescan['nvme'] == True or storage_rescan['scsi'] == True)) or
+                 (metadata_rescan is defined and (metadata_rescan['nvme'] == True or metadata_rescan['scsi'] == True)))
+      when: ((storage_rescan is defined and (storage_rescan['nvme'] == True or storage_rescan['scsi'] == True)) or
+             (metadata_rescan is defined and (metadata_rescan['nvme'] == True or metadata_rescan['scsi'] == True)))
+
+    - name: Find all mapped storage/metadata volume paths.
+      import_tasks: common/find_volume_paths.yml
+    - name: Add storage/metadata volume paths to storage/metadata volume variables.
+      import_tasks: common/add_volume_paths.yml

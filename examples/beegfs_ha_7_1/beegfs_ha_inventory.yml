@@ -1,0 +1,33 @@
+all:
+  children:
+
+    eseries_storage_systems:
+      hosts:
+        eseries_storage_system_01:
+
+    ha_cluster:
+      children:
+        mgmt: # Resource Group - NOTE: must be 12 characters or less because the resource group is used to name the floating ip resource iflabel.
+          hosts:
+            node_mm1:  # Lists are ordered with the highest priority first.
+            node_mm2:
+
+        meta_01:
+          hosts:
+            node_mm2:
+            node_mm1:
+
+        meta_02:
+          hosts:
+            node_mm1:
+            node_mm2:
+
+        stor_01:
+          hosts:
+            node_ss1:
+            node_ss2:
+
+        stor_02:
+          hosts:
+            node_ss1:
+            node_ss2:

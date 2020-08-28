@@ -1,0 +1,5 @@
+beegfs_ha_pcs_host_auth_command: "pcs host auth"
+beegfs_ha_pcs_cluster_setup_command: "pcs cluster setup"
+beegfs_ha_ntp_service: ntpd.service
+sysctl_conf_path: "/etc/sysctl.conf"
+corosync_conf_path: "/etc/corosync/corosync.conf"

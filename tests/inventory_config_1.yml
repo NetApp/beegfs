@@ -1,0 +1,15 @@
+all:
+    children:
+        eseries_beegfs_hosts:
+            hosts:
+              ictm1619h3:
+                beegfs_node_roles: [management]
+              ictm1619h5:
+                beegfs_node_roles: [metadata, storage]
+              ictm1618h17:
+                beegfs_node_roles: [client]
+            vars:
+                beegfs_mgmt_node_ip: 192.168.1.10
+        eseries_storage_systems:
+            hosts:
+                ictm1620c18:

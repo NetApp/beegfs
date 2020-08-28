@@ -1,0 +1,160 @@
+- name: Get nodes list from pacemaker cib.xml.
+  xml:
+    path: "{{ beegfs_ha_pacemaker_cib_xml }}"
+    xpath: /cib/configuration/nodes/*
+    content: attribute
+  register: cib_nodes_search
+  failed_when: false
+  changed_when: false
+  when: inventory_hostname == preferred_management_node
+
+- name: Setup pcs cluster.
+  command:
+    cmd: "{{ beegfs_ha_pcs_cluster_setup_command }} {{ beegfs_ha_cluster_name }} {{ groups[beegfs_ha_ansible_host_group] | join(' ') }}"
+  register: pcs_cluster_setup_command
+  when: '"matches" not in (cib_nodes_search.keys() | list) and inventory_hostname == preferred_management_node'
+  become: true
+
+- name: Modify the existing pcs cluster.
+  block:
+    - name: Determine the nodes names from pacemaker cib.xml
+      set_fact:
+        cib_nodes: |-
+          {%- set nodes = [] -%}
+          {%- if "matches" in (cib_nodes_search.keys() | list) -%}
+            {%- for cib_nodes_match in cib_nodes_search["matches"] -%}
+              {%- if nodes.append(cib_nodes_match["node"]["uname"]) -%}{%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+          {{- nodes -}}
+        run_once: true
+
+    - name: Determine the pcs cluster node changes
+      set_fact:
+        add_cluster_nodes: |-
+          {%- set nodes = [] -%}
+          {%- for node in groups[beegfs_ha_ansible_host_group] if node not in cib_nodes -%}
+            {%- if nodes.append(node) -%}{%- endif -%}
+          {%- endfor -%}
+          {{- nodes -}}
+        remove_cluster_nodes: |-
+          {%- set nodes = [] -%}
+          {%- for node in cib_nodes if node not in groups[beegfs_ha_ansible_host_group] -%}
+            {%- if nodes.append(node) -%}{%- endif -%}
+          {%- endfor -%}
+          {{- nodes -}}
+      run_once: true
+
+    - name: Add missing cluster nodes.
+      command:
+        cmd: "pcs cluster node add {{ item }}"
+      loop: "{{ add_cluster_nodes }}"
+      register: pcs_cluster_add_nodes
+      when: add_cluster_nodes is defined and inventory_hostname == preferred_management_node
+      become: true
+
+    - name: Remove unexpected cluster nodes.
+      command:
+        cmd: "pcs cluster node remove {{ item }}"
+      loop: "{{ remove_cluster_nodes }}"
+      register: pcs_cluster_remove_nodes
+      when: remove_cluster_nodes is defined and inventory_hostname == preferred_management_node
+      become: true
+  when: '"matches" in (cib_nodes_search.keys() | list)'
+
+- name: Get fetch corosync.conf.
+  fetch:
+    src: "{{ corosync_conf_path }}"
+    dest: "/tmp/corosync.conf-{{ inventory_hostname }}"
+    flat: true
+  when: inventory_hostname == preferred_management_node
+
+- name: Determine pcs quorum auto_tie_breaker value.
+  set_fact:
+    auto_tie_breaker_update_required: |-
+      {%- set corosync_conf = lookup("file", "/tmp/corosync.conf-" ~ preferred_management_node) -%}
+      {%- for line in corosync_conf.split("\n") if line | regex_search(".*auto_tie_breaker: .?") -%}
+        {%- set current_value = line | regex_replace(".*auto_tie_breaker: ", "") -%}
+        {{- beegfs_ha_enable_auto_tie_breaker != (current_value == "1") -}}
+      {%- endfor -%}
+  run_once: true
+
+- name: Delete temporarily fetched corosync.conf file.
+  file:
+    state: absent
+    path: "/tmp/corosync.conf-{{ inventory_hostname }}"
+  run_once: true
+
+- name: Update quorum auto_tie_breaker.
+  block:
+    - name: Check whether pcs is running
+      command:
+        cmd: pcs cluster status
+      register: pcs_cluster_status
+      changed_when: false
+      failed_when: false
+
+    - name: Stop pcs cluster.
+      command:
+        cmd: "pcs cluster stop --all"
+      when: beegfs_ha_enable_auto_tie_breaker_force_update and pcs_cluster_status['rc'] == 0
+
+    - name: Update quorum auto_tie_breaker. (Will fail when pcs cluster is running.)
+      command:
+        cmd: "pcs quorum update auto_tie_breaker={% if beegfs_ha_enable_auto_tie_breaker == True %}1{% else %}0{% endif %}"
+      register: pcs_auto_tie_breaker_update
+      changed_when: false
+  when: inventory_hostname == preferred_management_node and auto_tie_breaker_update_required
+
+
+- name: Get the pacemaker and corosync active statuses.
+  command: systemctl is-active pacemaker.service corosync.service
+  delegate_to: "{{ item }}"
+  loop: "{{ groups[beegfs_ha_ansible_host_group] }}"
+  changed_when: false
+  failed_when: false
+  register: daemons_active
+  run_once: true
+  become: true
+
+- name: Get the pacemaker and corosync enabled statuses.
+  command: systemctl is-enabled pacemaker.service corosync.service
+  delegate_to: "{{ item }}"
+  loop: "{{ groups[beegfs_ha_ansible_host_group] }}"
+  changed_when: false
+  failed_when: false
+  register: daemons_enabled
+  run_once: true
+  become: true
+
+- name: Enable pcs cluster nodes.
+  command: pcs cluster enable --all
+  register: pcs_cluster_enable_update
+  when: all_enabled | bool == False
+  run_once: true
+  become: true
+  vars:
+    all_enabled: |-
+      {%- set status = {"all_enabled": True} -%}
+      {%- for result in daemons_enabled["results"] -%}
+        {%- for line in result["stdout_lines"] if line != "enabled" -%}
+          {%- if status.update({"all_enabled": False}) -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- status["all_enabled"] -}}
+
+- name: Start pcs cluster nodes.
+  command: pcs cluster start --all
+  register: pcs_cluster_start_update
+  when: all_active | bool == False
+  run_once: true
+  become: true
+  vars:
+    all_active: |-
+      {%- set status = {"all_active": True} -%}
+      {%- for result in daemons_active["results"] -%}
+        {%- for line in result["stdout_lines"] if line != "active" -%}
+          {%- if status.update({"all_active": False}) -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- status["all_active"] -}}

@@ -1,0 +1,83 @@
+- name: Ensure BeeGFS HA cluster is installed.
+  block:
+    - name: Collect NetApp E-Series volume information (Always).
+      import_tasks: ../collect_facts.yml
+      tags:
+        - always
+
+    - name: Provision storage and present the storage to hosts.
+      block:
+        - name: Ensure storage has been provisioned for hosts.
+          include_role:
+            name: netapp_eseries.santricity.nar_santricity_host
+          when: inventory_hostname in groups[beegfs_ha_ansible_storage_group]
+
+        - name: Ensure multipath and iscsi protocol are setup.
+          include_role:
+            name: netapp_eseries.host.storage_setup
+          when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+
+        - name: Ensure volumes are formatted but not mounted.
+          include_role:
+            name: netapp_eseries.host.mount
+          when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+          vars:
+            eseries_mount_volumes: []   # This ensures that no volumes get mounted
+            eseries_mount_skip_unmount: true
+      tags:
+        - storage
+
+    - name: Setup and configure BeeGFS HA on hosts.
+      block:
+        - name: Ensure expected BeeGFS packages are installed (Always).
+          include_tasks: packages.yml
+          when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+      tags:
+        - beegfs_ha
+        - beegfs_ha_package
+
+    - name: Configure performance tuning.
+      block:
+        - name: BeeGFS performance tuning (Storage/Metadata).
+          import_tasks: performance_tuning.yml
+          when: 'beegfs_ha_enable_performance_tuning == True and (inventory_hostname in groups[beegfs_ha_ansible_host_group] and
+                                                                  ("metadata" in node_info["services"] or "storage" in node_info["services"]))'
+      tags:
+        - beegfs_ha
+        - beegfs_ha_performance_tuning
+
+    - name: Configure BeeGFS HA.
+      block:
+        - name: Ensure common BeeGFS HA tasks are applied to BeeGFS service nodes (Management/Metadata/Storage).
+          include_tasks: common.yml
+          when: 'inventory_hostname in groups[beegfs_ha_ansible_host_group] and
+                ("management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"])'
+
+        - name: Ensure BeeGFS HA management resource group is configured.
+          include_tasks: services/management.yml
+          when: 'inventory_hostname in groups[beegfs_ha_ansible_host_group] and "management" in node_info["services"]'
+
+        - name: Ensure BeeGFS HA metadata resource group is configured.
+          include_tasks: services/metadata.yml
+          when: 'inventory_hostname in groups[beegfs_ha_ansible_host_group] and "metadata" in node_info["services"]'
+
+        - name: Ensure BeeGFS HA storage resource group is configured.
+          include_tasks: services/storage.yml
+          when: 'inventory_hostname in groups[beegfs_ha_ansible_host_group] and "storage" in node_info["services"]'
+
+        - name: Ensure BeeGFS HA services are running.
+          include_tasks: start.yml
+          when: inventory_hostname == preferred_management_node
+
+        - name: Ensure BeeGFS HA clients are configured.
+          include_tasks: services/client.yml
+          when: beegfs_ha_client | bool == True
+
+        - name: Backup current BeeGFS HA configuration.
+          include_tasks: ../backup.yml
+          when: inventory_hostname == preferred_management_node
+      tags:
+        - beegfs_ha_configure
+        - beegfs_ha
+
+  when: beegfs_ha_delete_data_and_uninstall_beegfs | bool == False

@@ -1,0 +1,18 @@
+- name: Add volume paths to storage/metadata_volumes.
+  set_fact:
+    storage_volumes: |-
+      {%- set volumes = [] %}
+      {%- for index in range(storage_volumes | length) -%}
+        {%- set volume = storage_volumes[index] -%}
+        {%- if volume.update({"path": storage_volume_paths["results"][index]["files"][0]["path"]}) -%}{%- endif -%}
+        {%- if volumes.append(volume) -%}{%- endif -%}
+      {%- endfor -%}
+      {{ volumes or storage_volumes | list }}
+    metadata_volumes: |-
+      {%- set volumes = [] %}
+      {%- for index in range(metadata_volumes | length) -%}
+        {%- set volume = metadata_volumes[index] -%}
+        {%- if volume.update({"path": metadata_volume_paths["results"][index]["files"][0]["path"]}) -%}{%- endif -%}
+        {%- if volumes.append(volume) -%}{%- endif -%}
+      {%- endfor -%}
+      {{ volumes or metadata_volumes | list }}

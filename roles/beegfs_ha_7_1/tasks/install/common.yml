@@ -1,0 +1,18 @@
+- name: Ensure the required firewall ports are open.
+  include_tasks: common/firewall.yml
+
+- name: Ensure the ntp is configured.
+  include_tasks: common/ntp.yml
+
+- name: Ensure /etc/hosts file is populated with cluster nodes and floating IP addresses.
+  include_tasks: common/hosts.yml
+
+- name: Ensure all cluster nodes are authenticated.
+  include_tasks: common/authenticate.yml
+
+- name: Ensure cluster user password is set and the pcs daemon is enabled and running.
+  include_tasks: common/pcs.yml
+
+#- name: Ensure the cluster is built.
+#  include_tasks: common/build_cluster.yml
+#  when: inventory_hostname == preferred_management_node

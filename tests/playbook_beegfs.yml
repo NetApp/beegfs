@@ -1,0 +1,8 @@
+- hosts: eseries_beegfs_hosts
+  any_errors_fatal: true
+  collections:
+    - netapp_eseries.beegfs
+  tasks:
+    - name: Import nar_santricity_beegfs_7_1 role.
+      import_role:
+        name: nar_santricity_beegfs_7_1

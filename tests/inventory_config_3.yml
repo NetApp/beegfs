@@ -1,0 +1,28 @@
+all:
+    children:
+        eseries_beegfs_hosts:
+            hosts:
+              ictm1619h3:
+                beegfs_node_roles: [management, metadata]
+              ictm1619h5:
+                beegfs_node_roles: [storage]
+              ictm1619h15:
+                beegfs_node_roles: [storage, metadata]
+              ictm1619h16:
+                beegfs_node_roles: [metadata]
+              ictm1618h17:
+                beegfs_node_roles: [client]
+              ictm1618h18:
+                beegfs_node_roles: [client]
+            vars:
+                beegfs_mgmt_node_ip: 192.168.1.10
+                beegfs_enable_quota: True
+                beegfs_quota_enable_enforcement: True
+                beegfs_enable_rdma: True
+                beegfs_eseries_group: test_override_beegfs_eseries_group
+                beegfs_data_directory: /mnt/beegfs/
+                beegfs_enable_performance_tuning: True
+                beegfs_ntp_enabled: True
+        test_override_beegfs_eseries_group:
+            hosts:
+                ictm1620c18_minimal:

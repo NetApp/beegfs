@@ -1,0 +1,20 @@
+ansible_user: ansible
+
+#beegfs_mgmt_node_ip: #DEVNOTE (jmccormi): This needs to be overridden in the config_X_inventory.yml file on a config-by-config basis.
+beegfs_connInterfaces:
+    - ib0
+
+beegfs_ntp_server_pools:
+  - "server bigben.eng.netapp.com iburst"
+
+beegfs_rhel_repository_base_url: http://repomirror-ict.eng.netapp.com/beegfs/beegfs_7_1/dists/rhel7/
+beegfs_rhel_repository_gpgkey: http://repomirror-ict.eng.netapp.com/beegfs/beegfs_7_1/gpg/RPM-GPG-KEY-beegfs
+
+beegfs_suse_repository_base_url: http://repomirror-ict.eng.netapp.com/beegfs/beegfs_7_1/dists/sles12/
+beegfs_suse_repository_gpgkey: http://repomirror-ict.eng.netapp.com/beegfs/beegfs_7_1/gpg/RPM-GPG-KEY-beegfs
+
+beegfs_debian_repository_base_url: http://repomirror-ict.eng.netapp.com/beegfs/beegfs_7_1/ # Note the apt command in the BeeGFS role should append "stretch non-free".
+beegfs_debian_repository_gpgkey: http://repomirror-ict.eng.netapp.com/beegfs/beegfs_7_1/gpg/DEB-GPG-KEY-beegfs
+
+beegfs_allow_unsupported_module: True
+beegfs_open_firewall_ports: True #DEVNOTE (jmccormi): This is set to False for individual SUSE hosts in their respective host_var files as we don't support SuSEfirewall2.

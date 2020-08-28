@@ -1,0 +1,8 @@
+<constraints>
+{%- for group in (resource_group_node_preference.keys() | list) -%}
+  {%- for node in resource_group_node_preference[group] | reverse -%}
+        {%- set priority = loop["index0"] * beegfs_ha_node_preference_scope_step -%}
+    <rsc_location id="location-{{ group }}-group-{{ node }}-{{ priority }}" node="{{ node }}" rsc="{{ group }}-group" score="{{ priority }}"/>
+  {%- endfor -%}
+{%- endfor -%}
+</constraints>

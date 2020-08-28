@@ -1,0 +1,24 @@
+eseries_system_api_url: https://192.168.1.200:8443/devmgr/v2/
+eseries_system_password: adminpass
+eseries_validate_certs: false
+eseries_initiator_protocol: iscsi   # Host interface communication protocol. Choices: fc, iscsi, sas, ib_iser, ib_srp, nvme_ib, nvme_roce
+                                    #   Note: Check protocol availability with netapp_eseries.host collection, https://galaxy.ansible.com/netapp_eseries/host.
+
+
+# To discover unconfigured NetApp E-Series storage systems use the following example.
+#   The serial number can be found on the front-top left of the storage system. The netapp_eseries.santricity.nar_santricity_management role must be
+#   applied the system to set the static IP addresses; otherwise, the discover process will be required each time Ansible applies changes. Once configured,
+#   SANtricity Web Services REST API will contacted via the known address. See netapp_eseries_santricity collection documentation for information,
+#   https://galaxy.ansible.com/netapp_eseries/santricity.
+#   Note: Storage systems with firmware prior to version 11.62 will only be discovered when the admin password has not been configured.
+
+#eseries_system_serial: "012345678901"   # Be sure to quote if the serial is all numbers and begins with zero.
+#eseries_subnet: 192.168.1.0/24
+#eseries_system_password: admin_password
+#eseries_validate_certs: false
+#eseries_management_interfaces:
+#  config_method: static
+#  controller_a:
+#    - address: 192.168.1.100
+#  controller_b:
+#    - address: 192.168.1.101

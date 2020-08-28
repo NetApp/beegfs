@@ -1,0 +1,51 @@
+- name: Ensure the BeeGFS management package is installed (RedHat/CentOS - Management).
+  yum:
+    state: absent
+    name: "beegfs-mgmtd-{{ beegfs_ha_beegfs_version }}*"
+  when: '"management" in node_info["services"]'
+  become: true
+
+- name: Ensure the BeeGFS metadata package is installed (RedHat/CentOS - Metadata).
+  yum:
+    state: absent
+    name: "beegfs-meta-{{ beegfs_ha_beegfs_version }}*"
+  when: '"metadata" in node_info["services"]'
+  become: true
+
+- name: Ensure the BeeGFS storage package is installed (RedHat/CentOS - Storage).
+  yum:
+    state: absent
+    name: "beegfs-storage-{{ beegfs_ha_beegfs_version }}*"
+  when: '"storage" in node_info["services"]'
+  become: true
+
+- name: Ensure the BeeGFS infiniband package is installed (RedHat/CentOS - Metadata/Storage).
+  yum:
+    state: absent
+    name: libbeegfs-ib
+  when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and beegfs_ha_enable_rdma'
+  become: true
+
+- name: Ensure the required HA packages are installed (RedHat/CentOS - Management/Metadata/Storage).
+  yum:
+    state: absent
+    name:
+      - "corosync-{{ beegfs_ha_corosync_version }}*"
+      - "pacemaker-{{ beegfs_ha_pacemaker_version }}*"
+      - "pcs-{{ beegfs_ha_pcs_version }}*"
+      - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined%}-{{beegfs_ha_fence_agents_all_version}}*{% endif %}"
+  when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
+  become: true
+
+- name: Configure packages for BeeGFS clients(RedHat/CentOS - Client).
+  block:
+    - name: Ensure the BeeGFS client package is installed (RedHat/CentOS - Client).
+      yum:
+        state: absent
+        name:
+          - "beegfs-client-{{ beegfs_ha_beegfs_version }}*"
+          - "beegfs-helperd-{{ beegfs_ha_beegfs_version }}*"
+          - "beegfs-utils-{{ beegfs_ha_beegfs_version }}*"
+      become: true
+  when: beegfs_ha_client | bool == True
+  become: true

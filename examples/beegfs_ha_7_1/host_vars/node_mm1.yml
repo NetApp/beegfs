@@ -1,0 +1,15 @@
+ansible_host: 192.168.1.226
+ansible_ssh_user: admin
+ansible_become_password: adminpass
+
+eseries_iscsi_iqn: iqn.1994-05.com.redhat:node_mm1
+eseries_iscsi_interfaces:
+  - name: eth1
+    address: 192.168.2.226/24
+  - name: eth2
+    address: 192.168.3.226/24
+
+beegfs_ha_client: true
+beegfs_ha_client_connInterfaces:
+  - eth0
+  - eth1

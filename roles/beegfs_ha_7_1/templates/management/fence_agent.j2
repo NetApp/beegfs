@@ -1,0 +1,10 @@
+<primitive class="stonith" id="{{ item['fence_name'] }}" type="{{ item['fence_type'] }}">
+  <instance_attributes id="{{ item['fence_name'] }}-instance_attributes">
+{% for key, value in (item['fence_agent_attributes'].items() | list) %}
+    <nvpair id="{{ item['fence_name'] }}-instance_attributes-{{ key }}" name="{{ key }}" value="{{ value }}"/>
+{% endfor %}
+  </instance_attributes>
+  <operations>
+    <op id="{{ item['fence_name'] }}-monitor-interval-60s" interval="60s" name="monitor"/>
+  </operations>
+</primitive>

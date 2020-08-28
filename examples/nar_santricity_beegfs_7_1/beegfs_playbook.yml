@@ -1,0 +1,21 @@
+# NetApp E-Series storage array playbook.  This playbook is needed if users use ansible to create the storage and metadata volumes instead of creating them manually.
+# The example of the volumes' configuration can be found in /example/hostvars/eseries_array.yml
+- hosts: eseries_storage_systems
+  connection: local
+  any_errors_fatal: true                                    # If any_errors_fatal == True, Ansible will stop when failure occurs, else, Ansible will continue to run
+  collections:
+    - netapp_eseries.santricity
+  tasks:
+    - name:  Import nar_santricity_host role
+      import_role:
+        name: nar_santricity_host
+
+# NetApp E-Series BeeGFS playbook.  This playbook is to deploy the beegfs parallel filesystem on the hosts.
+- hosts: eseries_beegfs_hosts                               # An inventory host group saved under /group_vars
+  any_errors_fatal: true                                    # If any_errors_fatal == True, Ansible will stop when failure occurs, else, Ansible will continue to run
+  collections:
+    - netapp_eseries.beegfs
+  tasks:
+    - name: Import nar_santricity_beegfs_7_1 role.
+      import_role:
+        name: nar_santricity_beegfs_7_1

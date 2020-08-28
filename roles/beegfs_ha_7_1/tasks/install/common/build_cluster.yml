@@ -1,0 +1,55 @@
+#- name: Get nodes list from pacemaker cib.xml.
+#  xml:
+#    path: "{{ beegfs_ha_pacemaker_cib_xml }}"
+#    xpath: /cib/configuration/nodes/*
+#    content: attribute
+#  register: cib_nodes_search
+#  failed_when: false
+#
+#- name: Setup pcs cluster.
+#  command:
+#    cmd: "{{ beegfs_ha_pcs_cluster_setup_command }} {{ beegfs_ha_cluster_name }} {{ groups[beegfs_ha_ansible_host_group] | join(' ') }}"
+#  when: '"matches" not in (cib_nodes_search.keys() | list)'
+#  become: true
+#
+#- name: Modify the existing pcs cluster.
+#  block:
+#    - name: Determine the nodes names from pacemaker cib.xml
+#      set_fact:
+#        cib_nodes: |-
+#          {%- set nodes = [] -%}
+#          {%- if "matches" in (cib_nodes_search.keys() | list) -%}
+#            {%- for cib_nodes_match in cib_nodes_search["matches"] -%}
+#              {%- if nodes.append(cib_nodes_match["node"]["uname"]) -%}{%- endif -%}
+#            {%- endfor -%}
+#          {%- endif -%}
+#          {{- nodes -}}
+#
+#    - name: Determine the pcs cluster node changes
+#      set_fact:
+#        add_cluster_nodes: |-
+#          {%- set nodes = [] -%}
+#          {%- for node in groups[beegfs_ha_ansible_host_group] if node not in cib_nodes -%}
+#            {%- if nodes.append(node) -%}{%- endif -%}
+#          {%- endfor -%}
+#          {{- nodes -}}
+#        remove_cluster_nodes: |-
+#          {%- set nodes = [] -%}
+#          {%- for node in cib_nodes if node not in groups[beegfs_ha_ansible_host_group] -%}
+#            {%- if nodes.append(node) -%}{%- endif -%}
+#          {%- endfor -%}
+#          {{- nodes -}}
+#
+#    - name: Add missing cluster nodes.
+#      command:
+#        cmd: "pcs cluster node add {{ item }}"
+#      loop: "{{ add_cluster_nodes }}"
+#      become: true
+#
+#    - name: Remove unexpected cluster nodes.
+#      command:
+#        cmd: "pcs cluster node remove {{ item }}"
+#      loop: "{{ remove_cluster_nodes }}"
+#      become: true
+#  when: '"matches" in (cib_nodes_search.keys() | list)'
+#

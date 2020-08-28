@@ -1,0 +1,14 @@
+port: 8005
+floating_ips:
+  - "eth1:192.168.2.101/24"
+  - "eth2:192.168.3.101/24"
+
+beegfs_service: metadata
+beegfs_targets:
+  example_eseries_storage_system:
+    eseries_storage_pool_configuration:   # This will create two RAID 1 volume groups each with a 100 gibibyte volume using two drives.
+      - name: mgmt_meta_01_02             # Specifying the storage pool/volume group name allows it to be used across multipath services.
+        raid_level: raid1                 #   An example being a shared volume group for management and metadata services.
+        criteria_drive_count: 2
+        volumes:
+          - size: 100

@@ -1,0 +1,2 @@
+ansible_host: 10.113.72.105
+beegfs_open_firewall_ports: False

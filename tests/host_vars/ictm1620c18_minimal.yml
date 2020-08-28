@@ -1,0 +1,8 @@
+#DEVNOTE (jmccormi): This minimal E-Series host_var file is meant for testing without explicitly defined volumes/host/mappings.
+
+# E-Series Connection Configuration:
+eseries_ssid: 1
+eseries_api_url: https://10.113.72.90/devmgr/v2
+eseries_api_username: admin
+eseries_api_password: useansiblevault
+eseries_validate_certs: false

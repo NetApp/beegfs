@@ -1,0 +1,71 @@
+# This inventory file defines initial setup tasks for hosts in the CI testbed.
+
+all:
+    children:
+        eseries_beegfs_hosts:
+            hosts:
+              ictm1619h3:
+                ci_role: beegfs_server
+                nar_santricity_ipoib_ports:
+                  ib0: 192.168.1.10/24
+                nar_santricity_iser_interfaces:
+                  ib0: 192.168.1.10/24
+
+              ictm1619h5:
+                ci_role: beegfs_server
+                nar_santricity_ipoib_ports:
+                  ib0: 192.168.1.11/24
+                nar_santricity_iser_interfaces:
+                  ib0: 192.168.1.11/24
+
+              ictm1619h15:
+                ci_role: beegfs_server
+                nar_santricity_ipoib_ports:
+                  ib0: 192.168.1.12
+                nar_santricity_iser_interfaces:
+                  ib0: 192.168.1.12
+
+              ictm1619h16:
+                ci_role: beegfs_server
+                nar_santricity_ipoib_ports:
+                  ib0: 192.168.1.13
+                nar_santricity_iser_interfaces:
+                  ib0: 192.168.1.13
+
+              ictm1618h17:
+                ci_role: beegfs_client
+                nar_santricity_ipoib_ports:
+                  ib0: 192.168.1.14/24
+                nar_santricity_iser_interfaces:
+                  ib0: 192.168.1.14/24
+
+              ictm1618h18:
+                ci_role: beegfs_client
+                nar_santricity_ipoib_ports:
+                  ib0: 192.168.1.15
+                nar_santricity_iser_interfaces:
+                  ib0: 192.168.1.15
+
+# DEVNOTE (jmccormi): Ubuntu 18.04 host if we end up adding support for it (need a path to configure IPoIB on it).
+#              ictm1618h19:
+#                ci_role: beegfs_client
+#                nar_santricity_ipoib_ports:
+#                  ib0: 192.168.1.16/24
+#                nar_santricity_iser_interfaces:
+#                  ib0: 192.168.1.16/24
+            vars:
+                nar_santricity_iser_skip_network_config: True
+                ci_run_initial_setup_tasks: False                  # Toggle "True" to run initial setup tasks needed to deploy new CI nodes including setting up repomirrors and installing packages.
+                eseries_storage_systems:                           # Configuration required for the iSER role.
+                  ictm1620c18:
+                    array_target_IQN: iqn.1992-08.com.netapp:5700.600a098000d850f6000000005e0f43db
+                    array_target_ports:
+                      A_ports:
+                        - 192.168.1.100:3260
+                      B_ports:
+                        - 192.168.1.102:3260
+        eseries_storage_systems:
+            hosts:
+                ictm1620c18:
+            vars:
+              ci_run_initial_setup_tasks: False

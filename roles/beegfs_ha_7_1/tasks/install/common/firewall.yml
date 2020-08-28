@@ -1,0 +1,6 @@
+- name: Ensure the required firewall ports are open.
+  firewalld:
+    state: enabled
+    permanent: true
+    service: high-availability
+  become: true

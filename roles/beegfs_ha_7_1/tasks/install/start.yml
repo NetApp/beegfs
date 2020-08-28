@@ -1,0 +1,166 @@
+# Ensure cluster attribute symmetric-cluster is set to false.
+- name: Determine whether cluster is configured for asymmetric cluster architecture.
+  command:
+    cmd: crm_attribute --type crm_config --name symmetric-cluster --query --quiet
+  changed_when: false
+  failed_when: false
+  register: symmetric_cluster_query
+  become: true
+
+- name: Set cluster to asymmetric cluster architecture.
+  command:
+    cmd: crm_attribute --type crm_config --name symmetric-cluster --update false
+  register: symmetric_cluster_update
+  when: symmetric_cluster_query['rc'] != 0 or symmetric_cluster_query['stdout'] != 'false'
+  become: true
+
+
+# Ensure cluster resource defaults are configured.
+- name: Determine cluster resource defaults.
+  command:
+    cmd: "crm_attribute --type rsc_defaults --name {{ item['key'] }} --query --quiet"
+  loop: "{{ beegfs_ha_cluster_resource_defaults | dict2items }}"
+  changed_when: false
+  failed_when: false
+  register: resource_default_query
+  become: true
+
+- name: Set cluster resource defaults.
+  command:
+    cmd: "crm_attribute --type rsc_defaults --name {{ item['item']['key'] }} --update {{ item['item']['value'] }}"
+  loop: "{{ resource_default_query['results'] }}"
+  register: resource_default_update
+  when: item['rc'] != 0 or item['stdout'] != item["item"]["value"] | string
+  become: true
+
+
+# Ensure opt-in constraints are configured.
+- name: Query current pacemaker metadata group resources.
+  command:
+    cmd: "cibadmin --query --scope constraints"
+  register: constraints_query
+  changed_when: false
+  become: true
+
+- name: Determine whether changes are required.
+  command:
+    cmd: "crm_diff -O '{{ constraints_query['stdout'] }}' -N '{{ lookup('template', 'management/constraints.j2') }}'"
+  register: constraints_diff
+  failed_when: constraints_diff['rc'] not in [0, 1]
+  changed_when: false
+  become: true
+
+- name: Modify pacemaker constraints.
+  command:
+    cmd: "cibadmin --modify --scope constraints --xml-text '{{ lookup('template', 'management/constraints.j2') }}'"
+  register: constraints_update
+  when: constraints_diff['rc'] == 1
+  become: true
+
+
+# Ensure pacemaker fencing agents are configured as expected.
+- name: Query for all current fencing agent definitions.
+  command:
+    cmd: "cibadmin --query --xpath '/cib/configuration/resources/primitive[@class=\"stonith\"]'"
+  register: existing_fencing_agent_resource_query
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Determine the existing fencing agent resource ids.
+  set_fact:
+    existing_fence_agent_ids: |-
+      {%- set ids = [] -%}
+      {%- for line in existing_fencing_agent_resource_query["stdout_lines"] if line | regex_search(".*<primitive class=\"stonith\" id=\".*\" type=\".*\">") -%}
+        {%- if ids.append(line | regex_replace(".*<primitive class=\"stonith\" id=\"|\" type=\".*\">", "")) -%}{%- endif -%}
+      {%- endfor -%}
+      {{- ids -}}
+
+- name: Determine expected cib.xml resource entries for each fencing agent definition.
+  set_fact:
+    fence_agent_definitions: |-
+      {%- set fence_agent_definitions = [] -%}
+      {%- for fence_agent_type, fence_agent_attributes in (beegfs_ha_fencing_agents.items() | list) -%}
+        {%- for fence_agent_attribute in fence_agent_attributes -%}
+          {%- set fence_type = fence_agent_type -%}
+          {%- set fence_name = fence_agent_type ~ '_' ~ loop['index'] -%}
+
+          {#- Build fencing agent resource definition -#}
+          {%- set fence_definition_line = [] -%}
+          {%- if fence_definition_line.append('<primitive class="stonith" id="' ~ fence_name ~ '" type="' ~ fence_type ~ '"><instance_attributes id="' ~ fence_name ~ '-instance_attributes">') -%}{%- endif -%}
+          {% for key, value in (fence_agent_attribute.items() | list) %}
+            {%- if fence_definition_line.append('<nvpair id="' ~ fence_name ~ '-instance_attributes-' ~ key ~ '" name="' ~ key ~ '" value="' ~ value ~'"/>') -%}{%- endif -%}
+          {% endfor %}
+          {%- if fence_definition_line.append('</instance_attributes><operations><op id="' ~ fence_name ~ '-monitor-interval-60s" interval="60s" name="monitor"/></operations></primitive>') -%}{%- endif -%}
+
+          {#- Determine existing fence agent resource -#}
+          {%- set scratch = {"found": False, "existing_fence_definition": []} -%}
+          {%- for line in existing_fencing_agent_resource_query["stdout_lines"][1:-1] -%}
+            {%- if line | regex_search("  <primitive class=\"stonith\" id=\"" ~ fence_name ~ "\" type=\"" ~ fence_type ~ "\">") -%}
+              {%- if scratch.update({"found": True, "existing_fence_definition": [line]}) -%}{%- endif -%}
+            {%- elif scratch["found"] == True -%}
+              {%- if scratch["existing_fence_definition"].append(line) -%}{%- endif -%}
+              {%- if line == "  </primitive>" -%}
+                {%- if scratch.update({"found": False}) -%}{%- endif -%}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+
+          {%- if fence_agent_definitions.append({"fence_name": fence_name, "fence_definition": fence_definition_line | join(), "existing_fence_definition": scratch["existing_fence_definition"] | join()}) -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- fence_agent_definitions -}}
+
+- name: Determine whether pacemaker fencing agent resources need to be modified.
+  command:
+    cmd: "crm_diff -O '{{ item[\"existing_fence_definition\"] }}' -N '{{ item[\"fence_definition\"] }}'"
+  loop: "{{ fence_agent_definitions }}"
+  register: fencing_agents_resource_diff
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Ensure pacemaker fencing agent resources.
+  command:
+    cmd: "cibadmin {% if item['item']['existing_fence_definition'] %}--modify{%- else -%}--create{% endif %} --scope resources --xml-text '{{ item['item'][\"fence_definition\"] }}'"
+  loop: "{{ fencing_agents_resource_diff['results'] }}"
+  register: fencing_agents_resource_update
+  when: item['rc'] == 1
+  become: true
+
+- name: Remove any unexpected fencing agents.
+  command:
+    cmd: "cibadmin --delete --xpath='/cib/configuration/resources/primitive[@id=\"{{ item }}\"]'"
+  loop: "{{ remove_list }}"
+  register: fencing_agents_resource_delete
+  become: true
+  vars:
+    remove_list: |-
+      {%- set ids = [] -%}
+      {%- for line in existing_fencing_agent_resource_query["stdout_lines"] if line | regex_search(".*<primitive class=\"stonith\" id=\".*\" type=\".*\">") -%}
+        {%- set current_id = line | regex_replace(".*<primitive class=\"stonith\" id=\"|\" type=\".*\">", "") -%}
+        {%- for fence_agent_definition in fence_agent_definitions if current_id == fence_agent_definition['fence_name'] -%}
+          {#- DO NOTHING -#}
+        {%- else -%}
+          {%- if ids.append(current_id) -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- ids -}}
+
+
+# Ensure pcs stonith-enabled property is configured as expected.
+- name: Get the pcs status of stonith_enabled_status property.
+  command:
+    cmd: "pcs property show stonith-enabled"
+  register: pcs_stonith_enabled_status
+  changed_when: false
+  become: true
+
+- name: Set the pcs status of stonith_enabled_status property.
+  command:
+    cmd: "pcs property set stonith-enabled={{ beegfs_ha_enable_fence }}"
+  become: true
+  register: pcs_stonith_enabled_update
+  when: stonith_enabled_status != beegfs_ha_enable_fence
+  vars:
+    stonith_enabled_status: "{{ pcs_stonith_enabled_status['stdout'] | regex_replace('Cluster Properties:\n.*stonith-enabled: ', '') | bool }}"
