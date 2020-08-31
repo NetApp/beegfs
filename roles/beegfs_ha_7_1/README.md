@@ -7,7 +7,7 @@ Requirements
 ------------
     - Ansible 2.9 or later
     - NetApp E-Series E2800 platform or newer or NetApp E-Series SANtricity Web Services Proxy configured for older E-Series Storage arrays.
-    - Redhat 7+ for all BeeGFS HA node.
+    - Redhat 7+ for all BeeGFS HA nodes.
 
 Example Playbook
 ----------------
