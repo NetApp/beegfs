@@ -115,26 +115,41 @@
   register: beegfs_mgmtd_service
   become: true
 
-- name: Configure pacemaker resources.
-  block:
-    - name: Query current pacemaker management group resources.
-      command:
-        cmd: "cibadmin --query --xpath '/cib/configuration/resources/group[@id=\"{{ resource_group }}-group\"]'"
-      register: mgmt_group_resource_query
-      failed_when: false
-      changed_when: false
+#- name: Configure pacemaker resources.
+#  block:
+#    - name: Query current pacemaker management group resources.
+#      command:
+#        cmd: "cibadmin --query --xpath '/cib/configuration/resources/group[@id=\"{{ resource_group }}-group\"]'"
+#      register: mgmt_group_resource_query
+#      failed_when: false
+#      changed_when: false
+#
+#    - name: Determine whether changes are required.
+#      command:
+#        cmd: "crm_diff -O '{{ mgmt_group_resource_query[\"stdout\"] | default(\"\")}}' -N '{{ lookup(\"template\", \"management/resources.j2\") }}'"
+#      register: mgmt_group_resource_diff
+#      changed_when: false
+#      failed_when: mgmt_group_resource_diff['rc'] not in [0, 1]
+#
+#    - name: Determine whether resource group order changed.
+#      set_fact:
+#        mgmt_group_resource_order_diff: |-
+#          {%- set existing = mgmt_group_resource_query["stdout"] | default("") | regex_replace("/s+", " ") | regex_replace("\n", "") -%}
+#          {%- set expected = lookup("template", "management/resources.j2") | regex_replace("/s+", " ") | regex_replace("\n", "") -%}
+#          {{- not (existing == expected) | bool -}}
+#
+#    - name: Modify pacemaker management group resources.
+#      command:
+#        cmd: "cibadmin {% if mgmt_group_resource_query['rc'] == 6 %}--create --scope resources{% else %}--replace --xpath '/cib/configuration/resources/group[@id=\"{{ resource_group }}-group\"]'{% endif %} --xml-text '{{ lookup(\"template\", \"management/resources.j2\") }}'"
+#      register: mgmt_group_resource_update
+#      when: mgmt_group_resource_diff['rc'] == 1 or mgmt_group_resource_order_diff == True
+#  when: inventory_hostname == preferred_management_node
 
-    - name: Determine whether changes are required.
-      command:
-        cmd: "crm_diff -O '{{ mgmt_group_resource_query[\"stdout\"] | default(\"\")}}' -N '{{ lookup(\"template\", \"management/resources.j2\") }}'"
-      register: mgmt_group_resource_diff
-      changed_when: false
-      failed_when: mgmt_group_resource_diff['rc'] not in [0, 1]
 
-    - name: Modify pacemaker management group resources.
-      command:
-        cmd: "cibadmin {% if mgmt_group_resource_query['rc'] == 6 %}--create --scope resources{% else %}--modify --xpath '/cib/configuration/resources/group[@id=\"{{ resource_group }}-group\"]'{% endif %} --xml-text '{{ lookup(\"template\", \"management/resources.j2\") }}'"
-      register: mgmt_group_resource_update
-      when: mgmt_group_resource_diff['rc'] == 1
 
-  when: inventory_hostname == preferred_management_node
+
+#- name: Build pacemaker cluster management group resources.
+#  set_fact:
+#    cluster_resources: '{{ lookup("template", "management/resources.j2") }}'
+#  run_once: true
+

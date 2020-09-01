@@ -14,7 +14,7 @@ Example Playbook
     - hosts: all
       gather_facts: false
       collections:
-        - netapp_eseries.solutions_automation_beegfs
+        - netapp_eseries.beegfs
       tasks:
         - name: Ensure BeeGFS HA cluster is setup.
           import_role:

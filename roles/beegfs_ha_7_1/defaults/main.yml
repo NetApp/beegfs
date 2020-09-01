@@ -17,6 +17,7 @@ beegfs_ha_filter_ip_ranges: []
 beegfs_ha_node_preference_scope_step: 200
 beegfs_ha_cluster_resource_defaults:
   resource-stickiness: 15000
+beegfs_ha_fencing_agents: {}
 beegfs_ha_backup: true
 
 

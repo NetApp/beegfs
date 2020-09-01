@@ -69,8 +69,11 @@
       {%- for group in cluster_resource_groups -%}
 
         {%- if resource_node_order.update({group: []}) -%}{%- endif -%}
-        {%- for line in content -%}
+        {%- for line in content if line and not (line | regex_search("\A\s*(#.*)*\Z")) -%}
           {%- if scratch["resource_found"] == True and scratch["hosts_found"] == True -%}
+            {%- if scratch["indentation"] == 0 -%}
+              {%- if scratch.update({"indentation": (line | regex_replace("\w+:.*", "")) | length}) -%}{%- endif -%}
+            {%- endif -%}
 
             {%- if scratch["indentation"] == (line | regex_replace("\w+:.*", "") | length) -%}
               {%- if resource_node_order[group].append(line | regex_replace(".*(?=(\b\w+:))|:.*| *", "")) -%}{%- endif -%}
@@ -79,7 +82,7 @@
             {%- endif -%}
 
           {%- elif scratch["resource_found"] == True and line | regex_search(".*hosts:.*") -%}
-            {%- if scratch.update({"hosts_found": True, "indentation": (content[loop["index"]] | regex_replace("\w+:.*", "")) | length}) -%}{%- endif -%}
+            {%- if scratch.update({"hosts_found": True}) -%}{%- endif -%}
 
           {%- elif line | regex_search(" *" ~ group ~ ":.*") -%}
             {%- if scratch.update({"resource_found": True}) -%}{%- endif -%}
