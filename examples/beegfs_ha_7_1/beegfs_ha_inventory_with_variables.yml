@@ -50,8 +50,8 @@ all:
 
         meta_01:
           hosts:
-            node_mm2:
             node_mm1:
+            node_mm2:
           vars:
             port: 8005
             floating_ips:
@@ -69,8 +69,8 @@ all:
 
         meta_02:
           hosts:
-            node_mm1:
             node_mm2:
+            node_mm1:
           vars:
             port: 8045
             floating_ips:

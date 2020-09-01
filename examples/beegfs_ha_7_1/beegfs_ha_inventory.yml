@@ -14,13 +14,13 @@ all:
 
         meta_01:
           hosts:
-            node_mm2:
             node_mm1:
+            node_mm2:
 
         meta_02:
           hosts:
-            node_mm1:
             node_mm2:
+            node_mm1:
 
         stor_01:
           hosts:
