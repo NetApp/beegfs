@@ -24,7 +24,7 @@ pipeline {
             post {
                 always {
                 sh "echo 'Removing Docker image.'"
-                sh "docker rmi $(docker images --filter=reference='*cicd/esola/ansible_control*' -q) -f"
+                sh "docker rmi \$(docker images --filter=reference='*cicd/esola/ansible_control*' -q) -f"
                 }
             }
         }
@@ -45,7 +45,7 @@ pipeline {
             post {
                 always {
                 sh "echo 'Removing Docker image.'"
-                sh "docker rmi $(docker images --filter=reference='*team/esola/ansible_control*' -q) -f"
+                sh "docker rmi \$(docker images --filter=reference='*team/esola/ansible_control*' -q) -f"
                 }
             }
         }
