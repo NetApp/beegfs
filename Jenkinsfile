@@ -24,8 +24,7 @@ pipeline {
             post {
                 always {
                 sh "echo 'Removing Docker image.'"
-                sh "docker rmi docker.repo.eng.netapp.com/cicd/esola/ansible_control:${BRANCH_NAME}.${BUILD_ID}"
-                sh "docker rmi cicd/esola/ansible_control:${BRANCH_NAME}.${BUILD_ID}"
+                sh "docker rmi $(docker images --filter=reference='*cicd/esola/ansible_control*' -q) -f"
                 }
             }
         }
@@ -46,8 +45,7 @@ pipeline {
             post {
                 always {
                 sh "echo 'Removing Docker image.'"
-                sh "docker rmi docker.repo.eng.netapp.com/team/esola/ansible_control:${SEM_VERSION}.${BUILD_ID}"
-                sh "docker rmi team/esola/ansible_control:${SEM_VERSION}.${BUILD_ID}"
+                sh "docker rmi $(docker images --filter=reference='*team/esola/ansible_control*' -q) -f"
                 }
             }
         }
