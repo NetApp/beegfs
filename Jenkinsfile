@@ -9,6 +9,7 @@ pipeline {
     stages {
         // Note this publishes to the cicd/esola namespace that has a retention policy of 90-days.
         stage('Build/Publish Docker Image (Non-Release Branch)') {
+            when { not { branch "release-*" } }
             steps {
                 script {
                     docker.withRegistry('https://docker.repo.eng.netapp.com', 'mswbuild-shared-account-cyclict') {
@@ -24,13 +25,14 @@ pipeline {
                 always {
                 sh "echo 'Removing Docker image.'"
                 sh "docker rmi docker.repo.eng.netapp.com/cicd/esola/ansible_control:${BRANCH_NAME}.${BUILD_ID}"
+                sh "docker rmi cicd/esola/ansible_control:${BRANCH_NAME}.${BUILD_ID}"
                 }
             }
         }
 
         // Note this publishes to the team/esola namespace which allows indefinite storage of images.
         stage('Build/Publish Docker Image (Release Branch)') {
-            when { branch pattern: "release-\\d+", comparator: "REGEXP"}
+            when { branch "release-*" }
             steps {
                 script {
                     docker.withRegistry('https://docker.repo.eng.netapp.com', 'mswbuild-shared-account-cyclict') {
@@ -45,6 +47,7 @@ pipeline {
                 always {
                 sh "echo 'Removing Docker image.'"
                 sh "docker rmi docker.repo.eng.netapp.com/team/esola/ansible_control:${SEM_VERSION}.${BUILD_ID}"
+                sh "docker rmi team/esola/ansible_control:${SEM_VERSION}.${BUILD_ID}"
                 }
             }
         }
