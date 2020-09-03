@@ -8,6 +8,7 @@
   when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
 
 
+# The following section builds up inventory for each resource group and appends it to each host's inventory inside a variable with the resource's name.
 # Determine and build inventory contents.
 - name: Get main inventory file.
   include_vars:
@@ -15,6 +16,7 @@
     file: "{{ ansible_inventory_sources[0] }}"
   run_once: true
 
+# Collection the BeeGFS HA cluster's ansible inventory definition from the raw inventory file.
 - name: Determine the raw inventory for the BeeGFS HA cluster ansible host group.
   set_fact:
     cluster_group_raw_inventory: |-
@@ -47,6 +49,7 @@
       {{- cluster_group -}}
   run_once: true
 
+# Determine list of resource groups for each Ansible host.
 - name: Determine inventory group with all the BeeGFS HA resource groups.
   set_fact:
     cluster_resource_groups: |-
@@ -60,6 +63,7 @@
       {%- endfor -%}
       {{- resources -}}
 
+# Determine each resources group's preferred node order.
 - name: Determine preferred_node_order for each resource group.
   set_fact:
     resource_preferred_node_order: |-
@@ -92,6 +96,7 @@
       {{- resource_node_order -}}
     run_once: true
 
+# Collect resource group's inventory files and add their content to the resource group variable for each Ansible-BeeGFS HA host.
 - name: Get cluster group_vars inventory file.
   include_vars:
     name: cluster_group_vars
@@ -184,6 +189,7 @@
       {{- final_hostgroups -}}
   run_once: true
 
+# These dynamic hosts groups are used to map volumes on the E-Series storage systems.
 - name: Create new inventory hostgroups.
   add_host:
     name: "{{ item[0] }}"
