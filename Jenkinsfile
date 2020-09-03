@@ -13,7 +13,7 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://docker.repo.eng.netapp.com', 'mswbuild-shared-account-cyclict') {
-                        def image = docker.build("cicd/esola/ansible_control:${BRANCH_NAME}.${BUILD_ID}", "--build-arg internal_santricity_collection_url=https://$BITBUCKET_API_USER:$BITBUCKET_API_TOKEN@ict-bitbucket.eng.netapp.com/scm/esola/santricity.git --build-arg internal_host_collection_url=https://$BITBUCKET_API_USER:$BITBUCKET_API_TOKEN@ict-bitbucket.eng.netapp.com/scm/esola/host.git -f docker/Dockerfile ./")
+                        def image = docker.build("cicd/esola/ansible:${BRANCH_NAME}.${BUILD_ID}", "--build-arg internal_santricity_collection_url=https://$BITBUCKET_API_USER:$BITBUCKET_API_TOKEN@ict-bitbucket.eng.netapp.com/scm/esola/santricity.git --build-arg internal_host_collection_url=https://$BITBUCKET_API_USER:$BITBUCKET_API_TOKEN@ict-bitbucket.eng.netapp.com/scm/esola/host.git -f docker/Dockerfile ./")
                         image.push()
                         if (env.BRANCH_NAME == 'master')  {
                                 image.push('latest')
@@ -24,7 +24,8 @@ pipeline {
             post {
                 always {
                 sh "echo 'Removing Docker image.'"
-                sh "docker rmi \$(docker images --filter=reference='*cicd/esola/ansible_control*' -q) -f"
+                sh "docker rmi \$(docker images --filter=reference='*cicd/esola/ansible*' -q) -f"
+                sh "docker system prune -f"
                 }
             }
         }
@@ -36,7 +37,7 @@ pipeline {
                 script {
                     docker.withRegistry('https://docker.repo.eng.netapp.com', 'mswbuild-shared-account-cyclict') {
                         def SEM_VERSION = env.BRANCH_NAME.split("-")[1]
-                        def image = docker.build("team/esola/ansible_control:${SEM_VERSION}.${BUILD_ID}", "--build-arg internal_santricity_collection_url=https://$BITBUCKET_API_USER:$BITBUCKET_API_TOKEN@ict-bitbucket.eng.netapp.com/scm/esola/santricity.git --build-arg internal_host_collection_url=https://$BITBUCKET_API_USER:$BITBUCKET_API_TOKEN@ict-bitbucket.eng.netapp.com/scm/esola/host.git -f docker/Dockerfile ./")
+                        def image = docker.build("team/esola/ansible:${SEM_VERSION}", "--build-arg internal_santricity_collection_url=https://$BITBUCKET_API_USER:$BITBUCKET_API_TOKEN@ict-bitbucket.eng.netapp.com/scm/esola/santricity.git --build-arg internal_host_collection_url=https://$BITBUCKET_API_USER:$BITBUCKET_API_TOKEN@ict-bitbucket.eng.netapp.com/scm/esola/host.git -f docker/Dockerfile ./")
                         image.push()
                         image.push('latest')
                     }
@@ -45,7 +46,8 @@ pipeline {
             post {
                 always {
                 sh "echo 'Removing Docker image.'"
-                sh "docker rmi \$(docker images --filter=reference='*team/esola/ansible_control*' -q) -f"
+                sh "docker rmi \$(docker images --filter=reference='*team/esola/ansible*' -q) -f"
+                sh "docker system prune -f"
                 }
             }
         }
