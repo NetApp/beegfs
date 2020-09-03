@@ -69,10 +69,6 @@
           include_tasks: resources.yml
           when: inventory_hostname == preferred_management_node
 
-        - name: Ensure BeeGFS HA clients are configured.
-          include_tasks: services/client.yml
-          when: beegfs_ha_client | bool == True
-
         - name: Backup current BeeGFS HA configuration.
           include_tasks: ../backup.yml
           when: inventory_hostname == preferred_management_node
@@ -80,4 +76,12 @@
         - beegfs_ha_configure
         - beegfs_ha
 
-  when: beegfs_ha_delete_data_and_uninstall_beegfs | bool == False
+    - name: Configure BeeGFS HA client.
+      block:
+        - name: Ensure BeeGFS HA clients are configured.
+          include_tasks: services/client.yml
+          when: beegfs_ha_client == True
+      tags:
+        - beegfs_ha_client
+        - beegfs_ha
+  when: beegfs_ha_delete_data_and_uninstall_beegfs == False
