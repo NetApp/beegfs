@@ -15,8 +15,12 @@
   become: true
 
 - name: Modify pacemaker constraints.
-  command:
-    cmd: "cibadmin --replace --scope constraints --xml-text '{{ lookup('template', 'management/constraints.j2') }}'"
-  register: constraints_update
-  when: resources_change_required or constraints_diff['rc'] == 1
+  block:
+    - name: Set pacemaker into maintenance-mode.
+      command:
+        cmd: "crm_attribute --name maintenance-mode --update true"
+    - name: Modify pacemaker constraints.
+      command:
+        cmd: "cibadmin --replace --scope constraints --xml-text '{{ lookup('template', 'management/constraints.j2') }}'"
+  when: constraints_diff['rc'] == 1
   become: true

@@ -8,9 +8,13 @@
   become: true
 
 - name: Set cluster to asymmetric cluster architecture.
-  command:
-    cmd: "crm_attribute --type crm_config --name symmetric-cluster --update false"
-  register: symmetric_cluster_update
+  block:
+    - name: Set pacemaker into maintenance-mode.
+      command:
+        cmd: "crm_attribute --name maintenance-mode --update true"
+    - name: Set cluster to asymmetric cluster architecture.
+      command:
+        cmd: "crm_attribute --type crm_config --name symmetric-cluster --update false"
   when: symmetric_cluster_query['rc'] != 0 or symmetric_cluster_query['stdout'] != 'false'
   become: true
 
@@ -25,11 +29,17 @@
   register: resource_default_query
   become: true
 
+- name: Set pacemaker into maintenance-mode.
+  command:
+    cmd: "crm_attribute --name maintenance-mode --update true"
+  loop: "{{ resource_default_query['results'] }}"
+  when: item['rc'] != 0 or item['stdout'] != item["item"]["value"] | string
+  become: true
+
 - name: Set cluster resource defaults.
   command:
     cmd: "crm_attribute --type rsc_defaults --name {{ item['item']['key'] }} --update {{ item['item']['value'] }}"
   loop: "{{ resource_default_query['results'] }}"
-  register: resource_default_update
   when: item['rc'] != 0 or item['stdout'] != item["item"]["value"] | string
   become: true
 
@@ -44,8 +54,12 @@
   become: true
 
 - name: Set cluster to asymmetric cluster architecture.
-  command:
-    cmd: "crm_attribute --type crm_config --name stonith-enabled --update {{ beegfs_ha_enable_fence }}"
-  register: symmetric_cluster_update
+  block:
+    - name: Set pacemaker into maintenance-mode.
+      command:
+        cmd: "crm_attribute --name maintenance-mode --update true"
+    - name: Set cluster to asymmetric cluster architecture.
+      command:
+        cmd: "crm_attribute --type crm_config --name stonith-enabled --update {{ beegfs_ha_enable_fence }}"
   when: stonith_enabled_query['rc'] != 0 or (stonith_enabled_query['stdout'] | bool) != beegfs_ha_enable_fence
   become: true

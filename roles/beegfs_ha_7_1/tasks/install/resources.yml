@@ -1,3 +1,8 @@
+# The following tasks builds the authoritative resources for the BeeGFS HA cluster. Next, they compare the existing cluster resources with what is expected and
+#   if there is a discrepancy then the cluster will be placed into maintenance mode and remove any existing constraints and resources to prevent any problems
+#   with the update. After the resource update has complete and the constraints have been reinstated then the cluster will be pulled out of maintenance mode.
+# Note: crm_diff was not used because it does not account for resource ordering.
+
 - name: Create cluster_resource opening xml tag.
   set_fact:
     cluster_resources: "<resources>"
@@ -34,26 +39,39 @@
     resources_change_required: |-
       {%- set existing = resources_query["stdout"] | default("") | regex_replace("\n", "") | regex_replace("\s+", " ") | regex_replace(">\s+<", "><") -%}
       {%- set expected = cluster_resources | regex_replace("\n", "") | regex_replace("\s+", " ") | regex_replace(">\s+<", "><") -%}
-      {{- not (existing == expected) | bool -}}
+      {{- not (existing == expected) -}}
 
 - name: Update pacemaker resources.
   block:
+    - name: Set pacemaker into maintenance-mode.
+      command:
+        cmd: "crm_attribute --name maintenance-mode --update true"
     - name: Remove existing constraints.
       command:
         cmd: "cibadmin --replace --scope constraints --xml-text '<constraints/>'"
-      become: true
     - name: Remove existing resources.
       command:
         cmd: "cibadmin --replace --scope resources --xml-text '<resources/>'"
-      become: true
     - name: Update pacemaker resources.
       command:
         cmd: "cibadmin --replace --xpath '/cib/configuration/resources' --xml-text '{{ cluster_resources }}'"
-      become: true
   when: resources_change_required
+  become: true
 
 - name: Ensure BeeGFS HA cluster attributes are correct.
   include_tasks: attributes.yml
 
 - name: Ensure BeeGFS HA services are running.
   include_tasks: constraints.yml
+
+- name: Check whether cluster is in maintenance mode.
+  command:
+    cmd: "crm_attribute --name maintenance-mode --query"
+  register: maintenance_mode_query
+  failed_when: maintenance_mode_query['rc'] not in [0,6]
+  changed_when: false
+
+- name: Move cluster out of maintenance mode.
+  command:
+    cmd: "crm_attribute --name maintenance-mode --delete"
+  when: maintenance_mode_query['rc'] == 0 and maintenance_mode_query['stdout'] == 'true'
