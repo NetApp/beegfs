@@ -65,14 +65,23 @@
           include_tasks: services/storage.yml
           when: 'inventory_hostname in groups[beegfs_ha_ansible_host_group] and "storage" in node_info["services"]'
 
-        - name: Ensure BeeGFS HA cluster resources are correct.
-          include_tasks: resources.yml
-          when: inventory_hostname == preferred_management_node
-
-        - name: Backup current BeeGFS HA configuration.
-          include_tasks: ../backup.yml
-          when: inventory_hostname == preferred_management_node
       tags:
+        - beegfs_ha_configure
+        - beegfs_ha
+
+    - name: Ensure BeeGFS HA cluster resources are correct.
+      include_tasks: resources.yml
+      when: inventory_hostname == preferred_management_node
+      tags:
+        - beegfs_ha_resource_configuration
+        - beegfs_ha_configure
+        - beegfs_ha
+
+    - name: Backup current BeeGFS HA configuration.
+      include_tasks: ../backup.yml
+      when: inventory_hostname == preferred_management_node
+      tags:
+        - beegfs_ha_resource_configuration
         - beegfs_ha_configure
         - beegfs_ha
 

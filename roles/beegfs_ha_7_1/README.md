@@ -226,6 +226,7 @@ Role Tags
     - beegfs_ha                     # All BeeGFS HA tasks.
     - beegfs_ha_package             # All BeeGFS HA package tasks.
     - beegfs_ha_configure           # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
+    - beegfs_ha_resource_configuration   # All BeeGFS HA pacemaker resource tasks.
     - beegfs_ha_performance_tuning  # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
     - beegfs_ha_client              # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
 
