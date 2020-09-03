@@ -1,8 +1,0 @@
-# Define any tests we want to perform specific to config 3 here.
-
-- hosts: eseries_beegfs_hosts
-  any_errors_fatal: true
-  tasks:
-    - name: Execute Tests on Config 3
-      debug:
-        msg: "Insert tests for config 3 here."
