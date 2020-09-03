@@ -7,7 +7,35 @@ Requirements
 ------------
     - Ansible 2.9 or later
     - NetApp E-Series E2800 platform or newer or NetApp E-Series SANtricity Web Services Proxy configured for older E-Series Storage arrays.
-    - Redhat 7+ for all BeeGFS HA nodes.
+
+Support Matrix
+--------------
+The BeeGFS role has been tested with the following BeeGFS versions, operating systems, and backend/frontend protocols:
+
+| Component              | BeeGFS Version | Operating System        | Storage Protocols             | Client Protocols    |
+| ---------------------- | -------------- | ----------------------- | ----------------------------- | ------------------- |
+| BeeGFS Client service  | 7.1.4          | RedHat 7.7, SLES 12 SP4 | N/A                           | TCP/UDP and RDMA    |
+| BeeGFS Server services | 7.1.4          | RedHat 7.7              | IB-iSER, iSCSI                | N/A                 |
+
+Notes:
+- BeeGFS Server services include BeeGFS management, metadata and storage services.
+- While not explicitly tested, it is reasonable to expect implicit support for the following:
+  - RedHat/SLES versions within the same major release family (for example SLES 12 SP3) and downstream distributions (for example CentOS).
+  - Versions of BeeGFS within the same major release family (for example 7.1.3).
+
+The BeeGFS role has been tested with the following E-Series storage systems and protocols:
+
+| Platform | Firmware | Protocols           |
+| -------- | -------- | ------------------- |
+| E5700    | 11.52    | iSCSI, IB-iSER      |
+
+Notes:
+- While not explicitly included in testing, other firmware versions and storage systems including the E2800 and SAN protocols including IB-SRP, FCP, and NVMe/FC are expected to work.
+
+Installation
+------------
+    To install dependencies:
+        - pip install ansible>=2.9 ipaddr netaddr
 
 Example Playbook
 ----------------
@@ -37,6 +65,7 @@ Example Inventory
 
         ha_cluster:
           vars:
+            eseries_common_allow_host_reboot: true
             beegfs_ha_ansible_host_group: ha_cluster
             beegfs_ha_ansible_storage_group: eseries_storage_systems
             beegfs_ha_cluster_name: hacluster
@@ -185,7 +214,8 @@ Example Host Inventory File
 
 Example Project
 ---------------
-    See https://github.com/netappeseries/host/tree/master/beegfs_ha_7_1 example_project.
+    * If your going to use the example project as a basis for your own, be sure to copy the whole structure to your Ansible control node and update all values to ensure a smooth automation experience.
+    See the [example_project](https://github.com/netappeseries/host/tree/master/beegfs_ha_7_1).
 
 Role Tags
 ---------
@@ -197,6 +227,7 @@ Role Tags
     - beegfs_ha_package             # All BeeGFS HA package tasks.
     - beegfs_ha_configure           # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
     - beegfs_ha_performance_tuning  # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
+    - beegfs_ha_client              # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
 
 General Notes
 -------------
@@ -216,7 +247,7 @@ NTP (`beegfs_ha_ntp_enabled: true`)
     As a result the NTP related Ansible tasks will be marked as changed whenever the role is reapplied. If you're wanting to manage the NTP configuration outside Ansible simply set `beegfs_ha_ntp_enabled: False` to prevent the role from configuring NTP.
 
 Performance Tuning (`beegfs_ha_enable_performance_tuning: False`)
--------------------------------------------------------------
+-----------------------------------------------------------------
     Performance tuning is disabled by default, but can be enabled by setting `beegfs_ha_enable_performance_tuning: True`. The default is to avoid a scenario where users are unaware these are being set, and they result in poor performance or stability issues that are difficult to troubleshoot. There is also the added consideration the default values will likely need to be adjusted to achieve optimal performance for a given hardware configuration.
 
     BeeGFS calls out a number of parameters at https://www.beegfs.io/wiki/StorageServerTuning and https://www.beegfs.io/wiki/MetaServerTuning that can be used to improve the performance of BeeGFS storage and metadata services. To help simplify performance tuning for BeeGFS storage and metadata nodes, the BeeGFS role provides the following functionality:
@@ -363,18 +394,19 @@ Role Variables
     beegfs_ha_uninstall_pcsd_dir: /var/lib/pcsd/                      # PCS daemon directory absolute path.
 
     # Debian / Ubuntu repository defaults
-    beegfs_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7_1
-    beegfs_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_1/gpg/DEB-GPG-KEY-beegfs
+    beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7_1
+    beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_1/gpg/DEB-GPG-KEY-beegfs
 
 
     # RedHat / CentOS repository defaults
-    beegfs_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7_1/dists/rhel7
-    beegfs_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_1/gpg/RPM-GPG-KEY-beegfs
+    beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7_1/dists/rhel7
+    beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_1/gpg/RPM-GPG-KEY-beegfs
 
 
     # SUSE repository defaults
-    beegfs_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7_1/dists/sles12
-    beegfs_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_1/gpg/RPM-GPG-KEY-beegfs
+    beegfs_ha_suse_allow_unsupported_module: true
+    beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7_1/dists/sles12
+    beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_1/gpg/RPM-GPG-KEY-beegfs
 
 Dependencies
 ------------
