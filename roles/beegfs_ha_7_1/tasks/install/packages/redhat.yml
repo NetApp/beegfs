@@ -3,10 +3,10 @@
     name: beegfs
     description: BeeGFS YUM Repo
     file: beegfs_rhel7
-    baseurl: "{{ beegfs_rhel_repository_base_url }}"
-    enabled: yes
-    gpgcheck: yes
-    gpgkey: "{{ beegfs_rhel_repository_gpgkey }}"
+    baseurl: "{{ beegfs_ha_rhel_repository_base_url }}"
+    enabled: true
+    gpgcheck: true
+    gpgkey: "{{ beegfs_ha_rhel_repository_gpgkey }}"
   become: true
 
 - name: Ensure the BeeGFS management package is installed (RedHat/CentOS - Management).
@@ -87,13 +87,11 @@
       register: kernel_version
       failed_when: "kernel_version['rc'] != 0"
       changed_when: False
-      become: true
 
     - name: Ensure kernel-devel is installed (RedHat/CentOS - Client).
       yum:
         state: present
         name: "kernel-devel-{{ kernel_version['stdout'] }}"
-      become: true
 
     - name: Ensure the BeeGFS client package is installed (RedHat/CentOS - Client).
       yum:
@@ -103,26 +101,26 @@
           - "beegfs-client-{{ beegfs_ha_beegfs_version }}*"
           - "beegfs-helperd-{{ beegfs_ha_beegfs_version }}*"
           - "beegfs-utils-{{ beegfs_ha_beegfs_version }}*"
-      become: true
-  when: beegfs_ha_client | bool == True
+  when: beegfs_ha_client == True
+  become: true
 
 - name: Ensure mailx is installed for alerts (RedHat/CentOS).
   yum:
     state: present
     name: mailx
-  when: beegfs_ha_enable_alerts | bool == True
+  when: beegfs_ha_enable_alerts == True
   become: true
 
 - name: Ensure NTP is installed (RedHat/CentOS).
   yum:
     state: latest
     name: ntp
-  when: beegfs_ha_ntp_enabled | bool == True
+  when: beegfs_ha_ntp_enabled == True
   become: true
 
 - name: Ensure Chrony is uninstalled (RedHat/CentOS).
   yum:
     state: absent
     name: chrony
-  when: beegfs_ha_ntp_enabled | bool == True
+  when: beegfs_ha_ntp_enabled == True
   become: true

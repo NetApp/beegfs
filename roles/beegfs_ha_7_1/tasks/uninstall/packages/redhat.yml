@@ -37,15 +37,12 @@
   when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
   become: true
 
-- name: Configure packages for BeeGFS clients(RedHat/CentOS - Client).
-  block:
-    - name: Ensure the BeeGFS client package is installed (RedHat/CentOS - Client).
-      yum:
-        state: absent
-        name:
-          - "beegfs-client-{{ beegfs_ha_beegfs_version }}*"
-          - "beegfs-helperd-{{ beegfs_ha_beegfs_version }}*"
-          - "beegfs-utils-{{ beegfs_ha_beegfs_version }}*"
-      become: true
-  when: beegfs_ha_client | bool == True
+- name: Ensure the BeeGFS client package is installed (RedHat/CentOS - Client).
+  yum:
+    state: absent
+    name:
+      - "beegfs-client-{{ beegfs_ha_beegfs_version }}*"
+      - "beegfs-helperd-{{ beegfs_ha_beegfs_version }}*"
+      - "beegfs-utils-{{ beegfs_ha_beegfs_version }}*"
+  when: beegfs_ha_client == True
   become: true
