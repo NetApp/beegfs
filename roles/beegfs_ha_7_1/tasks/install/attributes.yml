@@ -44,8 +44,29 @@
   become: true
 
 
+# Ensure pcs stonith-action property is configured as expected.
+- name: Determine whether cluster stonith action is set to shutdown.
+  command:
+    cmd: "crm_attribute --type crm_config --name stonith-action --query --quiet"
+  changed_when: false
+  failed_when: false
+  register: stonith_action_query
+  become: true
+
+- name: Set cluster stonith action is set to shutdown
+  block:
+    - name: Set pacemaker into maintenance-mode.
+      command:
+        cmd: "crm_attribute --name maintenance-mode --update true"
+    - name: Set cluster to asymmetric cluster architecture.
+      command:
+        cmd: "crm_attribute --type crm_config --name stonith-action --update {{ beegfs_ha_enable_fence_shutdown }}"
+  when: stonith_action_query['rc'] != 0 or (stonith_action_query['stdout'] | bool) != beegfs_ha_enable_fence_shutdown
+  become: true
+
+
 # Ensure pcs stonith-enabled property is configured as expected.
-- name: Determine whether cluster is configured for asymmetric cluster architecture.
+- name: Determine whether cluster stonith is enabled.
   command:
     cmd: "crm_attribute --type crm_config --name stonith-enabled --query --quiet"
   changed_when: false
@@ -53,7 +74,7 @@
   register: stonith_enabled_query
   become: true
 
-- name: Set cluster to asymmetric cluster architecture.
+- name: Set cluster stonith is enabled.
   block:
     - name: Set pacemaker into maintenance-mode.
       command:

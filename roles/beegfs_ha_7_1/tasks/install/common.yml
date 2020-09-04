@@ -10,9 +10,8 @@
 - name: Ensure all cluster nodes are authenticated.
   include_tasks: common/authenticate.yml
 
-- name: Ensure cluster user password is set and the pcs daemon is enabled and running.
-  include_tasks: common/pcs.yml
+#- name: Ensure cluster user password is set and the pcs daemon is enabled and running.
+#  include_tasks: common/pcs.yml
 
-#- name: Ensure the cluster is built.
-#  include_tasks: common/build_cluster.yml
-#  when: inventory_hostname == preferred_management_node
+- name: Ensure the cluster is built.
+  include_tasks: common/build_cluster.yml

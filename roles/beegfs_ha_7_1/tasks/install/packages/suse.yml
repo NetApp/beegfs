@@ -16,6 +16,30 @@
   when: "'.repo' not in beegfs_ha_suse_repository_base_url"
   become: true
 
+- name: Ensure all cluster services are installed (SUSE - Management, Metadata, Storage).
+  block:
+    - name: Ensure mailx is installed for alerts (SUSE).
+      apt:
+        state: present
+        name: mailx
+      when: beegfs_ha_enable_alerts == True
+
+    - name: Ensure NTP is installed (SUSE).
+      zypper:
+        state: latest
+        name: ntp
+      when: beegfs_ntp_enabled | bool == True
+      become: true
+
+    - name: Ensure Chrony is uninstalled (SUSE).
+      zypper:
+        state: absent
+        name: chrony
+      when: beegfs_ntp_enabled | bool == True
+      become: true
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  become: true
+
 - name: Configure packages for BeeGFS clients (SUSE - Client).
   block:
     - name: Enable unsupported modules (SUSE - Client).
@@ -53,19 +77,5 @@
           - "beegfs-client={{ beegfs_ha_beegfs_version }}"
           - "beegfs-helperd={{ beegfs_ha_beegfs_version }}"
           - "beegfs-utils={{ beegfs_ha_beegfs_version }}"
-  when: beegfs_ha_client == True
-  become: true
-
-- name: Ensure NTP is installed (SUSE).
-  zypper:
-    state: latest
-    name: ntp
-  when: beegfs_ntp_enabled | bool == True
-  become: true
-
-- name: Ensure Chrony is uninstalled (SUSE).
-  zypper:
-    state: absent
-    name: chrony
-  when: beegfs_ntp_enabled | bool == True
+  when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
   become: true

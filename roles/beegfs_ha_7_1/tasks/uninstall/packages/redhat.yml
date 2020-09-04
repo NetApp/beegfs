@@ -44,5 +44,5 @@
       - "beegfs-client-{{ beegfs_ha_beegfs_version }}*"
       - "beegfs-helperd-{{ beegfs_ha_beegfs_version }}*"
       - "beegfs-utils-{{ beegfs_ha_beegfs_version }}*"
-  when: beegfs_ha_client == True
+  when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
   become: true

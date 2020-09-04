@@ -4,6 +4,7 @@
     dest: "{{ beegfs_ha_ntp_configuration_file }}"
   register: beegfs_ha_ntp_conf
   become: true
+
 - name: Start ntp service.
   systemd:
     name: "{{ beegfs_ha_ntp_service }}"
@@ -11,3 +12,5 @@
     daemon-reload: true
     enabled: true
   become: true
+
+# TODO - name: Ensure BeeGFS HA nodes are in sync.

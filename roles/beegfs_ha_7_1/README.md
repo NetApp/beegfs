@@ -207,7 +207,12 @@ Example Host Inventory File
       - name: eth2
         address: 192.168.3.226/24
 
-    beegfs_ha_client: true
+Example BeeGFS HA Client Inventory File
+---------------------------------------
+    ansible_host: 192.168.1.226
+    ansible_ssh_user: admin
+    ansible_become_password: adminpass
+
     beegfs_ha_client_connInterfaces:
       - eth0
       - eth1
@@ -323,7 +328,6 @@ Role Variables
     beegfs_ha_backup_path: /tmp/                                # PCS backup file path.
 
     # BeeGFS client defaults
-    beegfs_ha_client: false                                     # Whether node should be a BeeGFS client.
     beegfs_ha_client_connInterfaces:                            # List of node interfaces to use to communicate with the BeeGFS file system.
     beegfs_ha_client_udp_port: 8004                             # Client UDP port to communicate with the BeeGFS file system.
     beegfs_ha_helperd_tcp_port: 8006                            # Client helper daemon TCP port.

@@ -10,21 +10,21 @@
 - name: Ensure pcs has been stopped
   command:
     cmd: "pcs cluster stop --force"
-  when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   ignore_errors: true
   become: true
 
 - name: Ensure pcs cluster has been destroyed
   command:
     cmd: "pcs cluster destroy --force"
-  when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   ignore_errors: true
   become: true
 
 - name: Ensure storage has been provisioned for hosts.
   include_role:
     name: netapp_eseries.host.unmount
-  when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   vars:
     eseries_common_group: "{{ beegfs_ha_ansible_storage_group }}"
     eseries_unmount_volumes: all_volumes
@@ -35,7 +35,7 @@
 - name: Ensure multipath and iscsi protocol are setup.
   include_role:
     name: netapp_eseries.host.storage_setup
-  when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   vars:
     eseries_storage_setup_uninstall: true
 
@@ -48,17 +48,17 @@
 
 - name: Uninstall any configure OS-specific packages.
   include_tasks: "packages/{{ ansible_os_family | lower }}.yml"
-  when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 - name: Ensure any performance tuning has been removed.
   include_tasks: "performance_tuning.yml"
-  when: 'inventory_hostname in groups[beegfs_ha_ansible_host_group] and ("metadata" in node_info["services"] or "storage" in node_info["services"])'
+  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("metadata" in node_info["services"] or "storage" in node_info["services"])'
 
 - name: Reboot nodes
   reboot:
-  when: inventory_hostname in groups[beegfs_ha_ansible_host_group] and beegfs_ha_uninstall_reboot | bool == True
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and beegfs_ha_uninstall_reboot | bool == True
   become: true
 
 - name: Ensure any cluster and BeeGFS configuration files are removed.
   include_tasks: "configuration.yml"
-  when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]

@@ -1,4 +1,4 @@
-{% for host in groups[beegfs_ha_ansible_host_group] if "metadata" in (hostvars[host]["node_info"].keys() | list) %}
+{% for host in groups[beegfs_ha_ansible_cluster_group] if "metadata" in (hostvars[host]["node_info"].keys() | list) %}
   {%- for info in hostvars[host]["node_info"]["metadata"] if host in info["preferred_node_order"][0] -%}
     {%- set group = info["resource_group"] -%}
     {%- set volume = info["volumes"][0]["name"] -%}

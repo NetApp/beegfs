@@ -1,3 +1,37 @@
+- name: Retrieve the pcsd tokens for cluster node authentication validation.
+  fetch:
+    src: "{{ beegfs_ha_pcsd_tokens }}"
+    dest: "/tmp/~pcsd_tokens-{{ inventory_hostname }}"
+    flat: true
+    fail_on_missing: false
+  register: fetched_pcsd_tokens
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Determine pcs cluster node authentication statuses.
+  set_fact:
+    pcs_auth_tokens: "{{ (lookup('file', '/tmp/~pcsd_tokens-{{ inventory_hostname }}') | default({'tokens': {}}) | from_json)['tokens'] }}"
+  become: true
+  when: '"dest" in (fetched_pcsd_tokens.keys() | list)'
+
+- name: Ensure all pcs cluster nodes have been authenticate.
+  command:
+    cmd: "{{ beegfs_ha_pcs_auth_command }} {{ groups[beegfs_ha_ansible_cluster_group] | join(' ') }} -u {{ beegfs_ha_cluster_username }} -p {{ beegfs_ha_cluster_password }}"
+  register: pcs_node_authentication_update
+  when: unauthenticated_nodes | length > 0 and inventory_hostname == preferred_management_node
+  become: true
+  vars:
+    unauthenticated_nodes: |-
+      {%- set unauthenticated_nodes = [] -%}
+      {%- for host in groups[beegfs_ha_ansible_cluster_group] -%}
+        {%- if pcs_auth_tokens is not defined or hostvars[host]["inventory_hostname"] not in (pcs_auth_tokens.keys() | list) -%}
+          {%- if unauthenticated_nodes.append(host) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- unauthenticated_nodes -}}
+
+
 - name: Get nodes list from pacemaker cib.xml.
   xml:
     path: "{{ beegfs_ha_pacemaker_cib_xml }}"
@@ -10,7 +44,7 @@
 
 - name: Setup pcs cluster.
   command:
-    cmd: "{{ beegfs_ha_pcs_cluster_setup_command }} {{ beegfs_ha_cluster_name }} {{ groups[beegfs_ha_ansible_host_group] | join(' ') }}"
+    cmd: "{{ beegfs_ha_pcs_cluster_setup_command }} {{ beegfs_ha_cluster_name }} {{ groups[beegfs_ha_ansible_cluster_group] | join(' ') }}"
   register: pcs_cluster_setup_command
   when: '"matches" not in (cib_nodes_search.keys() | list) and inventory_hostname == preferred_management_node'
   become: true
@@ -33,13 +67,13 @@
       set_fact:
         add_cluster_nodes: |-
           {%- set nodes = [] -%}
-          {%- for node in groups[beegfs_ha_ansible_host_group] if node not in cib_nodes -%}
+          {%- for node in groups[beegfs_ha_ansible_cluster_group] if node not in cib_nodes -%}
             {%- if nodes.append(node) -%}{%- endif -%}
           {%- endfor -%}
           {{- nodes -}}
         remove_cluster_nodes: |-
           {%- set nodes = [] -%}
-          {%- for node in cib_nodes if node not in groups[beegfs_ha_ansible_host_group] -%}
+          {%- for node in cib_nodes if node not in groups[beegfs_ha_ansible_cluster_group] -%}
             {%- if nodes.append(node) -%}{%- endif -%}
           {%- endfor -%}
           {{- nodes -}}
@@ -110,7 +144,7 @@
 - name: Get the pacemaker and corosync active statuses.
   command: systemctl is-active pacemaker.service corosync.service
   delegate_to: "{{ item }}"
-  loop: "{{ groups[beegfs_ha_ansible_host_group] }}"
+  loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
   changed_when: false
   failed_when: false
   register: daemons_active
@@ -120,7 +154,7 @@
 - name: Get the pacemaker and corosync enabled statuses.
   command: systemctl is-enabled pacemaker.service corosync.service
   delegate_to: "{{ item }}"
-  loop: "{{ groups[beegfs_ha_ansible_host_group] }}"
+  loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
   changed_when: false
   failed_when: false
   register: daemons_enabled
