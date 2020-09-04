@@ -54,7 +54,7 @@
   set_fact:
     cluster_resource_groups: |-
       {%- set resources = [] -%}
-      {%- for group in (groups.keys() | list) if group != beegfs_ha_ansible_cluster_group -%}
+      {%- for group in (groups.keys() | list) if group not in [beegfs_ha_ansible_cluster_group, beegfs_ha_ansible_client_group] -%}
         {%- for host in groups[group] if host not in groups[beegfs_ha_ansible_cluster_group] -%}
           {#- DO NOTHING -#}
         {%- else -%}
@@ -127,7 +127,7 @@
   vars:
     resources: |-
       {%- set resources = {} -%}
-      {%- for group in (groups.keys() | list) if group != beegfs_ha_ansible_cluster_group -%}
+      {%- for group in (groups.keys() | list) if group not in [beegfs_ha_ansible_cluster_group, beegfs_ha_ansible_client_group] -%}
 
         {#- Collect and merge variables from the group_vars files -#}
         {%- if resources.update({group: {}}) -%}{%- endif -%}

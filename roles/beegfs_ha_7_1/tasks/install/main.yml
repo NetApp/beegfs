@@ -90,6 +90,8 @@
 
     - name: Ensure BeeGFS HA clients are configured.
       block:
+        - debug:
+            msg: "{{ groups[beegfs_ha_ansible_client_group] }}"
         - name: Ensure BeeGFS HA clients are configured.
           include_tasks: services/client.yml
           when: inventory_hostname in groups[beegfs_ha_ansible_client_group]

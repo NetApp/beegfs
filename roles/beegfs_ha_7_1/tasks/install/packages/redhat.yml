@@ -71,8 +71,15 @@
           - "corosync-{{ beegfs_ha_corosync_version }}*"
           - "pacemaker-{{ beegfs_ha_pacemaker_version }}*"
           - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined%}-{{beegfs_ha_fence_agents_all_version}}*{% endif %}"
-    # TESTING WITHOUT PCS - "pcs-{{ beegfs_ha_pcs_version }}*"
+          - "pcs-{{ beegfs_ha_pcs_version }}*"
       when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
+
+    - name: Ensure pcsd daemon is running and enabled.
+      systemd:
+        name: pcsd
+        state: started
+        enabled: true
+      become: true
 
     - name: Ensure mailx is installed for alerts (RedHat/CentOS).
       yum:
