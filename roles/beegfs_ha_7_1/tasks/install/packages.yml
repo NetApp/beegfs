@@ -1,10 +1,2 @@
 - name: Ensure expected BeeGFS packages are installed (Always).
   include_tasks: "packages/{{ ansible_os_family | lower }}.yml"
-
-- name: Ensure pacemaker and corosync are enabled and started
-  systemd:
-    state: started
-    enabled: true
-    name: "{{ item }}"
-  loop: ["corosync", "pacemaker"]
-  become: true

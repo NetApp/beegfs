@@ -32,6 +32,8 @@
     eseries_unmount_delete: true
     eseries_unmount_wipe_format_signatures: true
 
+# TODO: Delete all mount directories...
+
 - name: Ensure multipath and iscsi protocol are setup.
   include_role:
     name: netapp_eseries.host.storage_setup

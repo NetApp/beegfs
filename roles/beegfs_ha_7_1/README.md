@@ -219,7 +219,7 @@ Example BeeGFS HA Client Inventory File
 
 Example Project
 ---------------
-    * If your going to use the example project as a basis for your own, be sure to copy the whole structure to your Ansible control node and update all values to ensure a smooth automation experience.
+    *If your going to use the example project as a basis for your own, be sure to copy the whole structure to your Ansible control node and update all values to ensure a smooth automation experience.
     See the [example_project](https://github.com/netappeseries/host/tree/master/beegfs_ha_7_1).
 
 Role Tags
@@ -227,13 +227,17 @@ Role Tags
     Use the following tags when executing you BeeGFS HA playbook to only execute select tasks.
         example: ansible-playbook -i inventory.yml playbook.yml --tags beegfs_ha_configure
 
-    - storage                       # Provisions storage and ensures volumes are presented on hosts.
-    - beegfs_ha                     # All BeeGFS HA tasks.
-    - beegfs_ha_package             # All BeeGFS HA package tasks.
-    - beegfs_ha_configure           # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
-    - beegfs_ha_resource_configuration   # All BeeGFS HA pacemaker resource tasks.
-    - beegfs_ha_performance_tuning  # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
-    - beegfs_ha_client              # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
+    - storage                           # Provisions storage and ensures volumes are presented on hosts.
+    - beegfs_ha                         # All BeeGFS HA tasks.
+    - beegfs_ha_package                 # All BeeGFS HA package tasks.
+    - beegfs_ha_configure               # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
+    - beegfs_ha_resource_configuration  # All BeeGFS HA pacemaker resource tasks.
+    - beegfs_ha_firewall                # Ensure firewall high-availability service is enabled.
+    - beegfs_ha_ntp                     # Ensure NTP service is configured, enabled, and nodes are synchronized.
+    - beegfs_ha_node                    # Ensure all expected BeeGFS HA cluster nodes are available. *Use this when adding, removing, or replacing nodes in the cluster.
+    - beegfs_ha_performance_tuning      # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
+    - beegfs_ha_backup                  # Backup Pacemaker and Corosync configuration files.
+    - beegfs_ha_client                  # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
 
 General Notes
 -------------

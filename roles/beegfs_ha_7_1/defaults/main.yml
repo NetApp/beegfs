@@ -5,9 +5,9 @@ beegfs_ha_ansible_storage_group: eseries_storage_systems
 beegfs_ha_cluster_name: hacluster
 
 # THESE MAY ONLY BE NEEDED TO AUTHENTICATE USING THE PCS TOOL. ANSIBLE MAYBE A VIABLE REPLACEMENT FOR THIS TASK.
-#beegfs_ha_cluster_username: hacluster
-#beegfs_ha_cluster_password: hapassword
-#beegfs_ha_cluster_password_sha512_salt: random$alt
+beegfs_ha_cluster_username: hacluster
+beegfs_ha_cluster_password: hapassword
+beegfs_ha_cluster_password_sha512_salt: random$alt
 beegfs_ha_ntp_enabled: true
 beegfs_ha_alert_email_subject: "ClusterNotification"
 beegfs_ha_alert_email_list: []  # List of emails to alert when changes occur.
@@ -18,7 +18,7 @@ beegfs_ha_alert_email_list: []  # List of emails to alert when changes occur.
 beegfs_ha_enable_alerts: true
 beegfs_ha_enable_quota: false
 beegfs_ha_enable_fence: true  # Fencing agents should be used to ensure failed nodes are definitely down.  WARNING! If beegfs_ha_enable_fence is set to false then a fencing agent will not be configured!
-beegfs_ha_enable_fence_shutdown: true # Fence agent will by default shutdown when stoned.
+beegfs_ha_enable_fence_action: off  # Fence agent will by default shutdown when stoned. Options: off, reboot
 beegfs_ha_filter_ip_ranges: []
 beegfs_ha_node_preference_scope_step: 200
 beegfs_ha_cluster_resource_defaults:
@@ -70,6 +70,10 @@ beegfs_ha_ntp_restricts:
 corosync_authkey_path: /etc/corosync/authkey
 corosync_conf_path: /etc/corosync/corosync.conf
 corosync_log_path: /var/log/corosync.log
+
+
+# Pcs defaults
+beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/
 
 
 # Uninstall defaults

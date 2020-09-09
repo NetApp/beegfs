@@ -46,12 +46,22 @@
         - beegfs_ha
         - beegfs_ha_performance_tuning
 
-    - name: Ensure BeeGFS HA cluster is configured.
+
+    - name: Ensure common BeeGFS HA tasks are applied to BeeGFS service nodes (Management/Metadata/Storage).
       block:
         - name: Ensure common BeeGFS HA tasks are applied to BeeGFS service nodes (Management/Metadata/Storage).
           include_tasks: common.yml
-          when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
+          when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("management" in node_info["services"] or
+                                                                                    "metadata" in node_info["services"] or "storage" in node_info["services"])'
+      tags:
+        - beegfs_ha_firewall
+        - beegfs_ha_ntp
+        - beegfs_ha_node
+        - beegfs_ha_configure
+        - beegfs_ha
 
+    - name: Ensure BeeGFS HA cluster is configured.
+      block:
         - name: Ensure BeeGFS HA management resource group is configured.
           include_tasks: services/management.yml
           when: '"management" in node_info["services"]'
@@ -86,12 +96,11 @@
       tags:
         - beegfs_ha_resource_configuration
         - beegfs_ha_configure
+        - beegfs_ha_backup
         - beegfs_ha
 
     - name: Ensure BeeGFS HA clients are configured.
       block:
-        - debug:
-            msg: "{{ groups[beegfs_ha_ansible_client_group] }}"
         - name: Ensure BeeGFS HA clients are configured.
           include_tasks: services/client.yml
           when: inventory_hostname in groups[beegfs_ha_ansible_client_group]

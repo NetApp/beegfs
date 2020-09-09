@@ -1,7 +1,0 @@
-# THIS MAY BE NEEDED FOR PCS TOOL
-#- name: Set pcs cluster password.
-#  user:
-#    name: "{{ beegfs_ha_cluster_username }}"
-#    password: "{{ beegfs_ha_cluster_password | password_hash('sha512', beegfs_ha_cluster_password_sha512_salt) }}"
-#    create_home: false
-#  become: true

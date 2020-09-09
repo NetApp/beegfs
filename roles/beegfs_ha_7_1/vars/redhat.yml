@@ -1,3 +1,4 @@
+beegfs_ha_management_tool: pcs
 beegfs_ha_pcs_auth_command: "pcs cluster auth"
 beegfs_ha_pcs_cluster_setup_command: "pcs cluster setup --name"
 beegfs_ha_ntp_service: ntpd.service

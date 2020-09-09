@@ -34,7 +34,7 @@
       set_fact:
         beegfs_ha_corosync_authkey: |-
           {%- set authkeys = [] -%}
-          {%- for result in corosync_authkey["results"] if result["rc"] == 0 -%}
+          {%- for result in corosync_authkey["results"] if result["rc"] == 0 and result["stdout"] not in authkeys -%}
             {%- if authkeys.append(result["stdout"]) -%}{%- endif -%}
           {%- endfor -%}
           {%- if authkeys | length == 1 -%}
@@ -84,7 +84,34 @@
       changed_when: false
       register: nodes_query
 
-    # TODO: - name: Determine node changes. Whether nodes should be added or removed.
+    # Remove any nodes that are not expected
+    - name: Determine node changes. Whether nodes should be added or removed.
+      set_fact:
+        remove_node_list: |-
+          {%- set nodes = [] -%}
+          {%- for line in nodes_query if line | regex_search("uname=") -%}
+            {%- set current_node = (line | regex_replace('\s+<node uname="', "")).split('"')[0] -%}
+            {%- if current_node not in groups[beegfs_ha_ansible_cluster_group] -%}
+              {%- if nodes.append(current_node) -%}{%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{- nodes -}}
+
+    - name:     # Remove any nodes that are not expected. ONLY WORKS IF HOST IS PART OF THE INVENTORY.
+      systemd:
+        state: stop
+        enabled: false
+        name: corosync
+      delegate_to: "{{ item }}"
+      loop: "{{ remove_node_list }}"
+      failed_when: false  # In case corosync has been uninstalled.
+      become: true
+
+    - name: Remove node from pacemaker
+      command:
+        cmd: "crm_node -R {{ item }} --force"
+      loop: "{{ remove_node_list }}"
+      become: true
 
     - name: Determine whether changes are required for pacemaker resources.
       set_fact:

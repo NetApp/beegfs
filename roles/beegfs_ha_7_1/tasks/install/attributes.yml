@@ -60,8 +60,8 @@
         cmd: "crm_attribute --name maintenance-mode --update true"
     - name: Set cluster to asymmetric cluster architecture.
       command:
-        cmd: "crm_attribute --type crm_config --name stonith-action --update {{ beegfs_ha_enable_fence_shutdown }}"
-  when: stonith_action_query['rc'] != 0 or (stonith_action_query['stdout'] | bool) != beegfs_ha_enable_fence_shutdown
+        cmd: "crm_attribute --type crm_config --name stonith-action --update {{ beegfs_ha_enable_fence_action }}"
+  when: stonith_action_query['rc'] != 0 or (stonith_action_query['stdout'] | bool) != beegfs_ha_enable_fence_action
   become: true
 
 
