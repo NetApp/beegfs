@@ -70,8 +70,10 @@
         - beegfs_ha
 
     - name: Ensure BeeGFS HA cluster resources are correct.
-      include_tasks: resources.yml
-      when: inventory_hostname == preferred_management_node
+      block:
+        - name: Ensure BeeGFS HA cluster resources are correct.
+          include_tasks: resources.yml
+          when: inventory_hostname == preferred_management_node
       tags:
         - beegfs_ha_resource_configuration
         - beegfs_ha_configure
