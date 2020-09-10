@@ -232,9 +232,6 @@ Role Tags
     - beegfs_ha_package                 # All BeeGFS HA package tasks.
     - beegfs_ha_configure               # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
     - beegfs_ha_resource_configuration  # All BeeGFS HA pacemaker resource tasks.
-    - beegfs_ha_firewall                # Ensure firewall high-availability service is enabled.
-    - beegfs_ha_ntp                     # Ensure NTP service is configured, enabled, and nodes are synchronized.
-    - beegfs_ha_node                    # Ensure all expected BeeGFS HA cluster nodes are available. *Use this when adding, removing, or replacing nodes in the cluster.
     - beegfs_ha_performance_tuning      # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
     - beegfs_ha_backup                  # Backup Pacemaker and Corosync configuration files.
     - beegfs_ha_client                  # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
