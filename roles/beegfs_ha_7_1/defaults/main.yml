@@ -26,6 +26,8 @@ beegfs_ha_cluster_resource_defaults:
 beegfs_ha_fencing_agents: {}
 beegfs_ha_backup: true
 
+beegfs_ha_force_resource_move: true   # Forces node and resource changes to migrate services to preferred nodes.
+
 
 # BeeGFS client defaults
 #beegfs_ha_client_connInterfaces:

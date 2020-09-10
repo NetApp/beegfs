@@ -327,6 +327,7 @@ Role Variables
     beegfs_ha_node_preference_scope_step: 200                   # Arbitrary constraint scope step between ordered hosts in the inventory file resource host group.
     beegfs_ha_cluster_resource_defaults:                        # Pacemaker resource defaults dictionary. These will be applied across all resource groups.
       resource-stickiness: 15000
+    beegfs_ha_force_resource_move: true                         # Forces node and resource changes to migrate services to preferred nodes.
     beegfs_ha_backup: true                                      # Whether to create a PCS backup which can be used to restore to a previous configuration.
                                                                 #   Use the following command to restore a previous configuration: pcs config restore <backup>
     beegfs_ha_backup_path: /tmp/                                # PCS backup file path.

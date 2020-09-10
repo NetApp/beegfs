@@ -27,21 +27,22 @@
       set_fact:
         update_pcs_required: |-
           {%- set scratch = {"valid_token_files": True} -%}
-          {%- for host in groups[beegfs_ha_ansible_cluster_group] -%}
-            {%- set current = lookup("file", "/tmp/~pcs_tokens_" ~ host) | default({}) -%}
-            {%- if "previous" not in (scratch.keys() | list) -%}
-              {%- if scratch.update({"previous": current }) -%}{%- endif -%}
-            {%- endif -%}
+            {%- for host in groups[beegfs_ha_ansible_cluster_group] -%}
+              {%- set current = lookup("file", "/tmp/~pcs_tokens_" ~ host) | default({}) -%}
+              {%- if "previous" not in (scratch.keys() | list) -%}
+                {%- if scratch.update({"previous": current }) -%}{%- endif -%}
+              {%- endif -%}
 
-            {%- if scratch["previous"] == {} or scratch["previous"] != current -%}
-              {%- if scratch.update({"valid_token_files": False}) -%}{%- endif -%}
-            {%- endif -%}
-          {%- endfor -%}
+              {%- if scratch["previous"] == {} or scratch["previous"] != current -%}
+                {%- if scratch.update({"valid_token_files": False}) -%}{%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
 
           {%- set tokens_nodes = (scratch["previous"] | from_json)["tokens"].keys() | list | sort -%}
           {%- set expected_nodes = groups[beegfs_ha_ansible_cluster_group] | sort -%}
           {{- not scratch["valid_token_files"] or tokens_nodes != expected_nodes -}}
       run_once: true
+      ignore_errors: true
 
     - name: Delete temporary local pcs tokens file.
       file:
@@ -68,5 +69,5 @@
       command:
         cmd: "pcs cluster auth -u {{ beegfs_ha_cluster_username }} -p {{ beegfs_ha_cluster_password }}"
       when: inventory_hostname == preferred_management_node
-  when: update_pcs_required
+  when: update_pcs_required is not defined or update_pcs_required == True
   become: true

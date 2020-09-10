@@ -63,15 +63,3 @@
 
 - name: Ensure BeeGFS HA services are running.
   include_tasks: constraints.yml
-
-- name: Check whether cluster is in maintenance mode.
-  command:
-    cmd: "crm_attribute --name maintenance-mode --query --quiet"
-  register: maintenance_mode_query
-  failed_when: maintenance_mode_query['rc'] not in [0,6]
-  changed_when: false
-
-- name: Move cluster out of maintenance mode.
-  command:
-    cmd: "crm_attribute --name maintenance-mode --delete"
-  when: maintenance_mode_query['rc'] == 0 and maintenance_mode_query['stdout'] == 'true'
