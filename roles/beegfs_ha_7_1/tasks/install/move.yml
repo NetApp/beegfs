@@ -28,6 +28,6 @@
   command:
     cmd: "crm_resource --resource {{ item['key'] }}-group --un-move"
   register: resource_unmove
-  changed_when: resource_unmove['rc'] == 0
+  changed_when: false
   failed_when: false
   loop: "{{ preferred_resource_node_list | dict2items }}"
