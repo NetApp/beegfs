@@ -25,7 +25,7 @@ then
             mkdir /root/.ansible/collections/ansible_collections/netapp_eseries/host
             env GIT_SSL_NO_VERIFY=True git clone $env_internal_host_collection_url /root/.ansible/collections/ansible_collections/netapp_eseries/host
         fi
-        git clone $env_internal_santricity_collection_url /root/.ansible/collections/ansible_collections/netapp_eseries/santricity
+        env GIT_SSL_NO_VERIFY=True git clone $env_internal_santricity_collection_url /root/.ansible/collections/ansible_collections/netapp_eseries/santricity
         exit 0
     else
         echo "[repo_check.sh] Required variable 'internal_santricity_collection_url' is not set. Please specify a URL for this variable in the docker build command using --build-arg."
