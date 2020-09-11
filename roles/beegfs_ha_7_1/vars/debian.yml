@@ -1,6 +1,7 @@
 beegfs_ha_management_tool: pcs
-#beegfs_ha_pcs_auth_command: "pcs cluster auth"
-#beegfs_ha_pcs_cluster_setup_command: "pcs cluster setup --name"
-beegfs_ntp_service: ntp.service
+beegfs_ha_ntp_service: ntp.service
 sysctl_conf_path: "/etc/sysctl.d/99-eseries-beegfs.conf"
-corosync_conf_path: "/etc/corosync/corosync.conf"
+
+beegfs_ha_corosync_version: 2.4   #.5-4
+beegfs_ha_pacemaker_version: 1.1  #.21-4
+beegfs_ha_pcs_version: 0.9        #.168

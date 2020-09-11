@@ -1,4 +1,4 @@
 beegfs_ha_management_tool: crm
-beegfs_ntp_service: ntpd.service
+beegfs_ha_ntp_service: ntpd.service
 sysctl_conf_path: "/etc/sysctl.d/99-eseries-beegfs.conf"
 corosync_conf_path: "/etc/corosync/corosync.conf"

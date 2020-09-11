@@ -97,14 +97,14 @@
           {%- endfor -%}
           {{- nodes -}}
 
-    - name:     # Remove any nodes that are not expected. ONLY WORKS IF HOST IS PART OF THE INVENTORY.
+    - name: Remove any nodes that are not expected. ONLY WORKS IF HOST IS STILL PART OF THE INVENTORY.
       systemd:
         state: stop
         enabled: false
         name: corosync
       delegate_to: "{{ item }}"
       loop: "{{ remove_node_list }}"
-      failed_when: false  # In case corosync has been uninstalled.
+      failed_when: false   # In case corosync has been uninstalled.
       become: true
 
     - name: Remove node from pacemaker

@@ -5,13 +5,6 @@
     create_home: false
   become: true
 
-#- name: Determine whether pcs tokens file exists and is correct.
-#  template:
-#    src: common/pcs_tokens.j2
-#    dest: "{{ beegfs_ha_pcsd_pcsd_path }}tokens"
-#  register: pcs_tokens
-#  become: true
-
 - name: Determine whether pcs has only tokens for the expected cluster nodes.
   block:
     - name: Fetch pcs tokens file.

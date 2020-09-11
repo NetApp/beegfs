@@ -64,3 +64,6 @@
   shell: "beegfs-check-servers"
   register: beegfs_check_servers
   changed_when: "beegfs_check_servers['rc'] != 0"
+
+#TODO: Validate beegfs_check_servers['stdout']
+#   if failed stop all node pacemaker/corosync services and then start all node corosync/pacemaker services.

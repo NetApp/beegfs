@@ -54,7 +54,7 @@
           when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("management" in node_info["services"] or
                                                                                     "metadata" in node_info["services"] or "storage" in node_info["services"])'
       tags:
-        - beegfs_ha_resource_configuration
+        - beegfs_ha_configure_resource
         - beegfs_ha_configure
         - beegfs_ha
 
@@ -82,7 +82,7 @@
           include_tasks: resources.yml
           when: inventory_hostname == preferred_management_node
       tags:
-        - beegfs_ha_resource_configuration
+        - beegfs_ha_configure_resource
         - beegfs_ha_configure
         - beegfs_ha
 
@@ -98,7 +98,7 @@
         - name: Move cluster out of maintenance mode.
           command:
             cmd: "crm_attribute --name maintenance-mode --delete"
-          when: maintenance_mode_query['rc'] == 0 and maintenance_mode_query['stdout'] == 'true'
+          when: maintenance_mode_query['rc'] == 0 and (maintenance_mode_query['stdout'] | lower) == 'true'
       when: inventory_hostname == preferred_management_node
       tags:
         - always
@@ -110,7 +110,7 @@
           when: beegfs_ha_force_resource_move == True and inventory_hostname == preferred_management_node
       tags:
         - beegfs_ha_move_resource_to_preferred_host
-        - beegfs_ha_resource_configuration
+        - beegfs_ha_configure_resource
         - beegfs_ha_configure
         - beegfs_ha
 
@@ -120,7 +120,7 @@
           include_tasks: ../backup.yml
           when: inventory_hostname == preferred_management_node
       tags:
-        - beegfs_ha_resource_configuration
+        - beegfs_ha_configure_resource
         - beegfs_ha_configure
         - beegfs_ha_backup
         - beegfs_ha
