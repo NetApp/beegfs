@@ -7,18 +7,18 @@
 - name: Collect NetApp E-Series volume information (Always).
   include_tasks: ../collect_facts.yml
 
-- name: Ensure pcs has been stopped
-  command:
-    cmd: "pcs cluster stop --force"
+- name: Stop Pacemaker service.
+  systemd:
+    state: stopped
+    name: pacemaker
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-  ignore_errors: true
   become: true
 
-- name: Ensure pcs cluster has been destroyed
-  command:
-    cmd: "pcs cluster destroy --force"
+- name: Stop Corosync service.
+  systemd:
+    state: stopped
+    name: corosync
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-  ignore_errors: true
   become: true
 
 - name: Ensure storage has been provisioned for hosts.
@@ -32,7 +32,37 @@
     eseries_unmount_delete: true
     eseries_unmount_wipe_format_signatures: true
 
-# TODO: Delete all mount directories...
+- name: "Delete the mount point for the management volume."
+  file:
+    state: absent
+    path: "{{ management_info['volumes'][0]['metadata']['mount_dir'] }}{{ management_info['volumes'][0]['name'] }}"
+  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and "management" in node_info["services"]'
+  become: true
+
+- name: Delete mount point directory for each metadata volume.
+  file:
+    state: absent
+    path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}"
+  loop: "{{ node_info['metadata'] }}"
+  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and "metadata" in node_info["services"]'
+  become: true
+
+- name: Delete mount point directory for each storage volume from each storage service.
+  file:
+    state: absent
+    path: "{{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
+  loop: "{{ all_volumes }}"
+  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and "storage" in node_info["services"]'
+  become: true
+  vars:
+    all_volumes: |-
+      {%- set all_volumes = [] -%}
+      {%- for storage in node_info["storage"] -%}
+        {%- for volume in storage["volumes"] -%}
+          {%- if all_volumes.append(volume) -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- all_volumes -}}
 
 - name: Ensure multipath and iscsi protocol are setup.
   include_role:
