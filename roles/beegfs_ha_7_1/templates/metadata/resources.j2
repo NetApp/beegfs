@@ -29,7 +29,7 @@
       {%- set iflabel = group[:12] ~ "_" ~ loop["index"] -%}
       {%- set ipaddr_id = group ~ "-IP" ~ loop["index"] %}
 
-  <primitive class="ocf" id="{{ ipaddr_id }}" provider="heartbeat" type="IPaddr">
+  <primitive class="ocf" id="{{ ipaddr_id }}" provider="heartbeat" type="IPaddr2">
     <instance_attributes id="{{ ipaddr_id }}-instance_attributes">
       <nvpair id="{{ ipaddr_id }}-instance_attributes-cidr_netmask" name="cidr_netmask" value="{{ cidr_netmask }}"/>
       <nvpair id="{{ ipaddr_id }}-instance_attributes-flush_routes" name="flush_routes" value="1"/>
