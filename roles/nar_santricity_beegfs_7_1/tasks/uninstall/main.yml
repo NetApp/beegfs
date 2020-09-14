@@ -1,0 +1,22 @@
+- name: Unconfigure BeeGFS client services.
+  import_tasks: uninstall/configure/client.yml
+  when: '"client" in beegfs_node_roles'
+
+- name: Unconfigure BeeGFS storage services.
+  import_tasks: uninstall/configure/storage.yml
+  when: '"storage" in beegfs_node_roles'
+
+- name: Unconfigure BeeGFS metadata services.
+  import_tasks: uninstall/configure/metadata.yml
+  when: '"metadata" in beegfs_node_roles'
+
+- name: Unconfigure BeeGFS management service.
+  import_tasks: uninstall/configure/management.yml
+  when: '"management" in beegfs_node_roles'
+
+- name: Remove all BeeGFS service packages.
+  include_tasks: "uninstall/packages/{{ ansible_facts['os_family'] | lower }}.yml"
+  when: '"storage" in beegfs_node_roles or "metadata" in beegfs_node_roles'
+
+- name: Execute remaining configuration cleanup tasks.
+  import_tasks: uninstall/configure/common.yml

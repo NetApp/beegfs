@@ -2,6 +2,7 @@
   systemd:
     name: beegfs-storage.service
     state: stopped
+  become: true
 
 #DEVNOTE: This two tiered approach is a workaround for observed behavior on systems (e.g. SUSE) where systemd will immediately try to remount volumes if we just use "state: absent".
 
@@ -10,12 +11,14 @@
     path: "{{ beegfs_data_directory }}beegfs/{{item.name}}"
     state: unmounted
   loop: "{{ storage_volumes }}"
+  become: true
 
 - name: Remove entries for BeeGFS storage targets from /etc/fstab.
   mount:
     path: "{{ beegfs_data_directory }}beegfs/{{item.name}}"
     state: absent
   loop: "{{ storage_volumes }}"
+  become: true
 
 - name: Wipe filesystem signature from BeeGFS storage targets.
   command: "wipefs --all {%- if ansible_facts['os_family'] | lower == 'suse' %} --backup{%- endif %} {{ item['path'] }}"
@@ -23,6 +26,7 @@
   register: beegfs_wipefs_storage_result
   changed_when: "beegfs_wipefs_storage_result.stdout != ''"
   when: 'beegfs_disable_format_storage_metadata_disks == False'
+  become: true
 
 - name: Close BeeGFS storage service TCP/UDP firewall ports if configured by the role.
   firewalld:
@@ -34,8 +38,10 @@
   loop:
     - "8003/tcp"
     - "8003/udp"
+  become: true
 
 - name: Remove the systemd drop-in directory at /etc/systemd/system/beegfs-storage.service.d/ (Storage).
   file:
     path: /etc/systemd/system/beegfs-storage.service.d/
     state: absent
+  become: true

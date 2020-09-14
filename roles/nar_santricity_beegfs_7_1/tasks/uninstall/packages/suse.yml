@@ -1,0 +1,61 @@
+#- name: Add BeeGFS ZYPPER repository (SUSE).
+#  zypper_repository:
+#    name: beegfs
+#    description: BeeGFS ZYPPER Repo
+#    repo: "{{ beegfs_suse_repository_base_url }}"
+#    autorefresh: True
+#    state: present
+#    auto_import_keys: True
+#  when: "'.repo' in beegfs_suse_repository_base_url"
+#
+#- name: Create BeeGFS repo file (SUSE).
+#  template:
+#    src: common/beegfs_suse_repo.j2
+#    dest: "/etc/zypp/repos.d/beegfs.repo"
+#  when: "'.repo' not in beegfs_suse_repository_base_url"
+
+- name: Ensure the BeeGFS management package is installed (SUSE - Management).
+  zypper:
+    state: absent
+    name: beegfs-mgmtd
+  when: '"management" in beegfs_node_roles'
+  become: true
+
+- name: Ensure the BeeGFS metadata package is installed (SUSE - Metadata).
+  zypper:
+    state: absent
+    name: beegfs-meta
+  when: '"metadata" in beegfs_node_roles'
+  become: true
+
+- name: Ensure the BeeGFS storage package is installed (SUSE - Storage).
+  zypper:
+    state: absetn
+    name: beegfs-storage
+  when: '"storage" in beegfs_node_roles'
+  become: true
+
+- name: Ensure the BeeGFS infiniband package is installed (SUSE - Metadata/Storage).
+  zypper:
+    state: absent
+    name: libbeegfs-ib
+  when: '("storage" in beegfs_node_roles or "metadata" in beegfs_node_roles) and beegfs_enable_rdma'
+  become: true
+
+- name: Enable unsupported modules (SUSE - Client).
+  replace:
+    path: /etc/modprobe.d/10-unsupported-modules.conf
+    regexp: 'allow_unsupported_modules 0'
+    replace: 'allow_unsupported_modules 1'
+  when: 'beegfs_allow_unsupported_module == True and "client" in beegfs_node_roles'
+  become: true
+
+- name: Ensure the BeeGFS client package is installed (SUSE - Client).
+  zypper:
+    state: absent
+    name:
+      - beegfs-client
+      - beegfs-helperd
+      - beegfs-utils
+  when: '"client" in beegfs_node_roles'
+  become: true
