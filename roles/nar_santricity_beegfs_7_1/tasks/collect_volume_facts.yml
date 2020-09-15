@@ -1,18 +1,37 @@
-- name: Gather facts about E-Series storage systems.
-  setup:
-  delegate_to: localhost
-  delegate_facts: true
-  loop: "{{ lookup('list', groups[beegfs_eseries_group] | default(beegfs_eseries_group)) }}"
-
 - name: Retrieve initiator volume list from E-Series storage systems (All).
   netapp_eseries.santricity.na_santricity_facts:
-    ssid: "{{ hostvars[item]['current_eseries_ssid'] | default(hostvars[item]['eseries_ssid']) }}"
-    api_url: "{{ hostvars[item]['current_eseries_api_url'] | default(hostvars[item]['eseries_api_url']) }}"
-    api_username: "{{ hostvars[item]['current_eseries_api_username'] | default(hostvars[item]['eseries_api_username']) }}"
-    api_password: "{{ hostvars[item]['current_eseries_api_password'] | default(hostvars[item]['eseries_api_password']) }}"
-    validate_certs: "{{ hostvars[item]['current_eseries_validate_certs'] | default(hostvars[item]['eseries_validate_certs']) }}"
+    ssid: "{{ creds['ssid'] }}"
+    api_url: "{{ creds['api_url'] }}"
+    api_username: "{{ creds['api_username'] }}"
+    api_password: "{{ creds['api_password'] }}"
+    validate_certs: "{{ creds['validate_certs'] }}"
   loop: "{{ lookup('list', groups[beegfs_eseries_group] | default(beegfs_eseries_group)) }}"
   register: storage_array_facts
+  vars:
+    creds: |-
+      {%- set info = hostvars[item] -%}
+      {%- set info_keys = info.keys() | list -%}
+      {%- set creds = {} -%}
+      {%- if "eseries_validate_certs" in info_keys -%}
+        {%- if creds.update({"validate_certs": info['eseries_validate_certs']}) -%}{%- endif -%}
+      {%- endif -%}
+      {%- if "eseries_system_api_url" in info_keys and "eseries_system_password" in info_keys -%}
+        {%- if creds.update({"ssid": "1",
+                             "api_url": info["eseries_system_api_url"],
+                             "api_username": info["eseries_system_username"] | default("admin"),
+                             "api_password": info["eseries_system_password"]}) -%}{%- endif -%}
+      {%- elif "eseries_proxy_ssid" in info_keys and "eseries_proxy_api_url" in info_keys and "eseries_proxy_api_password" in info_keys -%}
+        {%- if creds.update({"ssid": info["eseries_proxy_ssid"],
+                             "api_url": info["eseries_proxy_api_url"],
+                             "api_username": info["eseries_proxy_api_username"] | default("admin"),
+                             "api_password": info["eseries_proxy_api_password"]}) -%}{%- endif -%}
+      {%- elif "eseries_api_url" in info_keys and "eseries_api_password" in info_keys -%}
+        {%- if creds.update({"ssid": info["eseries_ssid"] | default("1"),
+                             "api_url": info["eseries_api_url"],
+                             "api_username": info["eseries_api_username"] | default("admin"),
+                             "api_password": info["eseries_api_password"]}) -%}{%- endif -%}
+      {%- endif -%}
+      {{- creds -}}
 
 - name: Populate eseries_volumes variable for each host (All).
   set_fact:
