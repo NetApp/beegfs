@@ -76,6 +76,12 @@
 
     - name: Force a rescue when volumes are not available (Storage/Metadata).
       block:
+        - name: Rescan iSCSI sessions (Storage/Metadata).
+          command:
+            cmd: "iscsiadm -m session -R"
+          become: true
+          when: metadata_rescan['iscsi'] or metadata_rescan['ib_iser'] or storage_rescan['iscsi'] or storage_rescan['ib_iser']
+
         - name: Rescan for all SCSI devices (Storage/Metadata).
           shell: "{{ item }}"
           become: true
