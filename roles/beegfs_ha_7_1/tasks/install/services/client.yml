@@ -3,6 +3,7 @@
     src: client/beegfs_client_conf.j2
     dest: "{{ beegfs_ha_client_configuration_directory }}beegfs-client.conf"
   register: client_conf
+  become: true
 
 - name: Ensure beegfs-client-connInterfaces.conf is properly configured (Client).
   template:
@@ -12,12 +13,14 @@
     group: root
     mode: 0644
   register: client_interfaces_conf
+  become: true
 
 - name: Ensure beegfs-client-autobuild.conf is properly configured (Client).
   template:
     src: client/beegfs_client_autobuild_conf.j2
     dest: "{{ beegfs_ha_client_configuration_directory }}beegfs-client-autobuild.conf"
   register: client_autobuild_conf
+  become: true
 
 - name: Ensure helperd service is running.
   systemd:
@@ -25,11 +28,23 @@
     state: started
     daemon-reload: true
     enabled: true
+  become: true
 
 - name: Ensure the BeeGFS client kernel module is updated (Client).
-  shell: "/etc/init.d/beegfs-client rebuild"
+  command:
+    cmd: "/etc/init.d/beegfs-client rebuild"
   become: true
   when: client_autobuild_conf['changed']
+
+- name: Wait for BeeGFS to be ready.
+  command:
+    cmd: "beegfs-check-servers -e"
+  register: beegfs_check_servers
+  changed_when: false
+  retries: 60
+  delay: 3
+  until: beegfs_check_servers['rc'] == 0
+  become: true
 
 - name: Ensure client service is running.
   systemd:
@@ -37,11 +52,13 @@
     state: "{%- if client_conf['changed'] or client_interfaces_conf['changed'] or client_autobuild_conf['changed'] %}restarted{%- else %}started{%- endif %}"
     daemon-reload: true
     enabled: true
+  become: true
 
 - name: Determine whether locate's updatedb.conf file exists.
   find:
     path: "{{ beegfs_ha_client_updatedb_conf_path }}"
   register: updatedb_conf_find
+  become: true
 
 - name: Ensure locate system scan will not scan beegfs.
   lineinfile:
@@ -64,11 +81,3 @@
         {%- endif -%}
       {%- endfor -%}
       {{- prunefs_list -}}
-
-- name: Validate BeeGFS service servers.
-  shell: "beegfs-check-servers"
-  register: beegfs_check_servers
-  changed_when: "beegfs_check_servers['rc'] != 0"
-
-#TODO: Validate beegfs_check_servers['stdout']
-#   if failed stop all node pacemaker/corosync services and then start all node corosync/pacemaker services.
