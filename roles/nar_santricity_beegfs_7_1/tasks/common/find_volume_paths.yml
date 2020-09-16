@@ -1,5 +1,5 @@
 - name: Get the multipathd maps
-  command: multipathd show maps raw format "%w,%d"
+  command: multipathd show maps raw format "%w,%n"
   register: multipath_maps
   changed_when: false
   become: true
@@ -9,7 +9,7 @@
     metadata_volume_paths: |-
       {%- set paths = {} -%}
       {%- for volume in metadata_volumes -%}
-        {%- if paths.update({volume["name"]: {"path": "", "sysfs": "", "host_wwid": "", "host_port_protocols": volume["host_port_protocols"]}}) -%}{%- endif -%}
+        {%- if paths.update({volume["name"]: {"path": "", "host_wwid": "", "host_port_protocols": volume["host_port_protocols"]}}) -%}{%- endif -%}
       {%- endfor -%}
       {%- for volume in metadata_volumes -%}
         {%- for map in multipath_maps["stdout_lines"] | default([])-%}
@@ -17,7 +17,7 @@
 
           {%- if (volume["wwn"] and map_info[0] | regex_search(volume["wwn"], ignorecase=True)) or
                  (volume["eui"] and map_info[0] | regex_search(volume["eui"], ignorecase=True)) -%}
-            {%- if paths[volume["name"]].update({"path": "/dev/" ~ map_info[1], "sysfs": map_info[1], "host_wwid": map_info[0]}) -%}{%- endif -%}
+            {%- if paths[volume["name"]].update({"path": "/dev/mapper/" ~ map_info[1], "host_wwid": map_info[0]}) -%}{%- endif -%}
           {%- endif -%}
         {%- endfor -%}
       {%- endfor -%}
@@ -28,7 +28,7 @@
     storage_volume_paths: |-
       {%- set paths = {} -%}
       {%- for volume in storage_volumes -%}
-        {%- if paths.update({volume["name"]: {"path": "", "sysfs": "", "host_wwid": "", "host_port_protocols": volume["host_port_protocols"]}}) -%}{%- endif -%}
+        {%- if paths.update({volume["name"]: {"path": "", "host_wwid": "", "host_port_protocols": volume["host_port_protocols"]}}) -%}{%- endif -%}
       {%- endfor -%}
       {%- for volume in storage_volumes -%}
         {%- for map in multipath_maps["stdout_lines"] | default([])-%}
@@ -36,7 +36,7 @@
 
           {%- if (volume["wwn"] and map_info[0] | regex_search(volume["wwn"], ignorecase=True)) or
                  (volume["eui"] and map_info[0] | regex_search(volume["eui"], ignorecase=True)) -%}
-            {%- if paths[volume["name"]].update({"path": "/dev/" ~ map_info[1], "sysfs": map_info[1], "host_wwid": map_info[0]}) -%}{%- endif -%}
+            {%- if paths[volume["name"]].update({"path": "/dev/mapper/" ~ map_info[1], "host_wwid": map_info[0]}) -%}{%- endif -%}
           {%- endif -%}
         {%- endfor -%}
       {%- endfor -%}
