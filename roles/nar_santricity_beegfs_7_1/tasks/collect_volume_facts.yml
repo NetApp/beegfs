@@ -80,7 +80,7 @@
           command:
             cmd: "iscsiadm -m session -R"
           become: true
-          when: metadata_rescan['iscsi'] or metadata_rescan['ib_iser'] or storage_rescan['iscsi'] or storage_rescan['ib_iser']
+          when: 'rescan_iscsi_sessions' in rescan_actions
 
         - name: Rescan for all SCSI devices (Storage/Metadata).
           shell: "{{ item }}"
@@ -89,8 +89,7 @@
           loop:
             - "for x in $(ls /sys/class/scsi_host); do echo '- - -' > /sys/class/scsi_host/$x/scan; done &> /dev/null"
             - "for x in $(ls /sys/block); do echo 1 > /sys/block/$x/device/rescan; done &> /dev/null"
-          when: (metadata_rescan['iscsi'] or metadata_rescan['fc'] or metadata_rescan['sas'] or metadata_rescan['ib_srp'] or metadata_rescan['ib_iser'] or
-                 storage_rescan['iscsi'] or storage_rescan['fc'] or storage_rescan['sas'] or storage_rescan['ib_srp'] or storage_rescan['ib_iser'])
+          when: 'rescan_scsi_bus' in rescan_actions
 
         - name: Reload multipath service (Storage/Metadata).
           systemd:
@@ -98,8 +97,7 @@
             state: restarted
             daemon_reload: true
           become: true
-          when: (metadata_rescan['iscsi'] or metadata_rescan['fc'] or metadata_rescan['sas'] or metadata_rescan['ib_srp'] or metadata_rescan['ib_iser'] or
-                 storage_rescan['iscsi'] or storage_rescan['fc'] or storage_rescan['sas'] or storage_rescan['ib_srp'] or storage_rescan['ib_iser'])
+          when: 'rescan_scsi_bus' in rescan_actions
 
         - name: Find all mapped storage/metadata volume paths.
           import_tasks: common/find_volume_paths.yml
@@ -107,24 +105,15 @@
           reboot:
             test_command: "systemctl is-active --quiet remote-fs.target"
           become: true
-          when: (metadata_rescan['iscsi'] or metadata_rescan['fc'] or metadata_rescan['sas'] or metadata_rescan['ib_srp'] or metadata_rescan['ib_iser'] or
-                 metadata_rescan['nvme_ib'] or metadata_rescan['nvme_fc'] or metadata_rescan['nvme_roce'] or
-                 storage_rescan['iscsi'] or storage_rescan['fc'] or storage_rescan['sas'] or storage_rescan['ib_srp'] or storage_rescan['ib_iser'] or
-                 storage_rescan['nvme_ib'] or storage_rescan['nvme_fc'] or storage_rescan['nvme_roce'])
+          when: 'rescan' in rescan_actions
 
         - name: Find all mapped storage/metadata volume paths.
           import_tasks: common/find_volume_paths.yml
         - name: Fail when volumes are not available (Storage/Metadata).
           fail:
             msg: "Failed to discover storage or metadata volumes!"
-          when: (metadata_rescan['iscsi'] or metadata_rescan['fc'] or metadata_rescan['sas'] or metadata_rescan['ib_srp'] or metadata_rescan['ib_iser'] or
-            metadata_rescan['nvme_ib'] or metadata_rescan['nvme_fc'] or metadata_rescan['nvme_roce'] or
-            storage_rescan['iscsi'] or storage_rescan['fc'] or storage_rescan['sas'] or storage_rescan['ib_srp'] or storage_rescan['ib_iser'] or
-            storage_rescan['nvme_ib'] or storage_rescan['nvme_fc'] or storage_rescan['nvme_roce'])
-      when: (metadata_rescan['iscsi'] or metadata_rescan['fc'] or metadata_rescan['sas'] or metadata_rescan['ib_srp'] or metadata_rescan['ib_iser'] or
-        metadata_rescan['nvme_ib'] or metadata_rescan['nvme_fc'] or metadata_rescan['nvme_roce'] or
-        storage_rescan['iscsi'] or storage_rescan['fc'] or storage_rescan['sas'] or storage_rescan['ib_srp'] or storage_rescan['ib_iser'] or
-        storage_rescan['nvme_ib'] or storage_rescan['nvme_fc'] or storage_rescan['nvme_roce'])
+          when: 'rescan' in rescan_actions
+      when: 'rescan' in rescan_actions
 
     - name: Find all mapped storage/metadata volume paths.
       import_tasks: common/find_volume_paths.yml

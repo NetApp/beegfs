@@ -67,3 +67,20 @@
         {%- endif -%}
       {%- endfor -%}
       {{ rescan }}
+
+- name: Determine whether volumes are missing and what actions are required.
+  set_fact:
+    rescan_actions: |-
+      {%- set actions = [] -%}
+      {%- for protocol, value in (metadata_rescan.items() | list) + (storage_rescan.items() | list) if value == True -%}
+        {%- if protocol in beegfs_discovery_protocol_list -%}
+          {%- if actions.append("rescan") -%}{%- endif -%}
+        {%- endif -%}
+        {%- if protocol in beegfs_discovery_rescan_iscsi_session_protocol_list -%}
+          {%- if actions.append("rescan_iscsi_sessions") -%}{%- endif -%}
+        {%- endif -%}
+        {%- if protocol in beegfs_discovery_rescan_scsi_bus_protocol_list -%}
+          {%- if actions.append("rescan_scsi_bus") -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- actions -}}
