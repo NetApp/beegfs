@@ -1,51 +1,69 @@
-- name: Find mapped storage volumes.
-  find:
-    paths: "/dev/mapper/"
-    patterns:
-      - "*{{ item['wwn'] | lower }}"
-      - "*{{ item['eui'] | lower }}"
-    file_type: link
-  loop: "{{ lookup('list', storage_volumes) }}"
-  register: storage_volume_paths
+- name: Get the multipathd maps
+  command: multipathd show maps raw format "%w,%n"
+  register: multipath_maps
+  changed_when: false
+  become: true
+
 - name: Find mapped metadata volumes.
-  find:
-    paths: "/dev/mapper/"
-    patterns:
-      - "*{{ item['wwn'] | lower }}"
-      - "*{{ item['eui'] | lower }}"
-    file_type: link
-  loop: "{{ lookup('list', metadata_volumes) }}"
-  register: metadata_volume_paths
+  set_fact:
+    metadata_volume_paths: |-
+      {%- set paths = {} -%}
+      {%- for volume in metadata_volumes -%}
+        {%- if paths.update({volume["name"]: {"path": "", "host_wwid": "", "host_port_protocols": volume["host_port_protocols"]}}) -%}{%- endif -%}
+      {%- endfor -%}
+      {%- for volume in metadata_volumes -%}
+        {%- for map in multipath_maps["stdout_lines"] | default([])-%}
+          {%- set map_info = map.split(",") -%}
+
+          {%- if (volume["wwn"] and map_info[0] | regex_search(volume["wwn"], ignorecase=True)) or
+                 (volume["eui"] and map_info[0] | regex_search(volume["eui"], ignorecase=True)) -%}
+            {%- if paths[volume["name"]].update({"path": "/dev/mapper/" ~ map_info[1], "host_wwid": map_info[0]}) -%}{%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ paths }}
+
+- name: Find mapped storage volumes.
+  set_fact:
+    storage_volume_paths: |-
+      {%- set paths = {} -%}
+      {%- for volume in storage_volumes -%}
+        {%- if paths.update({volume["name"]: {"path": "", "host_wwid": "", "host_port_protocols": volume["host_port_protocols"]}}) -%}{%- endif -%}
+      {%- endfor -%}
+      {%- for volume in storage_volumes -%}
+        {%- for map in multipath_maps["stdout_lines"] | default([])-%}
+          {%- set map_info = map.split(",") -%}
+
+          {%- if (volume["wwn"] and map_info[0] | regex_search(volume["wwn"], ignorecase=True)) or
+                 (volume["eui"] and map_info[0] | regex_search(volume["eui"], ignorecase=True)) -%}
+            {%- if paths[volume["name"]].update({"path": "/dev/mapper/" ~ map_info[1], "host_wwid": map_info[0]}) -%}{%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ paths }}
+
+- name: Determine whether mapped metadata volumes are missing.
+  set_fact:
+    metadata_rescan: |-
+      {%- set rescan = {"iscsi": False, "fc": False, "sas": False, "ib_srp": False, "ib_iser": False, "nvme_ib": False, "nvme_fc": False, "nvme_roce": False} -%}
+      {%- for key, value in metadata_volume_paths.items() -%}
+        {%- if value["path"] == "" -%}
+          {%- for protocol in value["host_port_protocols"]  -%}
+            {%- if rescan.update({protocol: True}) -%}{%- endif -%}
+          {%- endfor -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ rescan }}
 
 - name: Determine whether mapped storage volumes are missing.
   set_fact:
     storage_rescan: |-
-      {%- set rescan = {"nvme": False, "scsi": False} -%}
-      {%- for index in range(storage_volumes | length) -%}
-        {%- if storage_volume_paths["results"][index]["matched"] == 0 and "storage" in beegfs_node_roles -%}
-          {%- if "nvmeof" in storage_volumes[index]["host_types"] -%}
-             {%- if rescan.update({"nvme": True}) -%}{%- endif -%}
-          {%- endif %}
-          {%- if "iscsi" in storage_volumes[index]["host_types"] or "fc" in storage_volumes[index]["host_types"] or
-                 "sas" in storage_volumes[index]["host_types"] or "ib" in storage_volumes[index]["host_types"] -%}
-             {%- if rescan.update({"scsi": True}) -%}{%- endif -%}
-          {%- endif %}
-        {%- endif -%}
-      {%- endfor -%}
-      {{ rescan }}
-- name: Determine whether mapped metadata volumes are missing.
-  set_fact:
-    metadata_rescan: |-
-      {%- set rescan = {"nvme": False, "scsi": False} -%}
-      {%- for index in range(metadata_volumes | length) -%}
-        {%- if metadata_volume_paths["results"][index]["matched"] == 0 and "metadata" in beegfs_node_roles -%}
-          {%- if "nvmeof" in metadata_volumes[index]["host_types"] -%}
-             {%- if rescan.update({"nvme": True}) -%}{%- endif -%}
-          {%- endif %}
-          {%- if "iscsi" in metadata_volumes[index]["host_types"] or "fc" in metadata_volumes[index]["host_types"] or
-                 "sas" in metadata_volumes[index]["host_types"] or "ib" in metadata_volumes[index]["host_types"] -%}
-             {%- if rescan.update({"scsi": True}) -%}{%- endif -%}
-          {%- endif %}
+      {%- set rescan = {"iscsi": False, "fc": False, "sas": False, "ib_srp": False, "ib_iser": False, "nvme_ib": False, "nvme_fc": False, "nvme_roce": False} -%}
+      {%- for key, value in storage_volume_paths.items() -%}
+        {%- if value["path"] == "" -%}
+          {%- for protocol in value["host_port_protocols"]  -%}
+            {%- if rescan.update({protocol: True}) -%}{%- endif -%}
+          {%- endfor -%}
         {%- endif -%}
       {%- endfor -%}
       {{ rescan }}
