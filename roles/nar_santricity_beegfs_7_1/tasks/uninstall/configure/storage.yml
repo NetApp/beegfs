@@ -2,6 +2,7 @@
   systemd:
     name: beegfs-storage.service
     state: stopped
+  when: "'beegfs-storage.service' in (ansible_facts['services'].keys() | list)"
   become: true
 
 #DEVNOTE: This two tiered approach is a workaround for observed behavior on systems (e.g. SUSE) where systemd will immediately try to remount volumes if we just use "state: absent".

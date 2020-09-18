@@ -1,3 +1,7 @@
+- name: Collect facts about BeeGFS services.
+  service_facts:
+  become: true
+
 - name: Unconfigure BeeGFS client services.
   import_tasks: uninstall/configure/client.yml
   when: '"client" in beegfs_node_roles'
@@ -14,9 +18,12 @@
   import_tasks: uninstall/configure/management.yml
   when: '"management" in beegfs_node_roles'
 
+- name: Unconfigure NTP service.
+  import_tasks: uninstall/configure/ntp.yml
+  when: beegfs_ntp_enabled == True
+
 - name: Remove all BeeGFS service packages.
   include_tasks: "uninstall/packages/{{ ansible_facts['os_family'] | lower }}.yml"
-  when: '"storage" in beegfs_node_roles or "metadata" in beegfs_node_roles'
 
 - name: Execute remaining configuration cleanup tasks.
   import_tasks: uninstall/configure/common.yml

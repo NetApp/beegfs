@@ -1,41 +1,25 @@
-#- name: Add BeeGFS ZYPPER repository (SUSE).
-#  zypper_repository:
-#    name: beegfs
-#    description: BeeGFS ZYPPER Repo
-#    repo: "{{ beegfs_suse_repository_base_url }}"
-#    autorefresh: True
-#    state: present
-#    auto_import_keys: True
-#  when: "'.repo' in beegfs_suse_repository_base_url"
-#
-#- name: Create BeeGFS repo file (SUSE).
-#  template:
-#    src: common/beegfs_suse_repo.j2
-#    dest: "/etc/zypp/repos.d/beegfs.repo"
-#  when: "'.repo' not in beegfs_suse_repository_base_url"
-
-- name: Ensure the BeeGFS management package is installed (SUSE - Management).
+- name: Ensure the BeeGFS management package is uninstalled (SUSE - Management).
   zypper:
     state: absent
     name: beegfs-mgmtd
   when: '"management" in beegfs_node_roles'
   become: true
 
-- name: Ensure the BeeGFS metadata package is installed (SUSE - Metadata).
+- name: Ensure the BeeGFS metadata package is uninstalled (SUSE - Metadata).
   zypper:
     state: absent
     name: beegfs-meta
   when: '"metadata" in beegfs_node_roles'
   become: true
 
-- name: Ensure the BeeGFS storage package is installed (SUSE - Storage).
+- name: Ensure the BeeGFS storage package is uninstalled (SUSE - Storage).
   zypper:
-    state: absetn
+    state: absent
     name: beegfs-storage
   when: '"storage" in beegfs_node_roles'
   become: true
 
-- name: Ensure the BeeGFS infiniband package is installed (SUSE - Metadata/Storage).
+- name: Ensure the BeeGFS infiniband package is uninstalled (SUSE - Metadata/Storage).
   zypper:
     state: absent
     name: libbeegfs-ib
@@ -50,7 +34,7 @@
   when: 'beegfs_allow_unsupported_module == True and "client" in beegfs_node_roles'
   become: true
 
-- name: Ensure the BeeGFS client package is installed (SUSE - Client).
+- name: Ensure the BeeGFS client package is uninstalled (SUSE - Client).
   zypper:
     state: absent
     name:
@@ -58,4 +42,22 @@
       - beegfs-helperd
       - beegfs-utils
   when: '"client" in beegfs_node_roles'
+  become: true
+
+- name: Add BeeGFS ZYPPER repository (SUSE).
+  zypper_repository:
+    name: beegfs
+    state: absent
+    description: BeeGFS ZYPPER Repo
+    repo: "{{ beegfs_suse_repository_base_url }}"
+    autorefresh: True
+    auto_import_keys: True
+  when: "'.repo' in beegfs_suse_repository_base_url"
+  become: true
+
+- name: Delete BeeGFS repo file (SUSE).
+  file:
+    state: absent
+    path: "/etc/zypp/repos.d/beegfs.repo"
+  when: "'.repo' not in beegfs_suse_repository_base_url"
   become: true

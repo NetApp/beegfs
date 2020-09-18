@@ -2,12 +2,14 @@
   systemd:
     name: beegfs-client.service
     state: stopped
+  when:  "'beegfs-client.service' in (ansible_facts['services'].keys() | list)"
   become: true
 
 - name: Stop BeeGFS helper daemon (Client).
   systemd:
     name: beegfs-helperd.service
     state: stopped
+  when:  "'beegfs-helperd.service' in (ansible_facts['services'].keys() | list)"
   become: true
 
 - name: Close BeeGFS client service firewall ports if configured by the role.

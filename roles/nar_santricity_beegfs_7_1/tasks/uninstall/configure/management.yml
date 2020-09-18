@@ -2,6 +2,7 @@
   systemd:
     name: beegfs-mgmtd.service
     state: stopped
+  when: "'beegfs-mgmtd.service' in (ansible_facts['services'].keys() | list)"
   become: true
 
 - name: Remove the BeeGFS management directory at {{ beegfs_data_directory }}beegfs/mgmt.
