@@ -7,18 +7,22 @@
 - name: Collect NetApp E-Series volume information (Always).
   include_tasks: ../collect_facts.yml
 
+- name: Collect facts about systemd services.
+  service_facts:
+  become: true
+
 - name: Stop Pacemaker service.
   systemd:
     state: stopped
     name: pacemaker
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and 'pacemaker.service' in (ansible_facts['services'].keys() | list)
   become: true
 
 - name: Stop Corosync service.
   systemd:
     state: stopped
     name: corosync
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  when: "inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and 'corosync.service' in (ansible_facts['services'].keys() | list)"
   become: true
 
 - name: Ensure storage has been provisioned for hosts.
