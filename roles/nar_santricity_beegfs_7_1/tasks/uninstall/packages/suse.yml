@@ -44,7 +44,7 @@
   when: '"client" in beegfs_node_roles'
   become: true
 
-- name: Add BeeGFS ZYPPER repository (SUSE).
+- name: Remove BeeGFS ZYPPER repository (SUSE).
   zypper_repository:
     name: beegfs
     state: absent
