@@ -45,11 +45,11 @@
 - name: Determine whether mapped metadata volumes are missing.
   set_fact:
     metadata_rescan: |-
-      {%- set rescan = {"iscsi": False, "fc": False, "sas": False, "ib_srp": False, "ib_iser": False, "nvme_ib": False, "nvme_fc": False, "nvme_roce": False} -%}
+      {%- set rescan = [] -%}
       {%- for key, value in metadata_volume_paths.items() -%}
         {%- if value["path"] == "" -%}
-          {%- for protocol in value["host_port_protocols"]  -%}
-            {%- if rescan.update({protocol: True}) -%}{%- endif -%}
+          {%- for protocol in value["host_port_protocols"] if protocol in beegfs_discovery_protocol_list -%}
+            {%- if rescan.append(protocol) -%}{%- endif -%}
           {%- endfor -%}
         {%- endif -%}
       {%- endfor -%}
@@ -58,11 +58,11 @@
 - name: Determine whether mapped storage volumes are missing.
   set_fact:
     storage_rescan: |-
-      {%- set rescan = {"iscsi": False, "fc": False, "sas": False, "ib_srp": False, "ib_iser": False, "nvme_ib": False, "nvme_fc": False, "nvme_roce": False} -%}
+      {%- set rescan = [] -%}
       {%- for key, value in storage_volume_paths.items() -%}
         {%- if value["path"] == "" -%}
-          {%- for protocol in value["host_port_protocols"]  -%}
-            {%- if rescan.update({protocol: True}) -%}{%- endif -%}
+          {%- for protocol in value["host_port_protocols"] if protocol in beegfs_discovery_protocol_list -%}
+            {%- if rescan.append(protocol) -%}{%- endif -%}
           {%- endfor -%}
         {%- endif -%}
       {%- endfor -%}
@@ -72,7 +72,7 @@
   set_fact:
     rescan_actions: |-
       {%- set actions = [] -%}
-      {%- for protocol, value in (metadata_rescan.items() | list) + (storage_rescan.items() | list) if value == True -%}
+      {%- for protocol in metadata_rescan + storage_rescan -%}
         {%- if protocol in beegfs_discovery_protocol_list -%}
           {%- if actions.append("rescan") -%}{%- endif -%}
         {%- endif -%}
