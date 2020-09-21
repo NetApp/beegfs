@@ -33,5 +33,5 @@
       file:
         path: "/etc/udev/rules.d/99-eseries-beegfs.rules"
         state: absent
-  when: '"storage" in beegfs_node_roles or "metadata" in beegfs_node_roles'
+  when: 'beegfs_enable_performance_tuning == True and ("storage" in beegfs_node_roles or "metadata" in beegfs_node_roles)'
   become: true
