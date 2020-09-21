@@ -2,19 +2,23 @@
   systemd:
     name: "{{ beegfs_ntp_service }}"
     state: stopped
-    enabled: no
+    enabled: false
+  when: "beegfs_ntp_service in (ansible_facts['services'].keys() | list)"
+  become: true
 
 - name: Ensure NTP is uninstalled (RHEL).
   yum:
     state: absent
     name: ntp
   when: ansible_facts['os_family'] | lower == 'redhat'
+  become: true
 
 - name: Ensure NTP is uninstalled (SUSE).
   zypper:
     state: absent
     name: ntp
   when: ansible_facts['os_family'] | lower == 'suse'
+  become: true
 
 - name: Ensure NTP is uninstalled (Debian/Ubuntu).
   apt:
@@ -22,3 +26,4 @@
     name: ntp
     purge: True
   when: ansible_facts['os_family'] | lower == 'debian'
+  become: true
