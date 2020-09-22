@@ -10,6 +10,7 @@
 - name: Collect facts about systemd services.
   service_facts:
   become: true
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 - name: Stop Pacemaker service.
   systemd:
