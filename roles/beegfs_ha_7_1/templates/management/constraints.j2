@@ -2,7 +2,7 @@
 {%- for fence_agent_type, fence_agent_attributes in (beegfs_ha_fencing_agents.items() | list) -%}
   {%- for fence_agent_attribute in fence_agent_attributes -%}
     {%- set fence_name = fence_agent_type ~ '_' ~ loop['index'] -%}
-    {%- for node in groups[beegfs_ha_ansible_host_group] -%}
+    {%- for node in groups[beegfs_ha_ansible_cluster_group] -%}
   <rsc_location id="location-{{ fence_name }}-{{ node }}-0" node="{{ node }}" rsc="{{ fence_name }}" score="0"/>
     {%- endfor -%}
   {%- endfor -%}

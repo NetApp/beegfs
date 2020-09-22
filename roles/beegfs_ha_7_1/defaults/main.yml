@@ -1,29 +1,38 @@
 # General configuration defaults
-beegfs_ha_ansible_host_group: ha_cluster
+beegfs_ha_ansible_cluster_group: ha_cluster
+beegfs_ha_ansible_client_group: ha_clients
 beegfs_ha_ansible_storage_group: eseries_storage_systems
 beegfs_ha_cluster_name: hacluster
+
+# THESE MAY ONLY BE NEEDED TO AUTHENTICATE USING THE PCS TOOL. ANSIBLE MAYBE A VIABLE REPLACEMENT FOR THIS TASK.
 beegfs_ha_cluster_username: hacluster
 beegfs_ha_cluster_password: hapassword
 beegfs_ha_cluster_password_sha512_salt: random$alt
 beegfs_ha_ntp_enabled: true
+beegfs_ha_allow_firewall_high_availability_service: true   # Allow high-availability firewall services.
 beegfs_ha_alert_email_subject: "ClusterNotification"
 beegfs_ha_alert_email_list: []  # List of emails to alert when changes occur.
-beegfs_ha_enable_auto_tie_breaker: true
-beegfs_ha_enable_auto_tie_breaker_force_update: false
+
+# THESE CONFIGURATION OPTIONS ARE IN THE COROSYNC.CONF FILE
+#beegfs_ha_enable_auto_tie_breaker: true
+#beegfs_ha_enable_auto_tie_breaker_force_update: false
 beegfs_ha_enable_alerts: true
 beegfs_ha_enable_quota: false
 beegfs_ha_enable_fence: true  # Fencing agents should be used to ensure failed nodes are definitely down.  WARNING! If beegfs_ha_enable_fence is set to false then a fencing agent will not be configured!
+beegfs_ha_enable_fence_action: "off"  # Fence agent will by default shutdown when stoned. Options: off, reboot
 beegfs_ha_filter_ip_ranges: []
 beegfs_ha_node_preference_scope_step: 200
 beegfs_ha_cluster_resource_defaults:
   resource-stickiness: 15000
 beegfs_ha_fencing_agents: {}
 beegfs_ha_backup: true
+beegfs_ha_storage_system_hostgroup_prefix: beegfs
+
+beegfs_ha_force_resource_move: true   # Forces node and resource changes to migrate services to preferred nodes.
 
 
 # BeeGFS client defaults
 #beegfs_ha_client_connInterfaces:
-beegfs_ha_client: false
 beegfs_ha_client_udp_port: 8004
 beegfs_ha_helperd_tcp_port: 8006
 beegfs_ha_client_configuration_directory: "/etc/beegfs/"
@@ -61,6 +70,16 @@ beegfs_ha_ntp_restricts:
   - ::1
 
 
+# Corosync defaults
+corosync_authkey_path: /etc/corosync/authkey
+corosync_conf_path: /etc/corosync/corosync.conf
+corosync_log_path: /var/log/corosync.log
+
+
+# Pcs defaults
+beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/
+
+
 # Uninstall defaults
 beegfs_ha_delete_data_and_uninstall_beegfs: false
 beegfs_ha_uninstall_reboot: true
@@ -68,9 +87,7 @@ beegfs_ha_uninstall_reboot: true
 
 # Package version defaults
 beegfs_ha_beegfs_version: 7.1
-beegfs_ha_corosync_version: 2.4.5-4
-beegfs_ha_pacemaker_version: 1.1.21-4
-beegfs_ha_pcs_version: 0.9.168
+
 #beegfs_ha_fence_agents_all_version: #TODO: is there a version for this???
 beegfs_ha_force_beegfs_patch_upgrade: false  # Major and master versions must not change; however the patch versions can and this flag will ensure that its the latest version.
 

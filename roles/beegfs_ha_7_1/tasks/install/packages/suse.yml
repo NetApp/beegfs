@@ -1,11 +1,11 @@
 - name: Add BeeGFS ZYPPER repository (SUSE).
   zypper_repository:
+    state: present
     name: beegfs
     description: BeeGFS ZYPPER Repo
     repo: "{{ beegfs_ha_suse_repository_base_url }}"
-    autorefresh: True
-    state: present
-    auto_import_keys: True
+    autorefresh: true
+    auto_import_keys: true
   when: "'.repo' in beegfs_ha_suse_repository_base_url"
   become: true
 
@@ -14,6 +14,82 @@
     src: common/suse_repo.j2
     dest: "/etc/zypp/repos.d/beegfs.repo"
   when: "'.repo' not in beegfs_ha_suse_repository_base_url"
+  become: true
+
+- name: Ensure all cluster services are installed (SUSE - Management, Metadata, Storage).
+  block:
+    - name: Ensure the BeeGFS management package is installed (SUSE - Management).
+      zypper:
+        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+        name: "beegfs-mgmtd"
+      register: beegfs_mgmtd_package
+      when: '"management" in node_info["services"]'
+
+    - name: Stop beegfs-mgmtd service.
+      systemd:
+        name: beegfs-mgmtd.service
+        state: stopped
+        enabled: false
+      when: beegfs_mgmtd_package['changed'] == True
+
+    - name: Ensure the BeeGFS metadata package is installed (SUSE - Metadata).
+      zypper:
+        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+        name: "beegfs-meta"
+      register: beegfs_meta_package
+      when: '"metadata" in node_info["services"]'
+
+    - name: Stop beegfs-metadata service.
+      systemd:
+        name: beegfs-meta.service
+        state: stopped
+        enabled: false
+      when: beegfs_meta_package['changed'] == True
+
+    - name: Ensure the BeeGFS storage package is installed (SUSE - Storage).
+      zypper:
+        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+        name: "beegfs-storage"
+      register: beegfs_storage_package
+      when: '"storage" in node_info["services"]'
+
+    - name: Stop beegfs-storage service.
+      systemd:
+        name: beegfs-storage.service
+        state: stopped
+        enabled: false
+      when: beegfs_storage_package['changed'] == True
+
+    - name: Ensure the BeeGFS infiniband package is installed (SUSE - Metadata/Storage).
+      zypper:
+        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+        name: libbeegfs-ib
+      when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and beegfs_ha_enable_rdma'
+
+    - name: Ensure ha-cluster-bootstrap is installed.
+      zypper:
+        state: present
+        name: ha-cluster-bootstrap
+      when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
+
+    - name: Ensure mailx is installed for alerts (SUSE).
+      zypper:
+        state: present
+        name: mailx
+      when: beegfs_ha_enable_alerts == True
+
+    - name: Ensure NTP is installed (SUSE).
+      zypper:
+        state: latest
+        name: ntp
+      when: beegfs_ha_ntp_enabled | bool == True
+
+    - name: Ensure Chrony is uninstalled (SUSE).
+      zypper:
+        state: absent
+        name: chrony
+      when: beegfs_ha_ntp_enabled | bool == True
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   become: true
 
 - name: Configure packages for BeeGFS clients (SUSE - Client).
@@ -50,22 +126,8 @@
       zypper:
         state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
         name:
-          - "beegfs-client={{ beegfs_ha_beegfs_version }}"
-          - "beegfs-helperd={{ beegfs_ha_beegfs_version }}"
-          - "beegfs-utils={{ beegfs_ha_beegfs_version }}"
-  when: beegfs_ha_client == True
-  become: true
-
-- name: Ensure NTP is installed (SUSE).
-  zypper:
-    state: latest
-    name: ntp
-  when: beegfs_ntp_enabled | bool == True
-  become: true
-
-- name: Ensure Chrony is uninstalled (SUSE).
-  zypper:
-    state: absent
-    name: chrony
-  when: beegfs_ntp_enabled | bool == True
+          - "beegfs-client"
+          - "beegfs-helperd"
+          - "beegfs-utils"
+  when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
   become: true

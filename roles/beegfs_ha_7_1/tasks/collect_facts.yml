@@ -1,11 +1,11 @@
-- name: Gather minimally required facts for BeeGFS HA cluster nodes.
+- name: Gather minimally required facts for BeeGFS HA cluster and client nodes.
   setup:
     gather_subset: min
-  when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group]
 
 - name: Include operating specific variables (Always).
-  include_vars: "{{ ansible_os_family | lower }}_{{ ansible_distribution_major_version }}.yml"
-  when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+  include_vars: "{{ ansible_os_family | lower }}.yml"
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group]
 
 
 # The following section builds up inventory for each resource group and appends it to each host's inventory inside a variable with the resource's name.
@@ -22,24 +22,24 @@
     cluster_group_raw_inventory: |-
       {%- set cluster_group = {} -%}
       {%- for top_level_key, top_level_value in (unmerged_inventory.items() | list) if "children" in (top_level_value.keys() | list) -%}
-        {%- if beegfs_ha_ansible_host_group in (top_level_value["children"].keys() | list) -%}
-          {%- if cluster_group.update(top_level_value["children"][beegfs_ha_ansible_host_group]) -%}{%- endif -%}
+        {%- if beegfs_ha_ansible_cluster_group in (top_level_value["children"].keys() | list) -%}
+          {%- if cluster_group.update(top_level_value["children"][beegfs_ha_ansible_cluster_group]) -%}{%- endif -%}
         {%-endif -%}
         {%- for second_level_key, second_level_value in (top_level_value["children"].items() | list) if "children" in (second_level_value.keys() | list) -%}
-          {%- if beegfs_ha_ansible_host_group in (second_level_value["children"].keys() | list) -%}
-            {%- if cluster_group.update(second_level_value["children"][beegfs_ha_ansible_host_group]) -%}{%- endif -%}
+          {%- if beegfs_ha_ansible_cluster_group in (second_level_value["children"].keys() | list) -%}
+            {%- if cluster_group.update(second_level_value["children"][beegfs_ha_ansible_cluster_group]) -%}{%- endif -%}
           {%-endif -%}
           {%- for third_level_key, third_level_value in (second_level_value["children"].items() | list) if "children" in (third_level_value.keys() | list) -%}
-            {%- if beegfs_ha_ansible_host_group in (third_level_value["children"].keys() | list) -%}
-              {%- if cluster_group.update(third_level_value["children"][beegfs_ha_ansible_host_group]) -%}{%- endif -%}
+            {%- if beegfs_ha_ansible_cluster_group in (third_level_value["children"].keys() | list) -%}
+              {%- if cluster_group.update(third_level_value["children"][beegfs_ha_ansible_cluster_group]) -%}{%- endif -%}
             {%-endif -%}
             {%- for fourth_level_key, fourth_level_value in (third_level_value["children"].items() | list) if "children" in (fourth_level_value.keys() | list) -%}
-              {%- if beegfs_ha_ansible_host_group in (fourth_level_value["children"].keys() | list) -%}
-                {%- if cluster_group.update(fourth_level_value["children"][beegfs_ha_ansible_host_group]) -%}{%- endif -%}
+              {%- if beegfs_ha_ansible_cluster_group in (fourth_level_value["children"].keys() | list) -%}
+                {%- if cluster_group.update(fourth_level_value["children"][beegfs_ha_ansible_cluster_group]) -%}{%- endif -%}
               {%-endif -%}
               {%- for fifth_level_key, fifth_level_value in (fourth_level_value["children"].items() | list) if "children" in (fifth_level_value.keys() | list) -%}
-                {%- if beegfs_ha_ansible_host_group in (fifth_level_value["children"].keys() | list) -%}
-                  {%- if cluster_group.update(fifth_level_value["children"][beegfs_ha_ansible_host_group]) -%}{%- endif -%}
+                {%- if beegfs_ha_ansible_cluster_group in (fifth_level_value["children"].keys() | list) -%}
+                  {%- if cluster_group.update(fifth_level_value["children"][beegfs_ha_ansible_cluster_group]) -%}{%- endif -%}
                 {%-endif -%}
               {%- endfor -%}
             {%- endfor -%}
@@ -54,8 +54,8 @@
   set_fact:
     cluster_resource_groups: |-
       {%- set resources = [] -%}
-      {%- for group in (groups.keys() | list) if group != beegfs_ha_ansible_host_group -%}
-        {%- for host in groups[group] if host not in groups[beegfs_ha_ansible_host_group] -%}
+      {%- for group in (groups.keys() | list) if group not in [beegfs_ha_ansible_cluster_group, beegfs_ha_ansible_client_group] -%}
+        {%- for host in groups[group] if host not in groups[beegfs_ha_ansible_cluster_group] -%}
           {#- DO NOTHING -#}
         {%- else -%}
           {%- if inventory_hostname in groups[group] and groups[group] | length > 0 and resources.append(group) -%}{%- endif -%}
@@ -101,7 +101,7 @@
   include_vars:
     name: cluster_group_vars
     dir: "{{ playbook_dir }}/group_vars/"
-    files_matching: "{{ beegfs_ha_ansible_host_group }}.(yml|yaml)"
+    files_matching: "{{ beegfs_ha_ansible_cluster_group }}.(yml|yaml)"
   run_once: true
 
 - name: Get group_vars inventory files.
@@ -123,11 +123,11 @@
   set_fact:
     "{{ item['key'] }}": "{{ item['value'] }}"
   loop: "{{ resources | dict2items }}"
-  when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   vars:
     resources: |-
       {%- set resources = {} -%}
-      {%- for group in (groups.keys() | list) if group != beegfs_ha_ansible_host_group -%}
+      {%- for group in (groups.keys() | list) if group not in [beegfs_ha_ansible_cluster_group, beegfs_ha_ansible_client_group] -%}
 
         {#- Collect and merge variables from the group_vars files -#}
         {%- if resources.update({group: {}}) -%}{%- endif -%}
@@ -136,7 +136,7 @@
         {%- endfor -%}
 
         {#- Merge resource variables from the inventory file. -#}
-        {%- for host in groups[group] if host not in groups[beegfs_ha_ansible_host_group] -%}
+        {%- for host in groups[group] if host not in groups[beegfs_ha_ansible_cluster_group] -%}
           {#- DO NOTHING -#}
         {%- else -%}
           {%- if inventory_hostname in groups[group] and groups[group] | length > 0 and "vars" in (cluster_group_raw_inventory["children"][group].keys() | list) -%}
@@ -176,7 +176,7 @@
       {%- set base_names = {} -%}
       {%- for hostgroup in hostgroups.values() -%}
         {%- set services_string = hostgroup["services"] | sort | join("_") | regex_replace("management", "mgmt") | regex_replace("metadata", "meta") -%}
-        {%- set base_name = "beegfs_" ~ services_string ~ "_" -%}
+        {%- set base_name = beegfs_ha_storage_system_hostgroup_prefix ~ "_" ~ services_string ~ "_" -%}
         {%- if base_name in (base_names.keys() | list) -%}
           {%- if base_names.update({base_name: base_names[base_name] + 1}) -%}{%- endif -%}
           {%- if final_hostgroups.update({base_name ~ (base_names[base_name] | string): hostgroup["hosts"]}) -%}{%- endif -%}
@@ -283,7 +283,7 @@
         {%- endfor -%}
       {%- endfor -%}
       {{- info -}}
-  when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 
 # Determine management information.

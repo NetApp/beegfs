@@ -4,3 +4,4 @@
     permanent: true
     service: high-availability
   become: true
+  when: beegfs_ha_allow_firewall_high_availability_service == True

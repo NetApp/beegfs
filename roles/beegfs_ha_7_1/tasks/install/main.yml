@@ -15,12 +15,12 @@
         - name: Ensure multipath and iscsi protocol are setup.
           include_role:
             name: netapp_eseries.host.storage_setup
-          when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+          when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
         - name: Ensure volumes are formatted but not mounted.
           include_role:
             name: netapp_eseries.host.mount
-          when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+          when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
           vars:
             eseries_mount_volumes: []   # This ensures that no volumes get mounted
             eseries_mount_skip_unmount: true
@@ -31,7 +31,7 @@
       block:
         - name: Ensure expected BeeGFS packages are installed (Always).
           include_tasks: packages.yml
-          when: inventory_hostname in groups[beegfs_ha_ansible_host_group]
+          when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group]
       tags:
         - beegfs_ha
         - beegfs_ha_package
@@ -40,31 +40,38 @@
       block:
         - name: BeeGFS performance tuning (Storage/Metadata).
           import_tasks: performance_tuning.yml
-          when: 'beegfs_ha_enable_performance_tuning == True and (inventory_hostname in groups[beegfs_ha_ansible_host_group] and
+          when: 'beegfs_ha_enable_performance_tuning == True and (inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and
                                                                   ("metadata" in node_info["services"] or "storage" in node_info["services"]))'
       tags:
         - beegfs_ha
         - beegfs_ha_performance_tuning
 
-    - name: Configure BeeGFS HA.
+
+    - name: Ensure common BeeGFS HA tasks are applied to BeeGFS service nodes (Management/Metadata/Storage).
       block:
         - name: Ensure common BeeGFS HA tasks are applied to BeeGFS service nodes (Management/Metadata/Storage).
           include_tasks: common.yml
-          when: 'inventory_hostname in groups[beegfs_ha_ansible_host_group] and
-                ("management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"])'
+          when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("management" in node_info["services"] or
+                                                                                    "metadata" in node_info["services"] or "storage" in node_info["services"])'
+      tags:
+        - beegfs_ha_configure_resource
+        - beegfs_ha_configure
+        - beegfs_ha
 
+    - name: Ensure BeeGFS HA cluster is configured.
+      block:
         - name: Ensure BeeGFS HA management resource group is configured.
           include_tasks: services/management.yml
-          when: 'inventory_hostname in groups[beegfs_ha_ansible_host_group] and "management" in node_info["services"]'
+          when: '"management" in node_info["services"]'
 
         - name: Ensure BeeGFS HA metadata resource group is configured.
           include_tasks: services/metadata.yml
-          when: 'inventory_hostname in groups[beegfs_ha_ansible_host_group] and "metadata" in node_info["services"]'
+          when: '"metadata" in node_info["services"]'
 
         - name: Ensure BeeGFS HA storage resource group is configured.
           include_tasks: services/storage.yml
-          when: 'inventory_hostname in groups[beegfs_ha_ansible_host_group] and "storage" in node_info["services"]'
-
+          when: '"storage" in node_info["services"]'
+      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       tags:
         - beegfs_ha_configure
         - beegfs_ha
@@ -75,23 +82,54 @@
           include_tasks: resources.yml
           when: inventory_hostname == preferred_management_node
       tags:
-        - beegfs_ha_resource_configuration
+        - beegfs_ha_configure_resource
+        - beegfs_ha_configure
+        - beegfs_ha
+
+    - name: Ensure BeeGFS HA cluster is out of maintenance mode.
+      block:
+        - name: Check whether cluster is in maintenance mode.
+          command:
+            cmd: "crm_attribute --name maintenance-mode --query --quiet"
+          register: maintenance_mode_query
+          failed_when: maintenance_mode_query['rc'] not in [0,6]
+          changed_when: false
+
+        - name: Move cluster out of maintenance mode.
+          command:
+            cmd: "crm_attribute --name maintenance-mode --delete"
+          when: maintenance_mode_query['rc'] == 0 and (maintenance_mode_query['stdout'] | lower) == 'true'
+      when: inventory_hostname == preferred_management_node
+      tags:
+        - always
+
+    - name: Attempt to return services to their preferred BeeGFS HA cluster nodes.
+      block:
+        - name: Backup current BeeGFS HA configuration.
+          include_tasks: move.yml
+          when: beegfs_ha_force_resource_move == True and inventory_hostname == preferred_management_node
+      tags:
+        - beegfs_ha_move_resource_to_preferred_host
+        - beegfs_ha_configure_resource
         - beegfs_ha_configure
         - beegfs_ha
 
     - name: Backup current BeeGFS HA configuration.
-      include_tasks: ../backup.yml
-      when: inventory_hostname == preferred_management_node
+      block:
+        - name: Backup current BeeGFS HA configuration.
+          include_tasks: ../backup.yml
+          when: inventory_hostname == preferred_management_node
       tags:
-        - beegfs_ha_resource_configuration
+        - beegfs_ha_configure_resource
         - beegfs_ha_configure
+        - beegfs_ha_backup
         - beegfs_ha
 
-    - name: Configure BeeGFS HA client.
+    - name: Ensure BeeGFS HA clients are configured.
       block:
         - name: Ensure BeeGFS HA clients are configured.
           include_tasks: services/client.yml
-          when: beegfs_ha_client == True
+          when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
       tags:
         - beegfs_ha_client
         - beegfs_ha

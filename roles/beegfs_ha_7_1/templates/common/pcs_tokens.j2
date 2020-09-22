@@ -1,0 +1,14 @@
+{
+  "format_version": 3,
+  "data_version": 1,
+  "tokens": {
+{% for host in groups[beegfs_ha_ansible_cluster_group] %}
+    "{{ host }}": {{ host | to_uuid }}{{ "," if not loop["last"] }}
+{% endfor %}
+  },
+  "ports": {
+{% for host in groups[beegfs_ha_ansible_cluster_group] %}
+    "{{ host }}": 2224{{ "," if not loop["last"] }}
+{% endfor %}
+  }
+}

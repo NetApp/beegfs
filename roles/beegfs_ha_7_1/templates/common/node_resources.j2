@@ -1,0 +1,5 @@
+<nodes>
+{% for node in groups[beegfs_ha_ansible_cluster_group] %}
+<node id="{{ loop['index'] }}" uname="{{ node }}" type="normal"/>
+{% endfor %}
+</nodes>

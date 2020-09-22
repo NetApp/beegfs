@@ -15,6 +15,7 @@
     - name: Set cluster to asymmetric cluster architecture.
       command:
         cmd: "crm_attribute --type crm_config --name symmetric-cluster --update false"
+  ignore_errors: true
   when: symmetric_cluster_query['rc'] != 0 or symmetric_cluster_query['stdout'] != 'false'
   become: true
 
@@ -41,11 +42,34 @@
     cmd: "crm_attribute --type rsc_defaults --name {{ item['item']['key'] }} --update {{ item['item']['value'] }}"
   loop: "{{ resource_default_query['results'] }}"
   when: item['rc'] != 0 or item['stdout'] != item["item"]["value"] | string
+  ignore_errors: true
+  become: true
+
+
+# Ensure pcs stonith-action property is configured as expected.
+- name: Determine whether cluster stonith action is set to shutdown.
+  command:
+    cmd: "crm_attribute --type crm_config --name stonith-action --query --quiet"
+  changed_when: false
+  failed_when: false
+  register: stonith_action_query
+  become: true
+
+- name: Set cluster stonith action is set to shutdown
+  block:
+    - name: Set pacemaker into maintenance-mode.
+      command:
+        cmd: "crm_attribute --name maintenance-mode --update true"
+    - name: Set cluster to asymmetric cluster architecture.
+      command:
+        cmd: "crm_attribute --type crm_config --name stonith-action --update {{ beegfs_ha_enable_fence_action }}"
+      ignore_errors: true
+  when: stonith_action_query['rc'] != 0 or stonith_action_query['stdout'] != beegfs_ha_enable_fence_action
   become: true
 
 
 # Ensure pcs stonith-enabled property is configured as expected.
-- name: Determine whether cluster is configured for asymmetric cluster architecture.
+- name: Determine whether cluster stonith is enabled.
   command:
     cmd: "crm_attribute --type crm_config --name stonith-enabled --query --quiet"
   changed_when: false
@@ -53,7 +77,7 @@
   register: stonith_enabled_query
   become: true
 
-- name: Set cluster to asymmetric cluster architecture.
+- name: Set cluster stonith is enabled.
   block:
     - name: Set pacemaker into maintenance-mode.
       command:
@@ -61,5 +85,6 @@
     - name: Set cluster to asymmetric cluster architecture.
       command:
         cmd: "crm_attribute --type crm_config --name stonith-enabled --update {{ beegfs_ha_enable_fence }}"
+      ignore_errors: true
   when: stonith_enabled_query['rc'] != 0 or (stonith_enabled_query['stdout'] | bool) != beegfs_ha_enable_fence
   become: true

@@ -17,6 +17,93 @@
     update_cache: true
   become: true
 
+- name: Ensure all cluster services are installed (Debian/Ubuntu - Management, Metadata, Storage).
+  block:
+    - name: Ensure the BeeGFS management package is installed (Debian/Ubuntu - Management).
+      apt:
+        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+        name: "beegfs-mgmtd={{ beegfs_ha_beegfs_version }}*"
+      register: beegfs_mgmtd_package
+      when: '"management" in node_info["services"]'
+
+    - name: Stop beegfs-mgmtd service.
+      systemd:
+        name: beegfs-mgmtd.service
+        state: stopped
+        enabled: false
+      when: beegfs_mgmtd_package['changed'] == True
+
+    - name: Ensure the BeeGFS metadata package is installed (Debian/Ubuntu - Metadata).
+      apt:
+        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+        name: "beegfs-meta={{ beegfs_ha_beegfs_version }}*"
+      register: beegfs_meta_package
+      when: '"metadata" in node_info["services"]'
+
+    - name: Stop beegfs-metadata service.
+      systemd:
+        name: beegfs-meta.service
+        state: stopped
+        enabled: false
+      when: beegfs_meta_package['changed'] == True
+
+    - name: Ensure the BeeGFS storage package is installed (Debian/Ubuntu - Storage).
+      apt:
+        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+        name: "beegfs-storage={{ beegfs_ha_beegfs_version }}*"
+      register: beegfs_storage_package
+      when: '"storage" in node_info["services"]'
+
+    - name: Stop beegfs-storage service.
+      systemd:
+        name: beegfs-storage.service
+        state: stopped
+        enabled: false
+      when: beegfs_storage_package['changed'] == True
+
+    - name: Ensure the BeeGFS infiniband package is installed (Debian/Ubuntu - Metadata/Storage).
+      apt:
+        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+        name: libbeegfs-ib
+      when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and beegfs_ha_enable_rdma'
+
+    - name: Ensure the required HA packages are installed (Debian/Ubuntu - Management/Metadata/Storage).
+      apt:
+        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+        name:
+          - "corosync={{ beegfs_ha_corosync_version }}*"
+          - "pacemaker={{ beegfs_ha_pacemaker_version }}*"
+          - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined%}={{beegfs_ha_fence_agents_all_version}}*{% endif %}"
+          - "pcs={{ beegfs_ha_pcs_version }}*"
+      when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
+
+    - name: Ensure pcsd daemon is running and enabled.
+      systemd:
+        name: pcsd
+        state: started
+        enabled: true
+      become: true
+
+    - name: Ensure mailx is installed for alerts (Debian/Ubuntu).
+      apt:
+        state: present
+        name: mailx
+      when: beegfs_ha_enable_alerts == True
+
+    - name: Ensure NTP is installed (Debian/Ubuntu).
+      apt:
+        state: latest
+        name: ntp
+      when: beegfs_ha_ntp_enabled == True
+
+    - name: Ensure Chrony is uninstalled (Debian/Ubuntu).
+      apt:
+        state: absent
+        name: chrony
+      when: beegfs_ha_ntp_enabled == True
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  become: true
+
 - name: Ensure BeeGFS client package is installed (Debian/Ubuntu - Client).
   apt:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
@@ -25,19 +112,5 @@
       - "beegfs-helperd={{ beegfs_ha_beegfs_version }}"
       - "beegfs-utils={{ beegfs_ha_beegfs_version }}"
       - libelf-dev
-  when: beegfs_ha_client == True
-  become: true
-
-- name: Ensure NTP is installed (Debian/Ubuntu).
-  apt:
-    state: latest
-    name: ntp
-  when: beegfs_ha_ntp_enabled == True
-  become: true
-
-- name: Ensure Chrony is uninstalled (Debian/Ubuntu).
-  apt:
-    state: absent
-    name: chrony
-  when: beegfs_ha_ntp_enabled == True
+  when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
   become: true

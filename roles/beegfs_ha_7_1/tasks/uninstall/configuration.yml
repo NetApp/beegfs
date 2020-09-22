@@ -3,6 +3,7 @@
     state: absent
     path: "{{ beegfs_ha_uninstall_pcsd_dir }}"
   become: true
+  when: beegfs_ha_management_tool == 'pcs'
 
 - name: Purge pacemaker configuration directory.
   file:

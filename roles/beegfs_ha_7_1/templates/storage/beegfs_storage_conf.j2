@@ -16,7 +16,7 @@
 
 sysMgmtdHost                 = {{ management_info["resource_group"] }}
 
-storeStorageDirectory        = {% for volume in item["volumes"][:-1] %}{{ volume["metadata"]["mount_dir"] }}{{ volume["name"] }}/data ,{% endfor%}{{ item["volumes"][-1]["metadata"]["mount_dir"] }}{{ item["volumes"][-1]["name"] }}/data
+storeStorageDirectory        = {% for volume in item['volumes'] %}{{ volume['metadata']['mount_dir'] }}{{ volume['name'] }}/data{{ "," if not loop["last"] }}{% endfor %}
 storeAllowFirstRunInit       = false
 
 

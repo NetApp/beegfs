@@ -207,14 +207,19 @@ Example Host Inventory File
       - name: eth2
         address: 192.168.3.226/24
 
-    beegfs_ha_client: true
+Example BeeGFS HA Client Inventory File
+---------------------------------------
+    ansible_host: 192.168.1.226
+    ansible_ssh_user: admin
+    ansible_become_password: adminpass
+
     beegfs_ha_client_connInterfaces:
       - eth0
       - eth1
 
 Example Project
 ---------------
-    * If your going to use the example project as a basis for your own, be sure to copy the whole structure to your Ansible control node and update all values to ensure a smooth automation experience.
+    *If your going to use the example project as a basis for your own, be sure to copy the whole structure to your Ansible control node and update all values to ensure a smooth automation experience.
     See the [example_project](https://github.com/netappeseries/host/tree/master/beegfs_ha_7_1).
 
 Role Tags
@@ -222,13 +227,14 @@ Role Tags
     Use the following tags when executing you BeeGFS HA playbook to only execute select tasks.
         example: ansible-playbook -i inventory.yml playbook.yml --tags beegfs_ha_configure
 
-    - storage                       # Provisions storage and ensures volumes are presented on hosts.
-    - beegfs_ha                     # All BeeGFS HA tasks.
-    - beegfs_ha_package             # All BeeGFS HA package tasks.
-    - beegfs_ha_configure           # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
-    - beegfs_ha_resource_configuration   # All BeeGFS HA pacemaker resource tasks.
-    - beegfs_ha_performance_tuning  # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
-    - beegfs_ha_client              # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
+    - storage                           # Provisions storage and ensures volumes are presented on hosts.
+    - beegfs_ha                         # All BeeGFS HA tasks.
+    - beegfs_ha_package                 # All BeeGFS HA package tasks.
+    - beegfs_ha_configure               # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
+    - beegfs_ha_configure_resource  # All BeeGFS HA pacemaker resource tasks.
+    - beegfs_ha_performance_tuning      # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
+    - beegfs_ha_backup                  # Backup Pacemaker and Corosync configuration files.
+    - beegfs_ha_client                  # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
 
 General Notes
 -------------
@@ -318,12 +324,12 @@ Role Variables
     beegfs_ha_node_preference_scope_step: 200                   # Arbitrary constraint scope step between ordered hosts in the inventory file resource host group.
     beegfs_ha_cluster_resource_defaults:                        # Pacemaker resource defaults dictionary. These will be applied across all resource groups.
       resource-stickiness: 15000
+    beegfs_ha_force_resource_move: true                         # Forces node and resource changes to migrate services to preferred nodes.
     beegfs_ha_backup: true                                      # Whether to create a PCS backup which can be used to restore to a previous configuration.
                                                                 #   Use the following command to restore a previous configuration: pcs config restore <backup>
     beegfs_ha_backup_path: /tmp/                                # PCS backup file path.
 
     # BeeGFS client defaults
-    beegfs_ha_client: false                                     # Whether node should be a BeeGFS client.
     beegfs_ha_client_connInterfaces:                            # List of node interfaces to use to communicate with the BeeGFS file system.
     beegfs_ha_client_udp_port: 8004                             # Client UDP port to communicate with the BeeGFS file system.
     beegfs_ha_helperd_tcp_port: 8006                            # Client helper daemon TCP port.
