@@ -9,120 +9,101 @@
     gpgkey: "{{ beegfs_ha_rhel_repository_gpgkey }}"
   become: true
 
-- name: Ensure all cluster services are installed (RedHat/CentOS - Management, Metadata, Storage).
-  block:
-    - name: Ensure the BeeGFS management package is installed (RedHat/CentOS - Management).
-      yum:
-        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
-        allow_downgrade: true
-        name: "beegfs-mgmtd-{{ beegfs_ha_beegfs_version }}*"
-      register: beegfs_mgmtd_package
-      when: '"management" in node_info["services"]'
-
-    - name: Stop beegfs-mgmtd service.
-      systemd:
-        name: beegfs-mgmtd.service
-        state: stopped
-        enabled: false
-      when: beegfs_mgmtd_package['changed'] == True
-
-    - name: Ensure the BeeGFS metadata package is installed (RedHat/CentOS - Metadata).
-      yum:
-        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
-        allow_downgrade: true
-        name: "beegfs-meta-{{ beegfs_ha_beegfs_version }}*"
-      register: beegfs_meta_package
-      when: '"metadata" in node_info["services"]'
-
-    - name: Stop beegfs-metadata service.
-      systemd:
-        name: beegfs-meta.service
-        state: stopped
-        enabled: false
-      when: beegfs_meta_package['changed'] == True
-
-    - name: Ensure the BeeGFS storage package is installed (RedHat/CentOS - Storage).
-      yum:
-        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
-        allow_downgrade: true
-        name: "beegfs-storage-{{ beegfs_ha_beegfs_version }}*"
-      register: beegfs_storage_package
-      when: '"storage" in node_info["services"]'
-
-    - name: Stop beegfs-storage service.
-      systemd:
-        name: beegfs-storage.service
-        state: stopped
-        enabled: false
-      when: beegfs_storage_package['changed'] == True
-
-    - name: Ensure the BeeGFS infiniband package is installed (RedHat/CentOS - Metadata/Storage).
-      yum:
-        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
-        allow_downgrade: true
-        name: libbeegfs-ib
-      when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and beegfs_ha_enable_rdma'
-
-    - name: Ensure the required HA packages are installed (RedHat/CentOS - Management/Metadata/Storage).
-      yum:
-        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
-        allow_downgrade: true
-        name:
-          - "corosync-{{ beegfs_ha_corosync_version }}*"
-          - "pacemaker-{{ beegfs_ha_pacemaker_version }}*"
-          - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined%}-{{beegfs_ha_fence_agents_all_version}}*{% endif %}"
-          - "pcs-{{ beegfs_ha_pcs_version }}*"
-      when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
-
-    - name: Ensure pcsd daemon is running and enabled.
-      systemd:
-        name: pcsd
-        state: started
-        enabled: true
-      become: true
-
-    - name: Ensure mailx is installed for alerts (RedHat/CentOS).
-      yum:
-        state: present
-        name: mailx
-      when: beegfs_ha_enable_alerts == True
-
-    - name: Ensure NTP is installed (RedHat/CentOS).
-      yum:
-        state: latest
-        name: ntp
-      when: beegfs_ha_ntp_enabled == True
-
-    - name: Ensure Chrony is uninstalled (RedHat/CentOS).
-      yum:
-        state: absent
-        name: chrony
-      when: beegfs_ha_ntp_enabled == True
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+- name: Ensure the BeeGFS management package is installed (RedHat/CentOS - Management).
+  yum:
+    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    allow_downgrade: true
+    name: "beegfs-mgmtd-{{ beegfs_ha_beegfs_version }}*"
+  register: beegfs_mgmtd_package
+  when: '"management" in node_info["services"]'
   become: true
 
-- name: Configure packages for BeeGFS clients (RedHat/CentOS - Client).
-  block:
-    - name: Get kernel version (RedHat/CentOS - Client).
-      command: "uname -r"
-      register: kernel_version
-      failed_when: "kernel_version['rc'] != 0"
-      changed_when: False
-
-    - name: Ensure kernel-devel is installed (RedHat/CentOS - Client).
-      yum:
-        state: present
-        name: "kernel-devel-{{ kernel_version['stdout'] }}"
-
-    - name: Ensure the BeeGFS client package is installed (RedHat/CentOS - Client).
-      yum:
-        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
-        allow_downgrade: true
-        name:
-          - "beegfs-client-{{ beegfs_ha_beegfs_version }}*"
-          - "beegfs-helperd-{{ beegfs_ha_beegfs_version }}*"
-          - "beegfs-utils-{{ beegfs_ha_beegfs_version }}*"
-  when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
+- name: Stop beegfs-mgmtd service.
+  systemd:
+    name: beegfs-mgmtd.service
+    state: stopped
+    enabled: false
+  when: beegfs_mgmtd_package['changed'] == True
   become: true
 
+- name: Ensure the BeeGFS metadata package is installed (RedHat/CentOS - Metadata).
+  yum:
+    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    allow_downgrade: true
+    name: "beegfs-meta-{{ beegfs_ha_beegfs_version }}*"
+  register: beegfs_meta_package
+  when: '"metadata" in node_info["services"]'
+  become: true
 
+- name: Stop beegfs-metadata service.
+  systemd:
+    name: beegfs-meta.service
+    state: stopped
+    enabled: false
+  when: beegfs_meta_package['changed'] == True
+  become: true
+
+- name: Ensure the BeeGFS storage package is installed (RedHat/CentOS - Storage).
+  yum:
+    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    allow_downgrade: true
+    name: "beegfs-storage-{{ beegfs_ha_beegfs_version }}*"
+  register: beegfs_storage_package
+  when: '"storage" in node_info["services"]'
+  become: true
+
+- name: Stop beegfs-storage service.
+  systemd:
+    name: beegfs-storage.service
+    state: stopped
+    enabled: false
+  when: beegfs_storage_package['changed'] == True
+  become: true
+
+- name: Ensure the BeeGFS infiniband package is installed (RedHat/CentOS - Metadata/Storage).
+  yum:
+    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    allow_downgrade: true
+    name: libbeegfs-ib
+  when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and beegfs_ha_enable_rdma'
+  become: true
+
+- name: Ensure the required HA packages are installed (RedHat/CentOS - Management/Metadata/Storage).
+  yum:
+    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    allow_downgrade: true
+    name:
+      - "corosync-{{ beegfs_ha_corosync_version }}*"
+      - "pacemaker-{{ beegfs_ha_pacemaker_version }}*"
+      - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined%}-{{beegfs_ha_fence_agents_all_version}}*{% endif %}"
+      - "pcs-{{ beegfs_ha_pcs_version }}*"
+  when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
+  become: true
+
+- name: Ensure pcsd daemon is running and enabled.
+  systemd:
+    name: pcsd
+    state: started
+    enabled: true
+  become: true
+
+- name: Ensure mailx is installed for alerts (RedHat/CentOS).
+  yum:
+    state: present
+    name: mailx
+  when: beegfs_ha_enable_alerts == True
+  become: true
+
+- name: Ensure NTP is installed (RedHat/CentOS).
+  yum:
+    state: latest
+    name: ntp
+  when: beegfs_ha_ntp_enabled == True
+  become: true
+
+- name: Ensure Chrony is uninstalled (RedHat/CentOS).
+  yum:
+    state: absent
+    name: chrony
+  when: beegfs_ha_ntp_enabled == True
+  become: true

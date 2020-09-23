@@ -32,6 +32,8 @@ beegfs_ha_force_resource_move: true   # Forces node and resource changes to migr
 
 
 # BeeGFS client defaults
+beegfs_ha_client_installed: true           # Whether to install BeeGFS client on the host.
+beegfs_ha_client_started: true             # Whether BeeGFS client should be running on the host.
 #beegfs_ha_client_connInterfaces:
 beegfs_ha_client_udp_port: 8004
 beegfs_ha_helperd_tcp_port: 8006

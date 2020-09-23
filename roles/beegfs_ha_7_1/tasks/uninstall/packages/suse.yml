@@ -35,7 +35,7 @@
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   become: true
 
-- name: Ensure the BeeGFS client package is installed (SUSE - Client).
+- name: Ensure the BeeGFS client package is uninstalled (SUSE - Client).
   zypper:
     state: absent
     name:
