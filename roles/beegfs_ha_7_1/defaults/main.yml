@@ -83,10 +83,11 @@ beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/
 
 
 # Uninstall defaults
-beegfs_ha_uninstall: false                 # Flag to uninstall the entire BeeGFS HA solution excluding the storage provisioning and host storage setup.
-beegfs_ha_delete_data_volumes: false       # Flag to delete all volume created for the BeeGFA HA solution. This requires beegfs_ha_uninstall to be set to true.
-beegfs_ha_uninstall_storage_setup: false   # Flag to remove configuration that allows storage to be accessible to the BeeGFS HA node (i.e. multipath, communications protocols (iSCSI, IB iSER)).
-beegfs_ha_uninstall_reboot: true           # Whether to reboot after uninstallation.
+beegfs_ha_uninstall: false                                # Flag to uninstall the entire BeeGFS HA solution excluding the storage provisioning and host storage setup.
+beegfs_ha_delete_data_volumes: false                      # Flag to delete all volume created for the BeeGFA HA solution.
+beegfs_ha_delete_storage_pools_and_host_mappings: false   # Flag to delete all storage pools/volume groups and host/host group mappings created for BeeGFS HA solution. Be aware that removing storage pools/volume groups and host/host group mappings will effect any volumes or host mappings dependent on them.
+beegfs_ha_uninstall_storage_setup: false                  # Flag to remove configuration that allows storage to be accessible to the BeeGFS HA node (i.e. multipath, communications protocols (iSCSI, IB iSER)).
+beegfs_ha_uninstall_reboot: true                          # Whether to reboot after uninstallation.
 
 
 # Package version defaults

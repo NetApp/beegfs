@@ -26,7 +26,7 @@
   when: "inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and 'corosync.service' in (ansible_facts['services'].keys() | list)"
   become: true
 
-- name: Ensure storage has been provisioned for hosts.
+- name: Ensure storage has been deprovisioned for hosts.
   include_role:
     name: netapp_eseries.host.unmount
   when: beegfs_ha_delete_data_volumes == True and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
@@ -100,7 +100,7 @@
 - name: Ensure storage has been provisioned for hosts.
   include_role:
     name: netapp_eseries.santricity.nar_santricity_host
-  when: beegfs_ha_delete_data_volumes == True and inventory_hostname in groups[beegfs_ha_ansible_storage_group]
+  when: beegfs_ha_delete_storage_pools_and_host_mappings == True and inventory_hostname in groups[beegfs_ha_ansible_storage_group]
   vars:
     eseries_remove_all_configuration: true
 
