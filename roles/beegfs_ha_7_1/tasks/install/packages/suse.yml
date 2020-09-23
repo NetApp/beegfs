@@ -72,6 +72,18 @@
         name: ha-cluster-bootstrap
       when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
 
+    - name: Ensure ha-cluster-bootstrap is installed.
+      zypper:
+        state: present
+        name: pacemaker
+      when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
+
+    - name: Ensure ha-cluster-bootstrap is installed.
+      zypper:
+        state: present
+        name: corosync
+      when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
+
     - name: Ensure mailx is installed for alerts (SUSE).
       zypper:
         state: present
