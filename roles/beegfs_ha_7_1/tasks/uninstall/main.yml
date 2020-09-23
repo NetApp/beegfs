@@ -29,7 +29,7 @@
 - name: Ensure storage has been provisioned for hosts.
   include_role:
     name: netapp_eseries.host.unmount
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  when: beegfs_ha_delete_data_volumes == True and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   vars:
     eseries_common_group: "{{ beegfs_ha_ansible_storage_group }}"
     eseries_unmount_volumes: all_volumes
@@ -72,14 +72,14 @@
 - name: Ensure multipath and iscsi protocol are setup.
   include_role:
     name: netapp_eseries.host.storage_setup
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  when: beegfs_ha_uninstall_storage_setup == True and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   vars:
     eseries_storage_setup_uninstall: true
 
 - name: Ensure storage has been provisioned for hosts.
   include_role:
     name: netapp_eseries.santricity.nar_santricity_host
-  when: inventory_hostname in groups[beegfs_ha_ansible_storage_group]
+  when: beegfs_ha_delete_data_volumes == True and inventory_hostname in groups[beegfs_ha_ansible_storage_group]
   vars:
     eseries_remove_all_configuration: true
 
@@ -97,7 +97,7 @@
 
 - name: Reboot nodes
   reboot:
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and beegfs_ha_uninstall_reboot | bool == True
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and beegfs_ha_uninstall_reboot == True
   become: true
 
 - name: Ensure any cluster and BeeGFS configuration files are removed.
