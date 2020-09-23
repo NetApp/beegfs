@@ -59,10 +59,19 @@
 - name: Delete mount point directory for each metadata volume.
   file:
     state: absent
-    path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}"
-  loop: "{{ node_info['metadata'] }}"
+    path: "{{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
+  loop: "{{ all_volumes }}"
   when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and "metadata" in node_info["services"]'
   become: true
+  vars:
+    all_volumes: |-
+      {%- set all_volumes = [] -%}
+      {%- for metadata in node_info["metadata"] -%}
+        {%- for volume in metadata["volumes"] -%}
+          {%- if all_volumes.append(volume) -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- all_volumes -}}
 
 - name: Delete mount point directory for each storage volume from each storage service.
   file:
