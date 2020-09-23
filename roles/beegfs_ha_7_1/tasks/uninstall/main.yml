@@ -32,7 +32,19 @@
   when: beegfs_ha_delete_data_volumes == True and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   vars:
     eseries_common_group: "{{ beegfs_ha_ansible_storage_group }}"
-    eseries_unmount_volumes: all_volumes
+    eseries_unmount_volumes: |-
+      {%- set volumes = [] -%}
+      {%- if "node_info" in (hostvars[inventory_hostname].keys() | list) -%}
+        {%- set info = hostvars[inventory_hostname]["node_info"] -%}
+        {%- for service in info["services"] -%}
+          {%- for resource in info[service] -%}
+            {%- for volume in resource["volumes"] -%}
+              {%- if volumes.append(volume["name"]) -%}{%- endif -%}
+            {%- endfor -%}
+          {%- endfor -%}
+        {%- endfor -%}
+      {%- endif -%}
+      {{- volumes -}}
     eseries_unmount_purge: true
     eseries_unmount_delete: true
     eseries_unmount_wipe_format_signatures: true
