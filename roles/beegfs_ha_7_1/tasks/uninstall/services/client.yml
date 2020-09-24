@@ -18,3 +18,9 @@
     state: absent
     path: "{{ beegfs_ha_client_configuration_directory }}beegfs-client-autobuild.conf"
   become: true
+
+- name: Remove /mnt/beegfs directory (Client).
+  file:
+    state: absent
+    path: /mnt/beegfs
+  become: true
