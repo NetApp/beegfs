@@ -114,6 +114,20 @@
         - beegfs_ha_configure
         - beegfs_ha
 
+    - name: Verify all Pacemaker resources are started.
+      block:
+        - name: Retry until resources are all started
+          include_tasks: install/validate_resources.yml
+
+        - name: Warn when resources are not all started.
+          fail:
+            msg: "Warning! The following cluster resources are not running: {{ resources_not_started }}"
+          when: resources_not_started | length > 0
+          ignore_errors: true
+      when: inventory_hostname == preferred_management_node
+      tags:
+        - always
+
     - name: Backup current BeeGFS HA configuration.
       block:
         - name: Backup current BeeGFS HA configuration.
