@@ -32,6 +32,8 @@ beegfs_ha_force_resource_move: true   # Forces node and resource changes to migr
 
 
 # BeeGFS client defaults
+beegfs_ha_client_installed: true           # Whether to install BeeGFS client on the host.
+beegfs_ha_client_started: true             # Whether BeeGFS client should be running on the host.
 #beegfs_ha_client_connInterfaces:
 beegfs_ha_client_udp_port: 8004
 beegfs_ha_helperd_tcp_port: 8006
@@ -81,8 +83,11 @@ beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/
 
 
 # Uninstall defaults
-beegfs_ha_delete_data_and_uninstall_beegfs: false
-beegfs_ha_uninstall_reboot: true
+beegfs_ha_uninstall: false                                # Flag to uninstall the entire BeeGFS HA solution excluding the storage provisioning and host storage setup.
+beegfs_ha_delete_data_volumes: false                      # Flag to delete all volume created for the BeeGFA HA solution.
+beegfs_ha_delete_storage_pools_and_host_mappings: false   # Flag to delete all storage pools/volume groups and host/host group mappings created for BeeGFS HA solution. Be aware that removing storage pools/volume groups and host/host group mappings will effect any volumes or host mappings dependent on them.
+beegfs_ha_uninstall_storage_setup: false                  # Flag to remove configuration that allows storage to be accessible to the BeeGFS HA node (i.e. multipath, communications protocols (iSCSI, IB iSER)).
+beegfs_ha_uninstall_reboot: true                          # Whether to reboot after uninstallation.
 
 
 # Package version defaults

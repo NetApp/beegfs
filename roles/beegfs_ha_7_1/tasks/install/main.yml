@@ -129,8 +129,12 @@
       block:
         - name: Ensure BeeGFS HA clients are configured.
           include_tasks: services/client.yml
-          when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
+          when: beegfs_ha_client_installed == True and inventory_hostname in groups[beegfs_ha_ansible_client_group]
+
+        - name: Ensure BeeGFS HA clients are removed.
+          include_tasks: ../uninstall/services/client.yml
+          when: beegfs_ha_client_installed == False and inventory_hostname in groups[beegfs_ha_ansible_client_group]
       tags:
         - beegfs_ha_client
         - beegfs_ha
-  when: beegfs_ha_delete_data_and_uninstall_beegfs == False
+  when: beegfs_ha_uninstall == False

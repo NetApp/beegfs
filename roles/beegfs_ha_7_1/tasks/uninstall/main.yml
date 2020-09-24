@@ -26,13 +26,25 @@
   when: "inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and 'corosync.service' in (ansible_facts['services'].keys() | list)"
   become: true
 
-- name: Ensure storage has been provisioned for hosts.
+- name: Ensure storage has been deprovisioned for hosts.
   include_role:
     name: netapp_eseries.host.unmount
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  when: beegfs_ha_delete_data_volumes == True and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   vars:
     eseries_common_group: "{{ beegfs_ha_ansible_storage_group }}"
-    eseries_unmount_volumes: all_volumes
+    eseries_unmount_volumes: |-
+      {%- set volumes = [] -%}
+      {%- if "node_info" in (hostvars[inventory_hostname].keys() | list) -%}
+        {%- set info = hostvars[inventory_hostname]["node_info"] -%}
+        {%- for service in info["services"] -%}
+          {%- for resource in info[service] -%}
+            {%- for volume in resource["volumes"] -%}
+              {%- if volumes.append(volume["name"]) -%}{%- endif -%}
+            {%- endfor -%}
+          {%- endfor -%}
+        {%- endfor -%}
+      {%- endif -%}
+      {{- volumes -}}
     eseries_unmount_purge: true
     eseries_unmount_delete: true
     eseries_unmount_wipe_format_signatures: true
@@ -47,10 +59,19 @@
 - name: Delete mount point directory for each metadata volume.
   file:
     state: absent
-    path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}"
-  loop: "{{ node_info['metadata'] }}"
+    path: "{{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
+  loop: "{{ all_volumes }}"
   when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and "metadata" in node_info["services"]'
   become: true
+  vars:
+    all_volumes: |-
+      {%- set all_volumes = [] -%}
+      {%- for metadata in node_info["metadata"] -%}
+        {%- for volume in metadata["volumes"] -%}
+          {%- if all_volumes.append(volume) -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- all_volumes -}}
 
 - name: Delete mount point directory for each storage volume from each storage service.
   file:
@@ -72,14 +93,14 @@
 - name: Ensure multipath and iscsi protocol are setup.
   include_role:
     name: netapp_eseries.host.storage_setup
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  when: beegfs_ha_uninstall_storage_setup == True and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   vars:
     eseries_storage_setup_uninstall: true
 
 - name: Ensure storage has been provisioned for hosts.
   include_role:
     name: netapp_eseries.santricity.nar_santricity_host
-  when: inventory_hostname in groups[beegfs_ha_ansible_storage_group]
+  when: beegfs_ha_delete_storage_pools_and_host_mappings == True and inventory_hostname in groups[beegfs_ha_ansible_storage_group]
   vars:
     eseries_remove_all_configuration: true
 
@@ -87,13 +108,17 @@
   include_tasks: "packages/{{ ansible_os_family | lower }}.yml"
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
+- name: Uninstall any configure OS-specific client packages.
+  include_tasks: "services/client.yml"
+  when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
+
 - name: Ensure any performance tuning has been removed.
   include_tasks: "performance_tuning.yml"
   when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("metadata" in node_info["services"] or "storage" in node_info["services"])'
 
 - name: Reboot nodes
   reboot:
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and beegfs_ha_uninstall_reboot | bool == True
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and beegfs_ha_uninstall_reboot == True
   become: true
 
 - name: Ensure any cluster and BeeGFS configuration files are removed.

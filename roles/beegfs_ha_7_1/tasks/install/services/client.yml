@@ -1,3 +1,15 @@
+- name: Ensure expected BeeGFS packages are installed (Always).
+  include_tasks: "../packages/{{ ansible_os_family | lower }}_client_only.yml"
+
+- name: Ensure the required firewall ports are open.
+  include_tasks: ../common/firewall.yml
+
+- name: Ensure the ntp is configured.
+  include_tasks: ../common/ntp.yml
+
+- name: Ensure /etc/hosts file is populated with cluster nodes and floating IP addresses.
+  include_tasks: ../common/hosts.yml
+
 - name: Ensure beegfs-client.conf is properly configured (Client).
   template:
     src: client/beegfs_client_conf.j2
@@ -25,7 +37,7 @@
 - name: Ensure helperd service is running.
   systemd:
     name: beegfs-helperd.service
-    state: started
+    state: "{% if beegfs_ha_client_started == true %}started{% else %}stopped{% endif %}"
     daemon-reload: true
     enabled: true
   become: true
@@ -49,7 +61,14 @@
 - name: Ensure client service is running.
   systemd:
     name: beegfs-client.service
-    state: "{%- if client_conf['changed'] or client_interfaces_conf['changed'] or client_autobuild_conf['changed'] %}restarted{%- else %}started{%- endif %}"
+    state: |-
+      {%- if beegfs_ha_client_started == false -%}
+        stopped
+      {%- elif client_conf['changed'] or client_interfaces_conf['changed'] or client_autobuild_conf['changed'] -%}
+        restarted
+      {%- else -%}
+        started
+      {%- endif -%}
     daemon-reload: true
     enabled: true
   become: true

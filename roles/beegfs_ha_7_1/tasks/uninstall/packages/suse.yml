@@ -27,6 +27,18 @@
         name: libbeegfs-ib
       when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and beegfs_ha_enable_rdma'
 
+    - name: Ensure ha-cluster-bootstrap is installed.
+      zypper:
+        state: absent
+        name: pacemaker
+      when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
+
+    - name: Ensure ha-cluster-bootstrap is installed.
+      zypper:
+        state: absent
+        name: corosync
+      when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
+
     - name: Ensure ha-cluster-bootstrap is uninstalled.
       zypper:
         state: absent
@@ -35,7 +47,7 @@
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   become: true
 
-- name: Ensure the BeeGFS client package is installed (SUSE - Client).
+- name: Ensure the BeeGFS client package is uninstalled (SUSE - Client).
   zypper:
     state: absent
     name:

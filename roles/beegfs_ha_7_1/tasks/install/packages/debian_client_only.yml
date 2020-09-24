@@ -1,0 +1,43 @@
+- name: Ensure software properties common package is installed (Debian/Ubuntu).
+  apt:
+    state: latest
+    name: software-properties-common
+  become: true
+
+- name: Add BeeGFS apt respository key (Debian/Ubuntu).
+  apt_key:
+    url: "{{ beegfs_ha_debian_repository_gpgkey }}"
+    state: present
+  become: true
+
+- name: Add BeeGFS apt respository (Debian/Ubuntu).
+  apt_repository:
+    state: present
+    repo: "deb [arch=amd64] {{ beegfs_ha_debian_repository_base_url }} stretch non-free"
+    update_cache: true
+  become: true
+
+- name: Ensure NTP is installed (Debian/Ubuntu).
+  apt:
+    state: latest
+    name: ntp
+  when: beegfs_ha_ntp_enabled == True
+  become: true
+
+- name: Ensure Chrony is uninstalled (Debian/Ubuntu).
+  apt:
+    state: absent
+    name: chrony
+  when: beegfs_ha_ntp_enabled == True
+  become: true
+
+- name: Ensure BeeGFS client package is installed (Debian/Ubuntu - Client).
+  apt:
+    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    name:
+      - "beegfs-client={{ beegfs_ha_beegfs_version }}"
+      - "beegfs-helperd={{ beegfs_ha_beegfs_version }}"
+      - "beegfs-utils={{ beegfs_ha_beegfs_version }}"
+      - libelf-dev
+  when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
+  become: true

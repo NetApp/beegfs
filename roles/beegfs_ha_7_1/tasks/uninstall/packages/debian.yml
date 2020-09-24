@@ -1,32 +1,32 @@
-- name: Ensure the BeeGFS management package is installed (Debian/Ubuntu - Management).
+- name: Ensure the BeeGFS management package is uninstalled (Debian/Ubuntu - Management).
   apt:
     state: absent
     name: beegfs-mgmtd
   when: '"management" in node_info["services"]'
   become: true
 
-- name: Ensure the BeeGFS metadata package is installed (Debian/Ubuntu - Metadata).
+- name: Ensure the BeeGFS metadata package is uninstalled (Debian/Ubuntu - Metadata).
   apt:
     state: absent
     name: beegfs-meta
   when: '"metadata" in node_info["services"]'
   become: true
 
-- name: Ensure the BeeGFS storage package is installed (Debian/Ubuntu - Storage).
+- name: Ensure the BeeGFS storage package is uninstalled (Debian/Ubuntu - Storage).
   apt:
     state: absent
     name: beegfs-storage
   when: '"storage" in node_info["services"]'
   become: true
 
-- name: Ensure the BeeGFS infiniband package is installed (Debian/Ubuntu - Metadata/Storage).
+- name: Ensure the BeeGFS infiniband package is uninstalled (Debian/Ubuntu - Metadata/Storage).
   apt:
     state: absent
     name: libbeegfs-ib
   when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and beegfs_ha_enable_rdma'
   become: true
 
-- name: Ensure the required HA packages are installed (Debian/Ubuntu - Management/Metadata/Storage).
+- name: Ensure the required HA packages are uninstalled (Debian/Ubuntu - Management/Metadata/Storage).
   apt:
     state: absent
     name:
@@ -37,7 +37,7 @@
   when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
   become: true
 
-- name: Ensure BeeGFS client package is installed (Debian/Ubuntu - Client).
+- name: Ensure BeeGFS client package is uninstalled (Debian/Ubuntu - Client).
   apt:
     state: absent
     name:
