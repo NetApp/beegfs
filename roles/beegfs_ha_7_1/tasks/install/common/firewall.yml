@@ -3,5 +3,6 @@
     state: enabled
     permanent: true
     service: high-availability
+  ignore_errors: true
   become: true
   when: beegfs_ha_allow_firewall_high_availability_service == True

@@ -39,7 +39,7 @@
     - name: Configure performance tuning.
       block:
         - name: BeeGFS performance tuning (Storage/Metadata).
-          import_tasks: performance_tuning.yml
+          include_tasks: performance_tuning.yml
           when: 'beegfs_ha_enable_performance_tuning == True and (inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and
                                                                   ("metadata" in node_info["services"] or "storage" in node_info["services"]))'
       tags:
