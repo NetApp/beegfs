@@ -1,0 +1,218 @@
+- hosts: all
+  gather_facts: false
+  vars:
+    beegfs_ha_ansible_cluster_group: ha_cluster
+    beegfs_ha_ansible_client_group: ha_clients
+    beegfs_ha_ansible_storage_group: eseries_storage_systems
+  tasks:
+
+    # Determine information needed for prompts
+    - name: Determine group facts.
+      set_fact:
+        beegfs_ha_resource_groups: |-
+          {%- set resource_groups = [] -%}
+          {%- for group, hosts in groups.items() if group not in ["all", "ungrouped", beegfs_ha_ansible_cluster_group, beegfs_ha_ansible_client_group, beegfs_ha_ansible_storage_group] -%}
+            {%- if resource_groups.append(group) -%}{%- endif -%}
+          {%- endfor -%}
+          {{- resource_groups -}}
+        beegfs_hosts: |-
+          {%- set beegfs_hosts = [] -%}
+          {%- for host in groups["all"] if host not in groups[beegfs_ha_ansible_storage_group] -%}
+            {%- if beegfs_hosts.append(host) -%}{%- endif -%}
+          {%- endfor -%}
+          {{- beegfs_hosts -}}
+        storage_target_hosts: |-
+          {%- set storage_target_hosts = [] -%}
+          {%- for host in groups["all"] if host in groups[beegfs_ha_ansible_storage_group] -%}
+            {%- if storage_target_hosts.append(host) -%}{%- endif -%}
+          {%- endfor -%}
+          {{- storage_target_hosts -}}
+      run_once: true
+
+    - name: Determine whether cluster resource group inventory files exist.
+      stat:
+        path: "{{ playbook_dir }}/group_vars/{{ item }}.yml"
+      register: cluster_resource_group_inventory_files
+      loop: "{{ beegfs_ha_resource_groups }}"
+      delegate_to: localhost
+      run_once: true
+
+
+    # Prompt for BeeGFS HA cluster information.
+    - name: Determine BeeGFS management IP address.
+      pause:
+        prompt: "What is the BeeGFS management service IP address?"
+      register: beegfs_mgmt_ip
+      delay: 0
+      until: beegfs_mgmt_ip['user_input'] | regex_search('\A[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}\Z')
+      delegate_to: localhost
+      run_once: true
+
+    - name: Determine BeeGFS storage communication protocol.
+      pause:
+        prompt: "What is communication protocol is used between the BeeGFS hosts and E-Series storage (1-iSCSI, 2-IB iSER, 3-mix)?"
+      register: beegfs_storage_protocol
+      delay: 0
+      until: beegfs_storage_protocol['user_input'] in ["1", "2", "3"]
+      delegate_to: localhost
+      run_once: true
+
+    - name: Determine BeeGFS HA resource service type.
+      pause:
+        prompt: "What is the BeeGFS service that will be running on {{ item['item'] }} resource (1-management, 2-metadata, 3-storage)?"
+      register: resource_beegfs_service
+      delay: 0
+      until: resource_beegfs_service['user_input'] in ["1", "2", "3"]
+      loop: "{{ cluster_resource_group_inventory_files['results'] }}"
+      when: item['stat']['exists'] == False
+
+    - name: Determine example interface entry.
+      set_fact:
+        example_interface: |-
+          {%- set protocol = beegfs_storage_protocol["user_input"] -%}
+          {%- if protocol == "1" -%}
+            eth0
+          {%- elif protocol == "2" -%}
+            ib0
+          {%- else -%}
+            eth0
+          {%- endif -%}
+
+
+    # Ensure initial inventory directories exist.
+    - name: Create inventory directories
+      file:
+        state: directory
+        path: "{{ playbook_dir }}/{{ item }}"
+      loop: ["group_vars", "host_vars"]
+      delegate_to: localhost
+      run_once: true
+
+
+    # Ensure all group inventory file exists.
+    - name: Determine whether all group inventory file exists.
+      stat:
+        path: "{{ playbook_dir }}/group_vars/all.yml"
+      register: all_group_inventory_file
+      delegate_to: localhost
+      run_once: true
+
+    - name: Generate all group inventory file exists.
+      template:
+        src: "templates/all_group_template.j2"
+        dest: "{{ playbook_dir }}/group_vars/all.yml"
+      delegate_to: localhost
+      run_once: true
+      when: all_group_inventory_file['stat']['exists'] == False
+
+
+    # Ensure E-Series storage system group inventory file exists.
+    - name: Determine whether E-Series storage system group inventory file exists.
+      stat:
+        path: "{{ playbook_dir }}/group_vars/{{ beegfs_ha_ansible_storage_group }}.yml"
+      register: eseries_storage_system_group_inventory_file
+      delegate_to: localhost
+      run_once: true
+
+    - name: Generate E-Series storage system group inventory file exists.
+      template:
+        src: "templates/eseries_storage_system_group_template.j2"
+        dest: "{{ playbook_dir }}/group_vars/{{ beegfs_ha_ansible_storage_group }}.yml"
+      delegate_to: localhost
+      run_once: true
+      when: eseries_storage_system_group_inventory_file['stat']['exists'] == False
+
+
+    # Ensure BeeGFS client group inventory file exists.
+    - name: Determine whether BeeGFS client group inventory file exists.
+      stat:
+        path: "{{ playbook_dir }}/group_vars/{{ beegfs_ha_ansible_client_group }}.yml"
+      register: client_group_inventory_file
+      delegate_to: localhost
+      run_once: true
+
+    - name: Generate BeeGFS client group inventory file exists.
+      template:
+        src: "templates/client_group_template.j2"
+        dest: "{{ playbook_dir }}/group_vars/{{ beegfs_ha_ansible_client_group }}.yml"
+      delegate_to: localhost
+      run_once: true
+      when: client_group_inventory_file['stat']['exists'] == False
+
+
+    # Ensure BeeGFS HA cluster group inventory file exists.
+    - name: Determine whether BeeGFS HA cluster group inventory file exists.
+      stat:
+        path: "{{ playbook_dir }}/group_vars/{{ beegfs_ha_ansible_cluster_group }}.yml"
+      register: cluster_group_inventory_file
+      delegate_to: localhost
+      run_once: true
+
+    - name: Generate BeeGFS HA cluster group inventory file exists.
+      template:
+        src: "templates/ha_cluster_group_template.j2"
+        dest: "{{ playbook_dir }}/group_vars/{{ beegfs_ha_ansible_cluster_group }}.yml"
+      delegate_to: localhost
+      run_once: true
+      when: cluster_group_inventory_file['stat']['exists'] == False
+
+
+    # Ensure BeeGFS HA cluster resource group inventory files exist.
+    - name: Generate BeeGFS cluster group resource inventory files.
+      template:
+        src: |-
+          {%- set service = item['user_input'] -%}
+          {%- if service == "1" -%}
+            templates/cluster_group_management_resource_template.j2
+          {%- elif service == "2" -%}
+            templates/cluster_group_metadata_resource_template.j2
+          {%- elif service == "3" -%}
+            templates/cluster_group_storage_resource_template.j2
+          {%- else -%}
+            templates/cluster_group_resource_template.j2
+          {%- endif -%}
+        dest: "{{ playbook_dir }}/group_vars/{{ item['item']['item'] }}.yml"
+      loop: "{{ resource_beegfs_service['results'] }}"
+      when: "'user_input' in (item.keys() | list)"
+      delegate_to: localhost
+      run_once: true
+
+
+    # Ensure all BeeGFS host inventory files exist.
+    - name: Determine whether host inventory files exist.
+      stat:
+        path: "{{ playbook_dir }}/host_vars/{{ item }}.yml"
+      register: host_inventory_files
+      loop: "{{ beegfs_hosts }}"
+      delegate_to: localhost
+      run_once: true
+      when: item in groups[beegfs_ha_ansible_cluster_group] or item in groups[beegfs_ha_ansible_client_group]
+
+    - name: Generate BeeGFS host inventory files.
+      template:
+        src: "templates/cluster_node_template.j2"
+        dest: "{{ playbook_dir }}/host_vars/{{ item['item'] }}.yml"
+      loop: "{{ host_inventory_files['results'] }}"
+      delegate_to: localhost
+      run_once: true
+      when: item['stat']['exists'] == False
+
+
+    # Ensure all E-Series storage system host inventory files exist.
+    - name: Determine whether host inventory files exist.
+      stat:
+        path: "{{ playbook_dir }}/host_vars/{{ item }}.yml"
+      register: storage_inventory_files
+      loop: "{{ storage_target_hosts }}"
+      delegate_to: localhost
+      run_once: true
+
+
+    - name: Generate E-Series storage host inventory files.
+      template:
+        src: "templates/eseries_storage_system_template.j2"
+        dest: "{{ playbook_dir }}/host_vars/{{ item['item'] }}.yml"
+      loop: "{{ storage_inventory_files['results'] }}"
+      when: item['stat']['exists'] == False
+      delegate_to: localhost
+      run_once: true

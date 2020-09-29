@@ -1,41 +1,21 @@
-netapp_eseries.beegfs_beegfs_ha_7_1 Role
-========================================
-    The netapp_eseries.beegfs_beegfs_ha_7_1 role is a complete end-to-end deployment of the NetApp E-Series BeeGFS HA solution (LINK TO TR). This role utilizes the netapp_eseries santricity and host collections which allows users to not only configure the BeeGFS file system with HA but will also provision storage and ensure the communications between the storage and hosts.
-    For a complete inventory and playbook examples checkout https://github.com/netappeseries/beegfs/examples/beegfs_ha_7_1. This directory provides useful examples of working BeeGFS group and host inventory files.
+netappeseries.beegfs.beegfs_ha_7_1 Role
+=======================================
+    The netappeseries.beegfs.beegfs_ha_7_1 role is a complete end-to-end deployment of the (NetApp E-Series BeeGFS HA (High-Availability) solution)[BeeGFS High Availability with NetApp E-Series]. This role utilizes the NetApp E-Series santricity, host, and beegfs collections which allows users to not only configure the BeeGFS file system with HA but will also provision, map storage and ensure the cluster storage is ready for use.
+
 
 Requirements
 ------------
     - Ansible 2.9 or later
-    - NetApp E-Series E2800 platform or newer or NetApp E-Series SANtricity Web Services Proxy configured for older E-Series Storage arrays.
+    - Ansible control node's SSH keys copied out to all BeeGFS HA nodes and clients.
+    - NetApp E-Series E2800 platform or newer
+    - netappeseries.santricity 1.1 or later
+    - netappeseries.host 0.1 or later (Later revisions will have more protocol options to extend this roles capabilities)
+    - ipaddr and netaddr pip packages
 
-Support Matrix
---------------
-The BeeGFS role has been tested with the following BeeGFS versions, operating systems, and backend/frontend protocols:
 
-| Component              | BeeGFS Version | Operating System        | Storage Protocols             | Client Protocols    |
-| ---------------------- | -------------- | ----------------------- | ----------------------------- | ------------------- |
-| BeeGFS Client service  | 7.1.4          | RedHat 7.7, SLES 12 SP4 | N/A                           | TCP/UDP and RDMA    |
-| BeeGFS Server services | 7.1.4          | RedHat 7.7              | IB-iSER, iSCSI                | N/A                 |
-
-Notes:
-- BeeGFS Server services include BeeGFS management, metadata and storage services.
-- While not explicitly tested, it is reasonable to expect implicit support for the following:
-  - RedHat/SLES versions within the same major release family (for example SLES 12 SP3) and downstream distributions (for example CentOS).
-  - Versions of BeeGFS within the same major release family (for example 7.1.3).
-
-The BeeGFS role has been tested with the following E-Series storage systems and protocols:
-
-| Platform | Firmware | Protocols           |
-| -------- | -------- | ------------------- |
-| E5700    | 11.52    | iSCSI, IB-iSER      |
-
-Notes:
-- While not explicitly included in testing, other firmware versions and storage systems including the E2800 and SAN protocols including IB-SRP, FCP, and NVMe/FC are expected to work.
-
-Installation
-------------
-    To install dependencies:
-        - pip install ansible>=2.9 ipaddr netaddr
+Get Started - Build Example/Skeleton Project
+--------------------------------------------
+To build a skeleton inventory and playbook based your BeeGFS cluster requirements, checkout the [beegfs_ha_7_1 readme](https://github.com/netappeseries/beegfs/tree/release-2.0.0/examples/beegfs_ha_7_1/README.md).
 
 Example Playbook
 ----------------
@@ -63,27 +43,34 @@ Example Inventory
               eseries_validate_certs: false
               eseries_initiator_protocol: iscsi
 
+        ha_clients:
+          hosts:
+            client_01:
+            client_02:
+
         ha_cluster:
           vars:
-            eseries_common_allow_host_reboot: true
             beegfs_ha_ansible_host_group: ha_cluster
             beegfs_ha_ansible_storage_group: eseries_storage_systems
             beegfs_ha_cluster_name: hacluster
             beegfs_ha_cluster_username: hacluster
             beegfs_ha_cluster_password: hapassword
             beegfs_ha_mgmtd_floating_ip: 192.168.1.230
-            filter_ip_ranges:
-              - 192.168.2.0/24
-              - 192.168.3.0/24
             beegfs_ha_alert_email_list: ["jack@example.com", "jill@example.com"]
             beegfs_ha_fencing_agents:
-              fence_vmware_rest: # Each entry is name fence_vmware_rest_X where X is the ordered list index.
-                - pcmk_host_map: "node_mm1:vm_node_mm1;node_mm2:vm_node_mm2;node_ss1:vm_node_ss1;node_ss2:vm_node_ss2"
-                  ipaddr: 192.168.4.10
-                  ssl: 1
-                  ssl_insecure: 1
-                  login: example@vsphere.local
-                  passwd: vspherepass
+              fence_apc:
+                - pcmk_host_list: "node_mm1,node_ss1"
+                  pcmk_host_map: "node_mm1:1;node_ss1:2"
+                  ipaddr: 192.168.10.100
+                  login: admin
+                  passwd: adminpass
+              fence_vmware_rest:
+                - pcmk_host_list: "node_mm2,node_ss2"
+                  pcmk_host_map: "node_mm2:vm_node_mm2;node_ss2:vm_node_ss2"
+                  ipaddr: 192.168.10.102
+                  login: apcuser
+                  passwd: apcpass
+            eseries_common_allow_host_reboot: true
           children:
             mgmt:       # Resource group name must be 10 characters or less because the resource group is used to name the floating ip resource iflabel.
               hosts:    # hosts ordering will be used to determine resource constraint opt-in preferences (highest to lowest).
@@ -105,31 +92,13 @@ Example Inventory
                           - size: 10                       # Size parameter default size is gibibytes.
             meta_01:
               hosts:
-                node_mm2:
                 node_mm1:
+                node_mm2:
               vars:
                 port: 8005
                 floating_ips:
                   - "eth1:192.168.2.232/24"
                   - "eth2:192.168.3.233/24"
-                beegfs_service: metadata
-                beegfs_targets:
-                  eseries_storage_system_01:
-                    eseries_storage_pool_configuration:
-                      - name: mgmt_meta_01_02
-                        raid_level: raid1
-                        criteria_drive_count: 2
-                        volumes:
-                          - size: 100
-            meta_02:
-              hosts:
-                node_mm1:
-                node_mm2:
-              vars:
-                port: 8045
-                floating_ips:
-                  - "eth1:192.168.2.234/24"
-                  - "eth2:192.168.3.235/24"
                 beegfs_service: metadata
                 beegfs_targets:
                   eseries_storage_system_01:
@@ -166,37 +135,10 @@ Example Inventory
                           - size: 2048
                           - size: 2048
                           - size: 2048
-            stor_02:
-              hosts:
-                node_ss1:
-                node_ss2:
-              vars:
-                port: 8050
-                floating_ips:
-                  - "eth1:192.168.2.238/24"
-                  - "eth2:192.168.3.239/24"
-                beegfs_service: storage
-                beegfs_targets:
-                  eseries_storage_system_01:
-                    eseries_storage_pool_configuration:
-                      - raid_level: raid6
-                        criteria_drive_count: 10
-                        volumes:
-                          - size: 2048
-                          - size: 2048
-                          - size: 2048
-                          - size: 2048
-                      - raid_level: raid6
-                        criteria_drive_count: 10
-                        volumes:
-                          - size: 2048
-                          - size: 2048
-                          - size: 2048
-                          - size: 2048
 
 Example Host Inventory File
 ---------------------------
-    ansible_host: 192.168.1.226
+    ansible_host: 192.168.1.10
     ansible_ssh_user: admin
     ansible_become_password: adminpass
 
@@ -209,7 +151,7 @@ Example Host Inventory File
 
 Example BeeGFS HA Client Inventory File
 ---------------------------------------
-    ansible_host: 192.168.1.226
+    ansible_host: 192.168.1.100
     ansible_ssh_user: admin
     ansible_become_password: adminpass
 
@@ -217,28 +159,31 @@ Example BeeGFS HA Client Inventory File
       - eth0
       - eth1
 
-Example Project
----------------
-    *If your going to use the example project as a basis for your own, be sure to copy the whole structure to your Ansible control node and update all values to ensure a smooth automation experience.
-    See the [example_project](https://github.com/netappeseries/host/tree/master/beegfs_ha_7_1).
+Example E-Series storage target for BeeGFS HA cluster
+-----------------------------------------------------
+    ansible_connection: local
+    eseries_system_api_url: https://192.168.1.200:8443/devmgr/v2/
+    eseries_system_password: adminpass
+    eseries_validate_certs: false
+    eseries_initiator_protocol: iscsi
 
 Role Tags
 ---------
     Use the following tags when executing you BeeGFS HA playbook to only execute select tasks.
         example: ansible-playbook -i inventory.yml playbook.yml --tags beegfs_ha_configure
 
-    - storage                           # Provisions storage and ensures volumes are presented on hosts.
-    - beegfs_ha                         # All BeeGFS HA tasks.
-    - beegfs_ha_package                 # All BeeGFS HA package tasks.
-    - beegfs_ha_configure               # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
-    - beegfs_ha_configure_resource  # All BeeGFS HA pacemaker resource tasks.
-    - beegfs_ha_performance_tuning      # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
-    - beegfs_ha_backup                  # Backup Pacemaker and Corosync configuration files.
-    - beegfs_ha_client                  # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
+    - storage                         # Provisions storage and ensures volumes are presented on hosts.
+    - beegfs_ha                       # All BeeGFS HA tasks (Ensure volumes have been presented to the cluster nodes).
+    - beegfs_ha_package               # All BeeGFS HA package tasks.
+    - beegfs_ha_configure             # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
+    - beegfs_ha_configure_resource    # All BeeGFS HA pacemaker resource tasks.
+    - beegfs_ha_performance_tuning    # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
+    - beegfs_ha_backup                # Backup Pacemaker and Corosync configuration files.
+    - beegfs_ha_client                # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
 
 General Notes
 -------------
-    - All nodes need to be available and if the BeeGFS HA solution is active then all services need to be running on their preferred nodes.
+    - All BeeGFS cluster nodes need to be available.
     - Fencing agents should be used to ensure failed nodes are definitely down.  WARNING! If beegfs_ha_enable_fence is set to false then a fencing agent will not be configured!
     - Uninstall functionality will remove required BeeGFS 7.1 packages. This means that there will be no changes made to the kernel development/NTP/chrony packages whether they previously existed or not.
     - BeeGFS is added to the PRUNEFS list in /etc/updatedb.conf to prevent daily indexing scans on clients which causes performance degradations.
@@ -305,19 +250,18 @@ Performance Tuning (`beegfs_ha_enable_performance_tuning: False`)
 Role Variables
 --------------
     # General configuration defaults
-    beegfs_ha_ansible_host_group: ha_cluster                    # Ansible inventory group name for the BeeGFS HA cluster. Define all resource group in this group.
+    beegfs_ha_ansible_cluster_group: ha_cluster                 # Ansible inventory group name for the BeeGFS HA cluster. Define all resource group in this group.
+    beegfs_ha_ansible_client_group: ha_clients                  # Ansible inventory group name for the BeeGFS clients.
     beegfs_ha_ansible_storage_group: eseries_storage_systems    # Ansible inventory group name for the BeeGFS HA E-Series storage systems.
     beegfs_ha_cluster_name: hacluster                           # Name for the pacemaker cluster.
     beegfs_ha_cluster_username: hacluster                       # Pacemaker cluster username.
     beegfs_ha_cluster_password: hapassword                      # Pacemaker cluster password.
     beegfs_ha_cluster_password_sha512_salt: random$alt          # Pacemaker cluster password sha512 encryption salt.
     beegfs_ha_ntp_enabled: true                                 # Whether NTP should be enabled.
-    beegfs_ha_enable_alerts: true                               # Whether to enable pacemaker email alerts.
-    beegfs_ha_alert_email_list: []                              # Pacemaker alert email recipients.
+    beegfs_ha_allow_firewall_high_availability_service: true    # Allow high-availability firewall services.
     beegfs_ha_alert_email_subject: "ClusterNotification"        # Alert email subject line.
-    beegfs_ha_enable_auto_tie_breaker: true                     # Whether to enable automatic node quorum tie breaker.
-    beegfs_ha_enable_auto_tie_breaker_force_update: false       # Whether to change automatic node quorum tie breaker settings when BeeGFS HA services are active.
-                                                                #   WARNING! This will force the BeeGFS HA services to restart.
+    beegfs_ha_alert_email_list: []                              # Pacemaker alert email recipients.
+    beegfs_ha_enable_alerts: true                               # Whether to enable pacemaker email alerts.
     beegfs_ha_enable_quota: false                               # Whether to enable BeeGFS file system quotas.
     beegfs_ha_enable_fence: true                                # Whether to enable pacemaker STONITH fencing agents.
     beegfs_ha_filter_ip_ranges: []                              # BeeGFS IPv4 CIDR subnet filters. This forces BeeGFS to only listen on these subnets.
@@ -325,6 +269,8 @@ Role Variables
     beegfs_ha_cluster_resource_defaults:                        # Pacemaker resource defaults dictionary. These will be applied across all resource groups.
       resource-stickiness: 15000
     beegfs_ha_force_resource_move: true                         # Forces node and resource changes to migrate services to preferred nodes.
+    beegfs_ha_storage_system_hostgroup_prefix: beegfs           # Prefix that is added to the storage system's host group name which is created to map volumes to
+                                                                #   all cluster nodes within the specific resource group.
     beegfs_ha_backup: true                                      # Whether to create a PCS backup which can be used to restore to a previous configuration.
                                                                 #   Use the following command to restore a previous configuration: pcs config restore <backup>
     beegfs_ha_backup_path: /tmp/                                # PCS backup file path.
@@ -338,15 +284,15 @@ Role Variables
 
     # RDMA defaults
     beegfs_ha_enable_rdma: false                                # Whether to enable RDMA.
-    beegfs_ha_ofed_include_path: /usr/src/openib/include        # OFED library include path.
+    beegfs_ha_ofed_include_path:                                # OFED library include path.
 
     # Performance tuning defaults (See `Performance Tuning` section above more information)
     beegfs_ha_enable_performance_tuning: False                  # Whether to enable performance tuning.
-    beegfs_ha_eseries_scheduler: noop                           # Raw volume device (dmX) scheduler value.
-    beegfs_ha_eseries_nr_requests: 64                           # Raw volume device (dmX) nr_requests value.
-    beegfs_ha_eseries_read_ahead_kb: 4096                       # Raw volume device (dmX) read_ahead_kb value.
-    beegfs_ha_eseries_max_sectors_kb: 1024                      # Raw volume device (dmX) max_sectors_kb value.
-    beegfs_ha_sysctl_entries:                                   # Kernel paremeter settings
+    beegfs_ha_eseries_scheduler: noop                           # Raw volume device (dm-X) scheduler value.
+    beegfs_ha_eseries_nr_requests: 64                           # Raw volume device (dm-X) nr_requests value.
+    beegfs_ha_eseries_read_ahead_kb: 4096                       # Raw volume device (dm-X) read_ahead_kb value.
+    beegfs_ha_eseries_max_sectors_kb: 1024                      # Raw volume device (dm-X) max_sectors_kb value.
+    beegfs_ha_sysctl_entries:                                   # Kernel parameter settings
       vm.dirty_background_ratio: 5
       vm.dirty_ratio: 20
       vm.vfs_cache_pressure: 50
@@ -354,27 +300,36 @@ Role Variables
       vm.zone_reclaim_mode: 1
 
     # NTP configuration defaults
-    beegfs_ha_ntp_configuration_file: /etc/ntp.conf   # Absolute file path for ntp.conf
-    beegfs_ha_ntp_server_pools:                       # List of ntp server pools.
+    beegfs_ha_ntp_configuration_file: /etc/ntp.conf             # Absolute file path for ntp.conf
+    beegfs_ha_ntp_server_pools:                                 # List of ntp server pools.
       - "server 0.ubuntu.pool.ntp.org iburst"
       - "server 1.ubuntu.pool.ntp.org iburst"
       - "server 2.ubuntu.pool.ntp.org iburst"
       - "server 3.ubuntu.pool.ntp.org iburst"
-    beegfs_ha_ntp_restricts:                          # Band addresses to acquire time from NTP services.
+    beegfs_ha_ntp_restricts:                                    # Band addresses to acquire time from NTP services.
       - 127.0.0.1
       - ::1
 
-    # Uninstall defaults
-    beegfs_ha_delete_data_and_uninstall_beegfs: false   # Uninstall flag for all BeeGFS HA install packages and configuration.
-    beegfs_ha_uninstall_reboot: true                    # Whether to reboot after uninstallation.
+    # Corosync defaults
+    corosync_authkey_path: /etc/corosync/authkey                # Absolute path for the Corosync authkey file.
+    corosync_conf_path: /etc/corosync/corosync.conf             # Absolute path for the Corosync configuration file.
+    corosync_log_path: /var/log/corosync.log                    # Absolute path for the Corosync log file.
 
-    # Package version defaults
-    beegfs_ha_beegfs_version: 7.1                # Default BeeGFS package version
-    beegfs_ha_corosync_version: 2.4.5-4          # Default Corosync package version
-    beegfs_ha_pacemaker_version: 1.1.21-4        # Default Pacemaker package version
-    beegfs_ha_pcs_version: 0.9.168               # Default PCS package version
-    beegfs_ha_fence_agents_all_version:          # Default Fence agent package version
-    beegfs_ha_force_beegfs_patch_upgrade: true   # Whether to upgrade the patch version of packages.
+    # Pcs defaults
+    beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/                    # Absolute path for the pcsd directory.
+
+    # Package version defaults (Warning! Only the patch version can change.)
+    beegfs_ha_beegfs_version: 7.1                               # BeeGFS package version.
+    beegfs_ha_pacemaker_version: 1.1                            # Pacemaker package version.
+    beegfs_ha_corosync_version: 2.4                             # Corosync package version.
+    beegfs_ha_pcs_version: 0.9                                  # PCS package version.
+    beegfs_ha_fence_agents_all_version:                         # Fence-agent-all package.
+    beegfs_ha_force_beegfs_patch_upgrade: false                 # Major and master versions must not change; however the patch versions can and this flag will
+                                                                #   ensure that its the latest version.
+
+    # Uninstall defaults
+    beegfs_ha_delete_data_and_uninstall_beegfs: false           # Confirmation flag for uninstalling BeeGFS HA configuration and deleting its data.
+    beegfs_ha_uninstall_reboot: true                            # Whether to reboot once the uninstallation is complete.
 
     # Volume formatting and mounting defaults
     beegfs_ha_service_volume_configuration:
@@ -414,6 +369,32 @@ Role Variables
     beegfs_ha_suse_allow_unsupported_module: true
     beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7_1/dists/sles12
     beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_1/gpg/RPM-GPG-KEY-beegfs
+
+Support Matrix
+--------------
+The BeeGFS role has been tested with the following BeeGFS versions, operating systems, and backend/frontend protocols:
+
+| Component              | BeeGFS Version | Operating System        | Storage Protocols             | Client Protocols    |
+| ---------------------- | -------------- | ----------------------- | ----------------------------- | ------------------- |
+| BeeGFS Client service  | 7.1.5          | RedHat 7.7, SLES 12 SP4 | N/A                           | TCP/UDP and RDMA    |
+| BeeGFS Server services | 7.1.5          | RedHat 7.7              | IB-iSER, iSCSI                | N/A                 |
+
+Notes:
+- BeeGFS Server services include BeeGFS management, metadata and storage services.
+- While not explicitly tested, it is reasonable to expect implicit support for the following:
+  - Versions of BeeGFS within the same major/minor release family (i.e. BeeGFS 7.1.X).
+- SLES 12 SP4 has been tested with the Pacemaker and Corosync packages but not the SLES HAE package that is required for SUSE support. The crm tool that comes with the HAE package has not bee added to the automation so the crm_X tools that come with pacemaker will need to be used in its stead.
+
+
+The BeeGFS role has been tested with the following E-Series storage systems and protocols:
+
+| Platform | Firmware | Protocols           |
+| -------- | -------- | ------------------- |
+| E5700    | 11.52    | iSCSI, IB-iSER      |
+
+Notes:
+- While not explicitly included in testing, other firmware versions and storage systems including the E2800.
+- Other SAN protocols including InfiniBand SRP, Fibre Channel, NVMe over IB, NVMe over FC, and NVMe over RoCE are expected to work when (netappeseries.host collection)[https://galaxy.ansible.com/netapp_eseries/host] implements them. At the time of writing only iSCSI and InfiniBand iSER have been implemented.
 
 Dependencies
 ------------

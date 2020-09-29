@@ -1,15 +1,29 @@
+# Example BeeGFS HA (High-Availability) cluster inventory file.
+
+# The basic function for Ansible inventory files are to define host groups. Group variables can be placed in a YAML file that corresponds to the group's name in
+#   the group_vars/ directory. Likewise, host variables can be placed in a YAML file that has its name in the host_vars/ directory. Note that the names used for
+#   Ansible host names do not need to correspond to the systems actual hostname; these are references only for Ansible automation.
+
 all:
+  vars:
+    ansible_python_interpreter: /usr/bin/python
   children:
 
-    eseries_storage_systems:
-      hosts:
-        eseries_storage_system_01:
 
+    # BeeGFS HA cluster resource Ansible group
     ha_cluster:
       children:
-        mgmt: # Resource Group - NOTE: must be 12 characters or less because the resource group is used to name the floating ip resource iflabel.
+
+        # Define all resource groups here for the BeeGFS cluster. At minimum you must have a management, metadata, and storage group. Create a 'hosts'
+        #   dictionary containing the cluster node names you wish to be included in the resource group.
+
+        # Notes:
+        #   - The host names are used are used to for the BeeGFS HA cluster node names.
+        #   - The resource group's name must be less than 12 characters because the resource group is used to name the floating ip resource iflabel.
+        #   - The order of the cluster nodes in the hosts dictionary determines the resource's preference for the host, starting with the highest preference.
+        mgmt:             # Management resource name - mgmt (unless changes) will be used to define Pacemaker resource group.
           hosts:
-            node_mm1:  # Lists are ordered with the highest priority first.
+            node_mm1:     # Within each BeeGFS Pacemaker resource group you can define 1 or more nodes beginning with the highest preference.
             node_mm2:
 
         meta_01:
@@ -29,5 +43,21 @@ all:
 
         stor_02:
           hosts:
-            node_ss1:
             node_ss2:
+            node_ss1:
+
+    # NetApp E-Series storage systems Ansible group
+    eseries_storage_systems:
+      hosts:
+
+        # Define all E-Series storage targets here used by the BeeGFS cluster.
+        eseries_storage_system_01:
+
+
+    # BeeGFS clients Ansible group
+    ha_clients:
+      hosts:
+
+        # Define all BeeGFS clients of the BeeGFS HA cluster.
+        client1:
+        client2:
