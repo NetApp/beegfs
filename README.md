@@ -254,8 +254,8 @@ Known Issues/Limitations of the BeeGFS Role
 * During the first run after enabling quota support, you may notice "changed" logged for the following tasks:
     * The tasks that populate service configuration files due to how Ansible determines changes between files (or subtle difference in the config templates/actual file).
     * The task responsible for mounting BeeGFS storage targets, especially if /etc/fstab was not updated with the new mount options.
-
-
+* When using the yum package manager, if the role is used to deploy, wipe, then redeploy BeeGFS regularly (on the order of 10s to 100s of times) depending how yum is configured the contents of `/var/cache` may grow exponentially over time. This cache can be purged by running `yum clean all`. More permanent workarounds may be possible by toggling the yum `/etc/yum.conf:keepcache` parameter, but have not been tested extensively thus are outside the scope of this documentation.
+  
 Troubleshooting
 ---------------
 * When deploying the BeeGFS client service on SLES, the client service may fail to start and indicate the BeeGFS kernel module is unsupported.
