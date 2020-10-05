@@ -1,7 +1,6 @@
 netappeseries.beegfs.beegfs_ha_7_1 Role
 =======================================
-    The netappeseries.beegfs.beegfs_ha_7_1 role is a complete end-to-end deployment of the (NetApp E-Series BeeGFS HA (High-Availability) solution)[BeeGFS High Availability with NetApp E-Series]. This role utilizes the NetApp E-Series santricity, host, and beegfs collections which allows users to not only configure the BeeGFS file system with HA but will also provision, map storage and ensure the cluster storage is ready for use.
-
+This role is a complete end-to-end deployment of the (NetApp E-Series BeeGFS HA (High-Availability) solution)[BeeGFS High Availability with NetApp E-Series]. This role utilizes the NetApp E-Series SANtricity, Host, and BeeGFS collections which allows users to not only configure the BeeGFS file system with HA but also provision, map storage and ensure the cluster storage is ready for use.
 
 Requirements
 ------------

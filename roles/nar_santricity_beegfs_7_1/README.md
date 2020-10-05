@@ -1,10 +1,6 @@
-NetApp E-Series BeeGFS Collection - nar_santricity_beegfs_7_1
+netappeseries.beegfs.nar_santricity_beegfs_7_1 Role
 =============================================================
-NetApp would typically publish the recommended steps to deploy parallel file systems using E-Series storage as one or more technical reports. To ensure the success of customers looking to use E-Series storage behind BeeGFS, we’ve now automated these deployment steps using a BeeGFS role for Ansible. This approach strives to simplify deploying solutions on E-Series by delivering them using an infrastructure as code (IaC) model.
-
-Currently this collection contains a single role `roles/nar_santricity_beegfs_7_1` that can be used to deploy a BeeGFS parallel file system on hosts using NetApp E-Series storage. This role was designed and developed for the BeeGFS v7.1 release family. To avoid backwards compatibility issues, if support is added for a new version of BeeGFS it will be implemented as a new role (example: `roles/nar_santricity_beegfs_7_2`).
-
-As Ansible Galaxy currently provides limited visibility to README files provided for roles contained within a collection, going forward this README will only contain documentation for the latest role released for BeeGFS. As this is the initial release of the BeeGFS Collection, all documentation currently exists in this file. In future documentation for legacy roles will be accessible at `roles/nar_santricity_beegfs_<version>/README.md`.
+This role deploys BeeGFS without high availability as described in the (BeeGFS with NetApp E-Series solution deployment guide)[https://www.netapp.com/us/media/tr-4755.pdf]. Note this role requires NetApp E-Series storage be configured and attached to the respective BeeGFS nodes before execution. Combined with the NetApp E-Series SANtricity and Host collections users can perform an end-to-end automated deployment.
 
 Requirements:
 -------------
