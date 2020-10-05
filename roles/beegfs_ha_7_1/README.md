@@ -4,20 +4,53 @@ This role is a complete end-to-end deployment of the (NetApp E-Series BeeGFS HA 
 
 Requirements
 ------------
-    - Ansible 2.9 or later
-    - Ansible control node's SSH keys copied out to all BeeGFS HA nodes and clients.
-    - NetApp E-Series E2800 platform or newer
-    - netappeseries.santricity 1.1 or later
-    - netappeseries.host 0.1 or later (Later revisions will have more protocol options to extend this roles capabilities)
-    - ipaddr and netaddr pip packages
+- Ansible control node with Ansible 2.9 or later ands the following dependencies installed:
+  - NetApp E-Series Ansible Collections:
+    - netappeseries.santricity 1.1 or later.
+    - netappeseries.host 0.1 or later (later revisions will have more protocol options to extend this roles capabilities).
+  - Python (pip) packages:
+    - ipaddr
+    - netaddr
+- Passwordless SSH setup from the Ansible control node to all BeeGFS HA nodes and clients.
 
+Support Matrix
+--------------
+The BeeGFS role has been tested with the following BeeGFS versions, operating systems, and backend/frontend protocols:
 
-Get Started - Build Example/Skeleton Project
---------------------------------------------
-To build a skeleton inventory and playbook based your BeeGFS cluster requirements, checkout the [beegfs_ha_7_1 readme](https://github.com/netappeseries/beegfs/tree/release-2.0.0/examples/beegfs_ha_7_1/README.md).
+| Component              | BeeGFS Version | Operating System        | Storage Protocols             | Client Protocols  |
+| ---------------------- | -------------- | ----------------------- | ----------------------------- | ----------------- |
+| BeeGFS Client service  | 7.1.5          | RedHat 7.7, SLES 12 SP4 | N/A                           | TCP/UDP and RDMA  |
+| BeeGFS Server services | 7.1.5          | RedHat 7.7              | IB-iSER, iSCSI                | N/A               |
 
-Example Playbook
+Notes:
+- BeeGFS Server services include BeeGFS management, metadata and storage services.
+- While not explicitly tested, it is reasonable to expect implicit support for the following:
+  - Versions of BeeGFS within the same major/minor release family (i.e. BeeGFS 7.1.X).
+- SLES 12 SP4 has been tested with the Pacemaker and Corosync packages but not the SLES HAE package that may be required for a SUSE support subscription. The crm tool that comes with the HAE package has not been added to the automation so the crm_X tools that come with pacemaker will need to be used in its stead.
+
+The BeeGFS role has been tested with the following E-Series storage systems and protocols:
+
+| Platform | Firmware | Protocols           |
+| -------- | -------- | ------------------- |
+| E5700    | 11.52    | iSCSI, IB-iSER      |
+
+Notes:
+- While not explicitly included in testing, other firmware versions and storage systems including the E2800, EF570, and EF600 (iSER only).
+- Other SAN protocols including InfiniBand SRP, Fibre Channel, NVMe over IB, NVMe over FC, and NVMe over RoCE are expected to work when (netappeseries.host collection)[https://galaxy.ansible.com/netapp_eseries/host] implements them. At the time of writing only iSCSI and InfiniBand iSER have been implemented.
+
+Getting Started
 ----------------
+To build an inventory and playbook based your BeeGFS cluster requirements, checkout the [beegfs_ha_7_1 example project readme](https://github.com/netappeseries/beegfs/tree/release-2.0.0/examples/beegfs_ha_7_1/README.md).
+
+This is the recommended way to get started with the BeeGFS HA role. Alternatively users can jump into the examples and detailed descriptions of the various variables found in the sections below.
+
+Example Playbook, Inventory, Group/Host Variables 
+-------------------------------------------------
+For users that want to jump right in this section provides examples of how to layout your playbook and inventory files.
+
+### Example Playbook File
+Simply import the BeeGFS role where you want to use it in your playbook: 
+
     - hosts: all
       gather_facts: false
       collections:
@@ -27,8 +60,9 @@ Example Playbook
           import_role:
             name: beegfs_ha_7_1
 
-Example Inventory
------------------
+### Example Inventory File
+The variables in this section are described in greater detail under the "Role Variables" section and may need to be customized to fit each installation:
+
     all:
       vars:
         ansible_python_interpreter: /usr/bin/python
@@ -43,6 +77,10 @@ Example Inventory
               eseries_initiator_protocol: iscsi
 
         ha_clients:
+          vars:
+            beegfs_ha_client_connInterfaces:
+              - eth0
+              - eth1        
           hosts:
             client_01:
             client_02:
@@ -135,8 +173,9 @@ Example Inventory
                           - size: 2048
                           - size: 2048
 
-Example Host Inventory File
----------------------------
+### Example BeeGFS HA Host Inventory File
+This file would typically be created as `host_vars/<hostname>.yml`:
+
     ansible_host: 192.168.1.10
     ansible_ssh_user: admin
     ansible_become_password: adminpass
@@ -148,144 +187,53 @@ Example Host Inventory File
       - name: eth2
         address: 192.168.3.226/24
 
-Example BeeGFS HA Client Inventory File
----------------------------------------
+### Example BeeGFS HA Client Inventory File
+This file would typically be created as `host_vars/<hostname>.yml`:
+
     ansible_host: 192.168.1.100
     ansible_ssh_user: admin
     ansible_become_password: adminpass
 
-    beegfs_ha_client_connInterfaces:
-      - eth0
-      - eth1
+### Example E-Series Storage System Inventory File
+This file would typically be created as `host_vars/<hostname>.yml`:
 
-Example E-Series storage target for BeeGFS HA cluster
------------------------------------------------------
     ansible_connection: local
     eseries_system_api_url: https://192.168.1.200:8443/devmgr/v2/
     eseries_system_password: adminpass
     eseries_validate_certs: false
     eseries_initiator_protocol: iscsi
 
-Role Tags
----------
-    Use the following tags when executing you BeeGFS HA playbook to only execute select tasks.
-        example: ansible-playbook -i inventory.yml playbook.yml --tags beegfs_ha_configure
-
-    - storage                         # Provisions storage and ensures volumes are presented on hosts.
-    - beegfs_ha                       # All BeeGFS HA tasks (Ensure volumes have been presented to the cluster nodes).
-    - beegfs_ha_package               # All BeeGFS HA package tasks.
-    - beegfs_ha_configure             # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
-    - beegfs_ha_configure_resource    # All BeeGFS HA pacemaker resource tasks.
-    - beegfs_ha_performance_tuning    # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
-    - beegfs_ha_backup                # Backup Pacemaker and Corosync configuration files.
-    - beegfs_ha_client                # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
-
-General Notes
--------------
-    - All BeeGFS cluster nodes need to be available.
-    - Fencing agents should be used to ensure failed nodes are definitely down.  WARNING! If beegfs_ha_enable_fence is set to false then a fencing agent will not be configured!
-    - Uninstall functionality will remove required BeeGFS 7.1 packages. This means that there will be no changes made to the kernel development/NTP/chrony packages whether they previously existed or not.
-    - BeeGFS is added to the PRUNEFS list in /etc/updatedb.conf to prevent daily indexing scans on clients which causes performance degradations.
-
-NTP (`beegfs_ha_ntp_enabled: true`)
------------------------------------
-    Time synchronization is required for BeeGFS to function properly. As a convenience to users the BeeGFS role provides functionality that can configure the ntpd service on all BeeGFS nodes by setting `beegfs_ha_ntp_enabled: True`. By default this variable is set to `False` to avoid conflicts with any existing NTP configuration that might be in place. If this variable is set to `True` please note any existing Chrony installations will be removed as they would conflict with ntpd.
-    The template used to generate the /etc/ntp.conf file can be found at `roles/beegfs_ha_7_1/templates/common/ntp_conf.j2`. Depending on the security policies of your organization, you way wish to adjust the default configuration.
-    * Some Linux installations may be setup to have the DHCP client periodically update /etc/ntp.conf with NTP servers from the DHCP server. You can tell this is happening if text like the following is appended to the bottom of /etc/ntp.conf:
-    ```
-    server <IP_ADDR>  # added by /sbin/dhclient-script
-    ```
-    As a result the NTP related Ansible tasks will be marked as changed whenever the role is reapplied. If you're wanting to manage the NTP configuration outside Ansible simply set `beegfs_ha_ntp_enabled: False` to prevent the role from configuring NTP.
-
-Performance Tuning (`beegfs_ha_enable_performance_tuning: False`)
------------------------------------------------------------------
-    Performance tuning is disabled by default, but can be enabled by setting `beegfs_ha_enable_performance_tuning: True`. The default is to avoid a scenario where users are unaware these are being set, and they result in poor performance or stability issues that are difficult to troubleshoot. There is also the added consideration the default values will likely need to be adjusted to achieve optimal performance for a given hardware configuration.
-
-    BeeGFS calls out a number of parameters at https://www.beegfs.io/wiki/StorageServerTuning and https://www.beegfs.io/wiki/MetaServerTuning that can be used to improve the performance of BeeGFS storage and metadata services. To help simplify performance tuning for BeeGFS storage and metadata nodes, the BeeGFS role provides the following functionality:
-
-    1) Tuning kernel parameters using sysctl.
-    2) Tuning parameters on E-Series block devices/paths using udev.
-
-    While default values for all tuning parameters are defined at `roles/beegfs_ha_7_1/defaults/main.yml`, more than likely these will need to be adjusted to tune based on the environment. As with any Ansible variable, you can override these defaults on a host-by-host or group basis to tune each node or sets of nodes differently.
-
-    To only run tasks related to BeeGFS performance tuning, use the tag "beegfs_ha_performance_tuning" in your Ansible playbook command (e.g. `ansible-playbook -i inventory.yml playbook.yml --tags beegfs_ha_performance_tuning`). This will greatly reduce playbook runtime when simply wishing to make incremental adjustments to these parameters during benchmark testing.
-
-    #### Tuning kernel parameters using sysctl:
-
-    BeeGFS recommends setting various kernel parameters under /proc/sys to help optimize the performance of BeeGFS storage/metadata nodes. One option to ensure these changes are persistent are setting them using sysctl. By default this role will will override the following parameters on BeeGFS storage and metadata nodes in /etc/sysctl.conf on RedHat or /etc/sysctl.d/99-eseries-beegfs.conf on SUSE:
-
-        beegfs_ha_sysctl_entries:
-          vm.dirty_background_ratio: 5
-          vm.dirty_ratio: 20
-          vm.vfs_cache_pressure: 50
-          vm.min_free_kbytes: 262144
-          vm.zone_reclaim_mode: 1
-
-    Important:
-    - If you define your own `beegfs_ha_sysctl_entries` you will need to explicitly list all sysctl key/value pairs you wish to be set.
-    - The documentation for some Linux distributions indicates you need to rebuild the initramfs after modifying the values of kernel variables using sysctl (reference: https://documentation.suse.com/sles/12-SP4/html/SLES-all/cha-boot.html#var-initrd-regenerate-kernelvars). Based on testing these values do persist through a reboot for the operating systems listed on the support matrix, and thus is not done automatically by the role. It is recommended users verify these settings persist in their environment, and rebuild the initramfs if needed.
-
-    #### Tuning parameters on E-Series block devices/paths using udev:
-
-    The following variables should be used to optimize performance for storage and metadata volumes:
-
-    - `beegfs_ha_eseries_scheduler: noop` -> `/sys/block/<device>/queue/scheduler`
-    - `beegfs_ha_eseries_nr_requests: 64` -> `/sys/block/<device>/queue/nr_requests`
-    - `beegfs_ha_eseries_read_ahead_kb: 4096` -> `/sys/block/<device>/queue/read_ahead_kb`
-    - `beegfs_ha_eseries_max_sectors_kb: 1024` -> `/sys/block/<device>/queue/max_sectors_kb`
-
-    Note these will be applied to both the device mapper entry (e.g. dm-X) and underlying path (e.g. sdX).
-
-    ##### Advanced:
-    - If it is desired to set additional parameters on E-Series devices using udev, the template for the rule is located at `roles/beegfs_ha_7_1/templates/common/eseries_beegfs_ha_udev_rule.j2`. Please note modifications to this file require an understanding of Ansible, Jinja2, udev and bash scripting and are made at the user's risk.
-    - The udev rule will be created on BeeGFS storage/metadata nodes at `/etc/udev/rules.d/99-eseries-beegfs-ha.rules`.
-
-    #### Restrictions:
-    - If BeeGFS Metadata and Storage services are running on the same node, there is no way to set different sysctl entries or udev rules to tune servers and LUNs used for metadata vs. storage differently.
-    - If `max_hw_sectors_kb` on a device is lower than max_sectors_kb you attempt to configure using udev, based on testing the device will be set at the max_hw_sectors_kb value and the udev setting is ignored.
-      - The `hw_max_sectors_kb` value can vary depending on the device (example: InfiniBand HCA) used to attach the host to external storage (either direct or through a fabric). Some device drivers may support changing parameters that allow the hw_max_sectors value to increase, but this is outside the scope of this documentation and Ansible role.
-      - The hardware versus configured value can be verified by substituting your devices in the following commands `cat /sys/block/[sdX|dm-X]/queue/max_hw_sectors_kb` and `cat /sys/block/[sdX|dm-X]/queue/max_sectors_kb`.
-
 Role Variables
 --------------
-    # General configuration defaults
-    beegfs_ha_ansible_cluster_group: ha_cluster                 # Ansible inventory group name for the BeeGFS HA cluster. Define all resource group in this group.
-    beegfs_ha_ansible_client_group: ha_clients                  # Ansible inventory group name for the BeeGFS clients.
-    beegfs_ha_ansible_storage_group: eseries_storage_systems    # Ansible inventory group name for the BeeGFS HA E-Series storage systems.
+This section gives a quick summary of the available variables to configure the BeeGFS HA role. For additional details on select variables please see the follow on sections.
+    
+    # These variables need to be set:
     beegfs_ha_cluster_name: hacluster                           # Name for the pacemaker cluster.
-    beegfs_ha_cluster_username: hacluster                       # Pacemaker cluster username.
-    beegfs_ha_cluster_password: hapassword                      # Pacemaker cluster password.
-    beegfs_ha_cluster_password_sha512_salt: random$alt          # Pacemaker cluster password sha512 encryption salt.
+    beegfs_ha_cluster_username: hacluster                       # Pcs cluster username.
+    beegfs_ha_cluster_password: hapassword                      # Pcs cluster password.
+    beegfs_ha_cluster_password_sha512_salt: random$alt          # Pcs cluster password sha512 encryption salt.
+        
+    # The default values for these variables may need to be overridden:      
     beegfs_ha_ntp_enabled: true                                 # Whether NTP should be enabled.
-    beegfs_ha_allow_firewall_high_availability_service: true    # Allow high-availability firewall services.
+    beegfs_ha_allow_firewall_high_availability_service: true    # Open firewall ports required by the high-availability services.
     beegfs_ha_alert_email_subject: "ClusterNotification"        # Alert email subject line.
     beegfs_ha_alert_email_list: []                              # Pacemaker alert email recipients.
     beegfs_ha_enable_alerts: true                               # Whether to enable pacemaker email alerts.
     beegfs_ha_enable_quota: false                               # Whether to enable BeeGFS file system quotas.
     beegfs_ha_enable_fence: true                                # Whether to enable pacemaker STONITH fencing agents.
-    beegfs_ha_filter_ip_ranges: []                              # BeeGFS IPv4 CIDR subnet filters. This forces BeeGFS to only listen on these subnets.
-    beegfs_ha_node_preference_scope_step: 200                   # Arbitrary constraint scope step between ordered hosts in the inventory file resource host group.
-    beegfs_ha_cluster_resource_defaults:                        # Pacemaker resource defaults dictionary. These will be applied across all resource groups.
-      resource-stickiness: 15000
-    beegfs_ha_force_resource_move: true                         # Forces node and resource changes to migrate services to preferred nodes.
-    beegfs_ha_storage_system_hostgroup_prefix: beegfs           # Prefix that is added to the storage system's host group name which is created to map volumes to
-                                                                #   all cluster nodes within the specific resource group.
-    beegfs_ha_backup: true                                      # Whether to create a PCS backup which can be used to restore to a previous configuration.
+    beegfs_ha_filter_ip_ranges: []                              # Specified the allowed IP subnets which may be used for outgoing communication by BeeGFS services (example: "192.168.10.0/24"). Defaults to any. 
+                                                                #   This is useful if BeeGFS server/client and server/storage system traffic are using the same interfaces but you want to isolate traffic to different subnets.
+    
+    # Backup defaults
+    beegfs_ha_backup: true                                      # Whether to create a pcs backup which can be used to restore to a previous configuration.
                                                                 #   Use the following command to restore a previous configuration: pcs config restore <backup>
-    beegfs_ha_backup_path: /tmp/                                # PCS backup file path.
+    beegfs_ha_backup_path: /tmp/                                # Pcs backup file path.            
 
-    # BeeGFS client defaults
-    beegfs_ha_client_connInterfaces:                            # List of node interfaces to use to communicate with the BeeGFS file system.
-    beegfs_ha_client_udp_port: 8004                             # Client UDP port to communicate with the BeeGFS file system.
-    beegfs_ha_helperd_tcp_port: 8006                            # Client helper daemon TCP port.
-    beegfs_ha_client_configuration_directory: "/etc/beegfs/"    # Client directory path for the BeeGFS client configuration.
-    beegfs_ha_client_updatedb_conf_path: "/etc/updatedb.conf"   # Client directory path for mlocate package configuration file.
-
-    # RDMA defaults
+    # RDMA defaults 
     beegfs_ha_enable_rdma: false                                # Whether to enable RDMA.
     beegfs_ha_ofed_include_path:                                # OFED library include path.
 
-    # Performance tuning defaults (See `Performance Tuning` section above more information)
+    # Performance tuning defaults (See `Performance Tuning` section below more information)
     beegfs_ha_enable_performance_tuning: False                  # Whether to enable performance tuning.
     beegfs_ha_eseries_scheduler: noop                           # Raw volume device (dm-X) scheduler value.
     beegfs_ha_eseries_nr_requests: 64                           # Raw volume device (dm-X) nr_requests value.
@@ -298,7 +246,7 @@ Role Variables
       vm.min_free_kbytes: 262144
       vm.zone_reclaim_mode: 1
 
-    # NTP configuration defaults
+    # NTP configuration defaults (see the `NTP` section below for more information) 
     beegfs_ha_ntp_configuration_file: /etc/ntp.conf             # Absolute file path for ntp.conf
     beegfs_ha_ntp_server_pools:                                 # List of ntp server pools.
       - "server 0.ubuntu.pool.ntp.org iburst"
@@ -309,6 +257,25 @@ Role Variables
       - 127.0.0.1
       - ::1
 
+    # These variables don't need to be changed unless you want to use use different inventory group names:     
+    beegfs_ha_ansible_cluster_group: ha_cluster                 # Ansible inventory group name for the BeeGFS HA cluster. Define all resource group in this group.
+    beegfs_ha_ansible_client_group: ha_clients                  # Ansible inventory group name for the BeeGFS clients.
+    beegfs_ha_ansible_storage_group: eseries_storage_systems    # Ansible inventory group name for the BeeGFS HA E-Series storage systems.
+
+    # These values will likely not need to be changed:
+    beegfs_ha_node_preference_scope_step: 200                   # Arbitrary constraint scope step between ordered hosts in the inventory file resource host group.
+    beegfs_ha_cluster_resource_defaults:                        # Pacemaker resource defaults dictionary. These will be applied across all resource groups.
+      resource-stickiness: 15000
+    beegfs_ha_force_resource_move: true                         # Forces node and resource changes to migrate services to preferred nodes.
+    beegfs_ha_storage_system_hostgroup_prefix: beegfs           # Prefix that is added to the storage system's host group name which is created to map volumes to
+                                                                #   all cluster nodes within the specific resource group.
+    # BeeGFS client defaults 
+    beegfs_ha_client_connInterfaces:                            # List of node interfaces to use to communicate with the BeeGFS file system.
+    beegfs_ha_client_udp_port: 8004                             # Client UDP port to communicate with the BeeGFS file system.
+    beegfs_ha_helperd_tcp_port: 8006                            # Client helper daemon TCP port.
+    beegfs_ha_client_configuration_directory: "/etc/beegfs/"    # Client directory path for the BeeGFS client configuration.
+    beegfs_ha_client_updatedb_conf_path: "/etc/updatedb.conf"   # Client directory path for mlocate package configuration file.
+    
     # Corosync defaults
     corosync_authkey_path: /etc/corosync/authkey                # Absolute path for the Corosync authkey file.
     corosync_conf_path: /etc/corosync/corosync.conf             # Absolute path for the Corosync configuration file.
@@ -358,52 +325,109 @@ Role Variables
     beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7_1
     beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_1/gpg/DEB-GPG-KEY-beegfs
 
-
     # RedHat / CentOS repository defaults
     beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7_1/dists/rhel7
     beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_1/gpg/RPM-GPG-KEY-beegfs
-
 
     # SUSE repository defaults
     beegfs_ha_suse_allow_unsupported_module: true
     beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7_1/dists/sles12
     beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_1/gpg/RPM-GPG-KEY-beegfs
 
-Support Matrix
---------------
-The BeeGFS role has been tested with the following BeeGFS versions, operating systems, and backend/frontend protocols:
+Role Tags
+---------
+Use the following tags when executing you BeeGFS HA playbook to only execute select tasks:
 
-| Component              | BeeGFS Version | Operating System        | Storage Protocols             | Client Protocols    |
-| ---------------------- | -------------- | ----------------------- | ----------------------------- | ------------------- |
-| BeeGFS Client service  | 7.1.5          | RedHat 7.7, SLES 12 SP4 | N/A                           | TCP/UDP and RDMA    |
-| BeeGFS Server services | 7.1.5          | RedHat 7.7              | IB-iSER, iSCSI                | N/A                 |
+        example: ansible-playbook -i inventory.yml playbook.yml --tags beegfs_ha_configure
 
-Notes:
-- BeeGFS Server services include BeeGFS management, metadata and storage services.
-- While not explicitly tested, it is reasonable to expect implicit support for the following:
-  - Versions of BeeGFS within the same major/minor release family (i.e. BeeGFS 7.1.X).
-- SLES 12 SP4 has been tested with the Pacemaker and Corosync packages but not the SLES HAE package that is required for SUSE support. The crm tool that comes with the HAE package has not bee added to the automation so the crm_X tools that come with pacemaker will need to be used in its stead.
+    - storage                         # Provisions storage and ensures volumes are presented on hosts.
+    - beegfs_ha                       # All BeeGFS HA tasks (Ensure volumes have been presented to the cluster nodes).
+    - beegfs_ha_package               # All BeeGFS HA package tasks.
+    - beegfs_ha_configure             # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
+    - beegfs_ha_configure_resource    # All BeeGFS HA pacemaker resource tasks.
+    - beegfs_ha_performance_tuning    # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
+    - beegfs_ha_backup                # Backup Pacemaker and Corosync configuration files.
+    - beegfs_ha_client                # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
 
+General Notes
+-------------
+- All BeeGFS cluster nodes need to be available.
+- Fencing agents should be used to ensure failed nodes are definitely down.  
+  - WARNING! If beegfs_ha_enable_fence is set to false then a fencing agent will not be configured!
+- Uninstall functionality will remove required BeeGFS 7.1 packages. This means that there will be no changes made to the kernel development/NTP/chrony packages whether they previously existed or not.
+- BeeGFS is added to the PRUNEFS list in /etc/updatedb.conf to prevent daily indexing scans on clients which causes performance degradations.
 
-The BeeGFS role has been tested with the following E-Series storage systems and protocols:
+NTP (`beegfs_ha_ntp_enabled: true`)
+-----------------------------------
+Time synchronization is required for BeeGFS to function properly. As a convenience to users the BeeGFS role provides functionality that can configure the ntpd service on all BeeGFS nodes by setting `beegfs_ha_ntp_enabled: True`. By default this variable is set to `False` to avoid conflicts with any existing NTP configuration that might be in place. If this variable is set to `True` please note any existing Chrony installations will be removed as they would conflict with ntpd.
 
-| Platform | Firmware | Protocols           |
-| -------- | -------- | ------------------- |
-| E5700    | 11.52    | iSCSI, IB-iSER      |
+The template used to generate the /etc/ntp.conf file can be found at `roles/beegfs_ha_7_1/templates/common/ntp_conf.j2`. Depending on the security policies of your organization, you way wish to adjust the default configuration.
 
-Notes:
-- While not explicitly included in testing, other firmware versions and storage systems including the E2800.
-- Other SAN protocols including InfiniBand SRP, Fibre Channel, NVMe over IB, NVMe over FC, and NVMe over RoCE are expected to work when (netappeseries.host collection)[https://galaxy.ansible.com/netapp_eseries/host] implements them. At the time of writing only iSCSI and InfiniBand iSER have been implemented.
+* Some Linux installations may be setup to have the DHCP client periodically update /etc/ntp.conf with NTP servers from the DHCP server. You can tell this is happening if text like the following is appended to the bottom of /etc/ntp.conf:
+    ```
+    server <IP_ADDR>  # added by /sbin/dhclient-script
+    ```
+    As a result the NTP related Ansible tasks will be marked as changed whenever the role is reapplied. If you're wanting to manage the NTP configuration outside Ansible simply set `beegfs_ha_ntp_enabled: False` to prevent the role from configuring NTP.
+
+Performance Tuning (`beegfs_ha_enable_performance_tuning: False`)
+-----------------------------------------------------------------
+Performance tuning is disabled by default, but can be enabled by setting `beegfs_ha_enable_performance_tuning: True`. The default is to avoid a scenario where users are unaware these are being set, and they result in poor performance or stability issues that are difficult to troubleshoot. There is also the added consideration the default values will likely need to be adjusted to achieve optimal performance for a given hardware configuration.
+
+BeeGFS calls out a number of parameters at https://www.beegfs.io/wiki/StorageServerTuning and https://www.beegfs.io/wiki/MetaServerTuning that can be used to improve the performance of BeeGFS storage and metadata services. To help simplify performance tuning for BeeGFS storage and metadata nodes, the BeeGFS role provides the following functionality:
+
+1) Tuning kernel parameters using sysctl.
+2) Tuning parameters on E-Series block devices/paths using udev.
+
+While default values for all tuning parameters are defined at `roles/beegfs_ha_7_1/defaults/main.yml`, more than likely these will need to be adjusted to tune based on the environment. As with any Ansible variable, you can override these defaults on a host-by-host or group basis to tune each node or sets of nodes differently.
+
+To only run tasks related to BeeGFS performance tuning, use the tag "beegfs_ha_performance_tuning" in your Ansible playbook command (e.g. `ansible-playbook -i inventory.yml playbook.yml --tags beegfs_ha_performance_tuning`). This will greatly reduce playbook runtime when simply wishing to make incremental adjustments to these parameters during benchmark testing.
+
+#### Tuning kernel parameters using sysctl:
+
+BeeGFS recommends setting various kernel parameters under /proc/sys to help optimize the performance of BeeGFS storage/metadata nodes. One option to ensure these changes are persistent are setting them using sysctl. By default this role will will override the following parameters on BeeGFS storage and metadata nodes in /etc/sysctl.conf on RedHat or /etc/sysctl.d/99-eseries-beegfs.conf on SUSE:
+
+        beegfs_ha_sysctl_entries:
+          vm.dirty_background_ratio: 5
+          vm.dirty_ratio: 20
+          vm.vfs_cache_pressure: 50
+          vm.min_free_kbytes: 262144
+          vm.zone_reclaim_mode: 1
+
+Important:
+- If you define your own `beegfs_ha_sysctl_entries` you will need to explicitly list all sysctl key/value pairs you wish to be set.
+- The documentation for some Linux distributions indicates you need to rebuild the initramfs after modifying the values of kernel variables using sysctl (reference: https://documentation.suse.com/sles/12-SP4/html/SLES-all/cha-boot.html#var-initrd-regenerate-kernelvars). Based on testing these values do persist through a reboot for the operating systems listed on the support matrix, and thus is not done automatically by the role. It is recommended users verify these settings persist in their environment, and rebuild the initramfs if needed.
+
+#### Tuning parameters on E-Series block devices/paths using udev:
+
+The following variables should be used to optimize performance for storage and metadata volumes:
+
+- `beegfs_ha_eseries_scheduler: noop` -> `/sys/block/<device>/queue/scheduler`
+- `beegfs_ha_eseries_nr_requests: 64` -> `/sys/block/<device>/queue/nr_requests`
+- `beegfs_ha_eseries_read_ahead_kb: 4096` -> `/sys/block/<device>/queue/read_ahead_kb`
+- `beegfs_ha_eseries_max_sectors_kb: 1024` -> `/sys/block/<device>/queue/max_sectors_kb`
+
+Note these will be applied to both the device mapper entry (e.g. dm-X) and underlying path (e.g. sdX).
+
+##### Advanced:
+- If it is desired to set additional parameters on E-Series devices using udev, the template for the rule is located at `roles/beegfs_ha_7_1/templates/common/eseries_beegfs_ha_udev_rule.j2`. Please note modifications to this file require an understanding of Ansible, Jinja2, udev and bash scripting and are made at the user's risk.
+- The udev rule will be created on BeeGFS storage/metadata nodes at `/etc/udev/rules.d/99-eseries-beegfs-ha.rules`.
+
+#### Restrictions:
+- If BeeGFS Metadata and Storage services are running on the same node, there is no way to set different sysctl entries or udev rules to tune servers and LUNs used for metadata vs. storage differently.
+- If `max_hw_sectors_kb` on a device is lower than max_sectors_kb you attempt to configure using udev, based on testing the device will be set at the max_hw_sectors_kb value and the udev setting is ignored.
+  - The `hw_max_sectors_kb` value can vary depending on the device (example: InfiniBand HCA) used to attach the host to external storage (either direct or through a fabric). Some device drivers may support changing parameters that allow the hw_max_sectors value to increase, but this is outside the scope of this documentation and Ansible role.
+  - The hardware versus configured value can be verified by substituting your devices in the following commands `cat /sys/block/[sdX|dm-X]/queue/max_hw_sectors_kb` and `cat /sys/block/[sdX|dm-X]/queue/max_sectors_kb`.    
 
 Dependencies
 ------------
-    netapp_eseries.santricity
-    netapp_eseries.host
+- netapp_eseries.santricity
+- netapp_eseries.host
 
 License
 -------
-    BSD
+BSD
 
 Author Information
 ------------------
-    Nathan Swartz (@ndswartz)
+- Joe McCormick (@iamjoemccormick)
+- Nathan Swartz (@ndswartz)
