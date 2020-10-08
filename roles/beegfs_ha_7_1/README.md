@@ -4,7 +4,7 @@ This role is a complete end-to-end deployment of the (NetApp E-Series BeeGFS HA 
 
 Requirements
 ------------
-- Ansible control node with Ansible 2.9 or later ands the following dependencies installed:
+- Ansible control node with Ansible 2.9 or later and the following dependencies installed:
   - NetApp E-Series Ansible Collections:
     - netappeseries.santricity 1.1 or later.
     - netappeseries.host 0.1 or later (later revisions will have more protocol options to extend this roles capabilities).
@@ -223,6 +223,7 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_enable_fence: true                                # Whether to enable pacemaker STONITH fencing agents.
     beegfs_ha_filter_ip_ranges: []                              # Specified the allowed IP subnets which may be used for outgoing communication by BeeGFS services (example: "192.168.10.0/24"). Defaults to any. 
                                                                 #   This is useful if BeeGFS server/client and server/storage system traffic are using the same interfaces but you want to isolate traffic to different subnets.
+    eseries_common_allow_host_reboot: false                     # Whether to allow a host reboots when attempting to discover BeeGFS storage volumes.
     
     # Backup defaults
     beegfs_ha_backup: true                                      # Whether to create a pcs backup which can be used to restore to a previous configuration.
@@ -394,12 +395,12 @@ To only run tasks related to BeeGFS performance tuning, use the tag "beegfs_ha_p
 
 BeeGFS recommends setting various kernel parameters under /proc/sys to help optimize the performance of BeeGFS storage/metadata nodes. One option to ensure these changes are persistent are setting them using sysctl. By default this role will will override the following parameters on BeeGFS storage and metadata nodes in /etc/sysctl.conf on RedHat or /etc/sysctl.d/99-eseries-beegfs.conf on SUSE:
 
-        beegfs_ha_sysctl_entries:
-          vm.dirty_background_ratio: 5
-          vm.dirty_ratio: 20
-          vm.vfs_cache_pressure: 50
-          vm.min_free_kbytes: 262144
-          vm.zone_reclaim_mode: 1
+    beegfs_ha_sysctl_entries:
+      vm.dirty_background_ratio: 5
+      vm.dirty_ratio: 20
+      vm.vfs_cache_pressure: 50
+      vm.min_free_kbytes: 262144
+      vm.zone_reclaim_mode: 1
 
 Important:
 - If you define your own `beegfs_ha_sysctl_entries` you will need to explicitly list all sysctl key/value pairs you wish to be set.
@@ -416,7 +417,7 @@ The following variables should be used to optimize performance for storage and m
 
 Note these will be applied to both the device mapper entry (e.g. dm-X) and underlying path (e.g. sdX).
 
-##### Advanced:
+#### Advanced:
 - If it is desired to set additional parameters on E-Series devices using udev, the template for the rule is located at `roles/beegfs_ha_7_1/templates/common/eseries_beegfs_ha_udev_rule.j2`. Please note modifications to this file require an understanding of Ansible, Jinja2, udev and bash scripting and are made at the user's risk.
 - The udev rule will be created on BeeGFS storage/metadata nodes at `/etc/udev/rules.d/99-eseries-beegfs-ha.rules`.
 
