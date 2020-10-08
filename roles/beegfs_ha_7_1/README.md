@@ -293,9 +293,17 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_force_beegfs_patch_upgrade: false                 # Major and master versions must not change; however the patch versions can and this flag will
                                                                 #   ensure that its the latest version.
 
-    # Uninstall defaults
-    beegfs_ha_delete_data_and_uninstall_beegfs: false           # Confirmation flag for uninstalling BeeGFS HA configuration and deleting its data.
-    beegfs_ha_uninstall_reboot: true                            # Whether to reboot once the uninstallation is complete.
+    # Uninstall defaults (See `Uninstall` section below more information)
+    beegfs_ha_uninstall: false                                          # Whether to uninstall the entire BeeGFS HA solution excluding the storage provisioning and host storage setup.
+    beegfs_ha_uninstall_purge_volumes: false                            # Whether to completely remove the volumes from the host only. This will not effect the data.
+    beegfs_ha_uninstall_wipe_format_volumes: false                      # Whether to wipe format signitures from volumes on the host. **WARNING! This action is unrecoverable.**
+    beegfs_ha_uninstall_delete_volumes: false                           # Whether to delete the volumes from the storage. **WARNING! This action is unrecoverable.**
+    beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false   # Whether to delete all storage pools/volume groups and host/host group mappings created for BeeGFS HA solution.
+                                                                        #   Be aware that removing storage pools/volume groups and host/host group mappings will effect any volumes or
+                                                                        #   host mappings dependent on them.  **WARNING! This action is unrecoverable.**
+    beegfs_ha_uninstall_storage_setup: false                            # Whether to remove configuration that allows storage to be accessible to the BeeGFS HA node (i.e. multipath, communications protocols (iSCSI, IB iSER)).
+    beegfs_ha_uninstall_reboot: false                                   # Whether to reboot after uninstallation.
+
 
     # Volume formatting and mounting defaults
     beegfs_ha_service_volume_configuration:
@@ -417,6 +425,35 @@ Note these will be applied to both the device mapper entry (e.g. dm-X) and under
 - If `max_hw_sectors_kb` on a device is lower than max_sectors_kb you attempt to configure using udev, based on testing the device will be set at the max_hw_sectors_kb value and the udev setting is ignored.
   - The `hw_max_sectors_kb` value can vary depending on the device (example: InfiniBand HCA) used to attach the host to external storage (either direct or through a fabric). Some device drivers may support changing parameters that allow the hw_max_sectors value to increase, but this is outside the scope of this documentation and Ansible role.
   - The hardware versus configured value can be verified by substituting your devices in the following commands `cat /sys/block/[sdX|dm-X]/queue/max_hw_sectors_kb` and `cat /sys/block/[sdX|dm-X]/queue/max_sectors_kb`.    
+
+Uninstall (`beegfs_ha_uninstall: False`)
+----------------------------------------
+Uninstall your BeeGFS HA instance by setting `beegfs_ha_uninstall: True`. At minimum, BeeGFS and HA applications, configuration, performance tunings, and mount points will be removed. The uninstallation process requires the original inventory files so just modify the `beegfs_ha_uninstall_x` variables at the group level.
+
+The following variables are used to control the uninstallation:
+
+- beegfs_ha_uninstall_purge_volumes: false                              # Whether to completely remove the volumes from the host only. This will not effect the data.
+- beegfs_ha_uninstall_wipe_format_volumes: false                        # Whether to wipe format signatures from volumes on the host. **WARNING! This action is unrecoverable.**
+- beegfs_ha_uninstall_delete_volumes: false                             # Whether to delete the volumes from the storage. **WARNING! This action is unrecoverable.**
+- beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false     # Whether to delete all storage pools/volume groups and host/host group mappings created for BeeGFS HA solution.
+                                                                        #   Be aware that removing storage pools/volume groups and host/host group mappings will effect any volumes or
+                                                                        #   host mappings dependent on them.  **WARNING! This action is unrecoverable.**
+- beegfs_ha_uninstall_storage_setup: false                              # Whether to remove configuration that allows storage to be accessible to the BeeGFS HA node (i.e. multipath,
+                                                                        #   communications protocols (iSCSI, IB iSER)).
+- beegfs_ha_uninstall_reboot: false                                     # Whether to reboot after uninstallation.
+
+Note that not setting `beegfs_ha_uninstall_wipe_format_volumes: true` when deleting and, subsequently, creating new volumes of the same size may result in recovering the original volume. While this is helpful if you unintentionally deleted the volumes, it can create mounting issues for the host.
+
+#### Implied actions:
+
+The following are an explicit list of implied actions.
+
+- `beegfs_ha_uninstall_purge_volumes: true`:
+    - `beegfs_ha_uninstall_storage_setup: true`
+    - `beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: true`
+- `eseries_unmount_delete: true`:
+    - `beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: true`
+    - `beegfs_ha_uninstall_delete_volumes: true`
 
 Dependencies
 ------------
