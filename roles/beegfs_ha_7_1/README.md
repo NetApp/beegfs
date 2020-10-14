@@ -311,17 +311,17 @@ This section gives a quick summary of the available variables to configure the B
       management:                                                           # BeeGFS management service volume definition.
         format_type: ext4                                                   # Volume format type
         format_options: "-i 2048 -I 512 -J size=400 -Odir_index,filetype"   # Volume format options
-        mount_options: "noatime,nodiratime,nobarrier,_netdev"               # Volume mount options
+        mount_options: "sync,noatime,nodiratime,nobarrier"               # Volume mount options
         mount_dir: /mnt/                                                    # Volume mount directory
       metadata:                                                             # BeeGFS metadata service volume definition.
         format_type: ext4                                                   # (...)
         format_options: "-i 2048 -I 512 -J size=400 -Odir_index,filetype"
-        mount_options: "noatime,nodiratime,nobarrier,_netdev"
+        mount_options: "sync,noatime,nodiratime,nobarrier
         mount_dir: /mnt/
       storage:                                                              # BeeGFS storage service volume definition.
         format_type: xfs                                                    # (...)
         format_options: "-d su=VOLUME_SEGMENT_SIZE_KBk,sw=VOLUME_STRIPE_COUNT -l version=2,su=VOLUME_SEGMENT_SIZE_KBk"
-        mount_options: "noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k,nobarrier,_netdev"
+        mount_options: "sync,noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k,nobarrier"
         mount_dir: /mnt/
 
     # General path defaults
