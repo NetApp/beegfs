@@ -50,7 +50,7 @@
 
     - name: Determine BeeGFS storage communication protocol.
       pause:
-        prompt: "What is communication protocol is used between the BeeGFS hosts and E-Series storage (1-iSCSI, 2-IB iSER, 3-mix)?"
+        prompt: "What is communication protocol between the BeeGFS hosts and E-Series storage (1-iSCSI, 2-IB iSER, 3-mix)?"
       register: beegfs_storage_protocol
       delay: 0
       until: beegfs_storage_protocol['user_input'] in ["1", "2", "3"]

@@ -4,7 +4,14 @@ The files in this directory expedite getting started with the role by having use
 
 Requirements
 ------------
-- Ansible 2.9 or later
+- Ansible control node with Ansible 2.9 or later and the following dependencies installed:
+  - NetApp E-Series Ansible Collections:
+    - netappeseries.santricity 1.1 or later.
+    - netappeseries.host 0.1 or later (later revisions will have more protocol options to extend this roles capabilities).
+  - Python (pip) packages:
+    - ipaddr
+    - netaddr
+- Passwordless SSH setup from the Ansible control node to all BeeGFS HA nodes and clients.
 
 Getting Started
 ---------------

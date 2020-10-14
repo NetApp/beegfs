@@ -4,11 +4,11 @@
 # This is a template for BeeGFS HA storage resource groups. You are seeing this for a resource due to specifying a storage beegfs service during the
 #   create_inventory_structure.yml playbook runtime. Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
 
-port: 8012                                  # BeeGFS HA resource service port. 8012 is the default BeeGFS storage service port number; Each BeeGFS HA
+port: <UNIQUE_PORT_NUMBER>                            # BeeGFS HA resource service port. 8012 is the default BeeGFS storage service port number; Each BeeGFS HA
                                             #   storage service resource must have a unique port number.
 
-floating_ips:                               # List of storage floating IP definitions in the form host_interface:ip_address/cidr_subnet_mask.
-  - {{ iface }}:192.168.2.102/24                #   This information is used to communicate with the BeeGFS management resource. Therefore, these definitions must
+floating_ips:                               # List of storage floating IP definitions in the form host_interface:ip_address/cidr_subnet_mask (i.e. {{ iface }}:192.168.1.10/24).
+  - <IFACE>:<IP_ADDRESS>/<CIDR_MASK>                     #   This information is used to communicate with the BeeGFS management resource. Therefore, these definitions must
                                             #   be on the same subnet as beegfs_ha_mgmtd_floating_ip value in group_vars/ha_cluster.yml. Any unusable definitions
                                             #   will be ignored which is specially useful when the definitions differ based on the host.
 
@@ -24,7 +24,7 @@ beegfs_targets:                             # Dictionary of E-Series storage sys
                                             #   RAID 6 stripes the data between across all drives with two parity stripes to allow for recovery of multiple drive
                                             #   failures which is the recommended storage type for BeeGFS storage services.
 
-        criteria_drive_count: 10            # Total drive count for the storage pool. RAID 1 requires even number of drives.
+        criteria_drive_count: 10            # Total drive count for the storage pool.
 
         volumes:                            # BeeGFS storage service volume list. In order to get the best performance it is recommended that you use a minimum
           - size: 4096                      #   of four volumes per storage service. Size of each BeeGFS storage service volume specified in Mebibytes.
