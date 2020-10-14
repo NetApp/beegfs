@@ -15,6 +15,45 @@
       {{- resources -}}
     resources_not_started_retries: "{%- if resources_not_started_retries is not defined -%}1{%- else -%}{{ (resources_not_started_retries | int) + 1}}{%- endif -%}"
 
-- name: Retry until resources are all started
-  include_tasks: install/validate_resources.yml
-  when: (resources_not_started_retries | int) < 10 and resources_not_started | length > 0
+- name: "Attempt to recover resources. [Attempt #{{ resources_not_started }}]."
+  block:
+    - name: Restart all resource services.
+      block:
+        - name: Stop Pacemaker.
+          systemd:
+            state: stopped
+            name: pacemaker
+          become: true
+        - name: Stop Corosync.
+          systemd:
+            state: stopped
+            name: corosync
+          become: true
+
+        - name: Start Corosync.
+          systemd:
+            state: started
+            name: corosync
+          become: true
+        - name: Start Pacemaker.
+          systemd:
+            state: started
+            name: pacemaker
+          become: true
+      when: 1 < (resources_not_started_retries | int) < 3 # Second attempt
+
+    - name: Wait and re-validate resources have started.
+      block:
+        - name: Wait 30 seconds.
+          pause:
+            seconds: 30
+        - name: Retry until resources are all started
+          include_tasks: install/validate_resources.yml
+      when: (resources_not_started_retries | int) < 3     # Both attempts
+
+    - name: Warn that not all resources are running.
+      fail:
+        msg: "Warning! Not all BeeGFS HA resources are running."
+      ignore_errors: True
+      when: (resources_not_started_retries | int) == 3    # After last attempt
+  when: resources_not_started | length > 0
