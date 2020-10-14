@@ -10,7 +10,11 @@
 - name: Collect facts about systemd services.
   service_facts:
   become: true
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group]
+
+- name: Uninstall any configure OS-specific client packages.
+  include_tasks: "services/client.yml"
+  when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
 
 - name: Stop Pacemaker service.
   systemd:
@@ -110,10 +114,6 @@
 - name: Uninstall any configure OS-specific packages.
   include_tasks: "packages/{{ ansible_os_family | lower }}.yml"
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-
-- name: Uninstall any configure OS-specific client packages.
-  include_tasks: "services/client.yml"
-  when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
 
 - name: Ensure any performance tuning has been removed.
   include_tasks: "performance_tuning.yml"

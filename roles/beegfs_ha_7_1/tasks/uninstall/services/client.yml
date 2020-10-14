@@ -1,3 +1,11 @@
+- name: Ensure beegfs-client service is stopped.
+  systemd:
+    name: beegfs-client.service
+    state: stopped
+    enabled: false
+  when: "'beegfs-client.service' in (ansible_facts['services'].keys() | list)"
+  become: true
+
 - name: Uninstall any configure OS-specific client packages.
   include_tasks: "../packages/{{ ansible_os_family | lower }}_client_only.yml"
 
