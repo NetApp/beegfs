@@ -45,14 +45,14 @@
         {%- endfor -%}
       {%- endif -%}
       {{- volumes -}}
-    eseries_unmount_purge: "{% if beegfs_ha_uninstall_purge_volumes == True or beegfs_ha_uninstall_storage_setup == True or
-                                  beegfs_ha_uninstall_delete_volumes == True or
-                                  beegfs_ha_uninstall_delete_storage_pools_and_host_mappings == True %}true{% else %}false{% endif %}"
+    eseries_unmount_purge: "{{ beegfs_ha_uninstall_unmap_volumes or beegfs_ha_uninstall_delete_volumes or
+                               beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
+    eseries_unmount_unmap: "{{ beegfs_ha_uninstall_unmap_volumes or beegfs_ha_uninstall_delete_volumes or
+                               beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
     eseries_unmount_wipe_format_signatures: "{{ beegfs_ha_uninstall_wipe_format_volumes }}"
-    eseries_unmount_delete: "{% if beegfs_ha_uninstall_delete_volumes == True or
-                                   beegfs_ha_uninstall_delete_storage_pools_and_host_mappings == True %}true{% else %}false{% endif %}"
+    eseries_unmount_delete: "{{ beegfs_ha_uninstall_delete_volumes or beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
 
-- name: Ensure multipath and iscsi protocol are setup.
+- name: Ensure multipath and iscsi protocol are uninstalled.
   include_role:
     name: netapp_eseries.host.storage_setup
   when: beegfs_ha_uninstall_storage_setup == True and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]

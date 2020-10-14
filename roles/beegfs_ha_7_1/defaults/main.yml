@@ -84,7 +84,7 @@ beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/
 
 # Uninstall defaults
 beegfs_ha_uninstall: false                                          # Whether to uninstall the entire BeeGFS HA solution excluding the storage provisioning and host storage setup.
-beegfs_ha_uninstall_purge_volumes: false                            # Whether to completely remove the volumes from the host only. This will not effect the data.
+beegfs_ha_uninstall_unmap_volumes: false                            # Whether to unmap the volumes from the host only. This will not effect the data.
 beegfs_ha_uninstall_wipe_format_volumes: false                      # Whether to wipe format signitures from volumes on the host. **WARNING! This action is unrecoverable.**
 beegfs_ha_uninstall_delete_volumes: false                           # Whether to delete the volumes from the storage. **WARNING! This action is unrecoverable.**
 beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false   # Whether to delete all storage pools/volume groups and host/host group mappings created for BeeGFS HA solution.

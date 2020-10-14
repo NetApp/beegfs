@@ -224,7 +224,7 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_filter_ip_ranges: []                              # Specified the allowed IP subnets which may be used for outgoing communication by BeeGFS services (example: "192.168.10.0/24"). Defaults to any. 
                                                                 #   This is useful if BeeGFS server/client and server/storage system traffic are using the same interfaces but you want to isolate traffic to different subnets.
     eseries_common_allow_host_reboot: false                     # Whether to allow a host reboots when attempting to discover BeeGFS storage volumes.
-    
+
     # Backup defaults
     beegfs_ha_backup: true                                      # Whether to create a pcs backup which can be used to restore to a previous configuration.
                                                                 #   Use the following command to restore a previous configuration: pcs config restore <backup>
@@ -296,7 +296,7 @@ This section gives a quick summary of the available variables to configure the B
 
     # Uninstall defaults (See `Uninstall` section below more information)
     beegfs_ha_uninstall: false                                          # Whether to uninstall the entire BeeGFS HA solution excluding the storage provisioning and host storage setup.
-    beegfs_ha_uninstall_purge_volumes: false                            # Whether to completely remove the volumes from the host only. This will not effect the data.
+    beegfs_ha_uninstall_unmap_volumes: false                            # Whether to unmap the volumes from the host only. This will not effect the data.
     beegfs_ha_uninstall_wipe_format_volumes: false                      # Whether to wipe format signitures from volumes on the host. **WARNING! This action is unrecoverable.**
     beegfs_ha_uninstall_delete_volumes: false                           # Whether to delete the volumes from the storage. **WARNING! This action is unrecoverable.**
     beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false   # Whether to delete all storage pools/volume groups and host/host group mappings created for BeeGFS HA solution.
@@ -433,7 +433,7 @@ Uninstall your BeeGFS HA instance by setting `beegfs_ha_uninstall: True`. At min
 
 The following variables are used to control the uninstallation:
 
-- beegfs_ha_uninstall_purge_volumes: false                              # Whether to completely remove the volumes from the host only. This will not effect the data.
+- beegfs_ha_uninstall_unmap_volumes: false                              # Whether to unmap the volumes from the host only. This will not effect the data.
 - beegfs_ha_uninstall_wipe_format_volumes: false                        # Whether to wipe format signatures from volumes on the host. **WARNING! This action is unrecoverable.**
 - beegfs_ha_uninstall_delete_volumes: false                             # Whether to delete the volumes from the storage. **WARNING! This action is unrecoverable.**
 - beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false     # Whether to delete all storage pools/volume groups and host/host group mappings created for BeeGFS HA solution.
@@ -449,12 +449,14 @@ Note that not setting `beegfs_ha_uninstall_wipe_format_volumes: true` when delet
 
 The following are an explicit list of implied actions.
 
-- `beegfs_ha_uninstall_purge_volumes: true`:
-    - `beegfs_ha_uninstall_storage_setup: true`
-    - `beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: true`
+- `beegfs_ha_uninstall_unmap_volumes: true`
+- `beegfs_ha_uninstall_storage_setup: true`
+    - `beegfs_ha_uninstall_unmap_volumes: true`
 - `eseries_unmount_delete: true`:
-    - `beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: true`
-    - `beegfs_ha_uninstall_delete_volumes: true`
+    - `beegfs_ha_uninstall_unmap_volumes: true`
+- `beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: true`
+    - `beegfs_ha_uninstall_unmap_volumes: true`
+    - `eseries_unmount_delete: true`
 
 Dependencies
 ------------
