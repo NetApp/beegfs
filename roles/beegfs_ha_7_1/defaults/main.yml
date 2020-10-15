@@ -83,11 +83,16 @@ beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/
 
 
 # Uninstall defaults
-beegfs_ha_uninstall: false                                # Flag to uninstall the entire BeeGFS HA solution excluding the storage provisioning and host storage setup.
-beegfs_ha_delete_data_volumes: false                      # Flag to delete all volume created for the BeeGFA HA solution.
-beegfs_ha_delete_storage_pools_and_host_mappings: false   # Flag to delete all storage pools/volume groups and host/host group mappings created for BeeGFS HA solution. Be aware that removing storage pools/volume groups and host/host group mappings will effect any volumes or host mappings dependent on them.
-beegfs_ha_uninstall_storage_setup: false                  # Flag to remove configuration that allows storage to be accessible to the BeeGFS HA node (i.e. multipath, communications protocols (iSCSI, IB iSER)).
-beegfs_ha_uninstall_reboot: false                         # Whether to reboot after uninstallation.
+beegfs_ha_uninstall: false                                          # Whether to uninstall the entire BeeGFS HA solution excluding the storage provisioning and host storage setup.
+beegfs_ha_uninstall_unmap_volumes: false                            # Whether to unmap the volumes from the host only. This will not effect the data.
+beegfs_ha_uninstall_wipe_format_volumes: false                      # Whether to wipe format signitures from volumes on the host. **WARNING! This action is unrecoverable.**
+beegfs_ha_uninstall_delete_volumes: false                           # Whether to delete the volumes from the storage. **WARNING! This action is unrecoverable.**
+beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false   # Whether to delete all storage pools/volume groups and host/host group mappings created for BeeGFS HA solution.
+                                                                    #   Be aware that removing storage pools/volume groups and host/host group mappings will effect any volumes or
+                                                                    #   host mappings dependent on them.  **WARNING! This action is unrecoverable.**
+beegfs_ha_uninstall_storage_setup: false                            # Whether to remove configuration that allows storage to be accessible to the BeeGFS HA node (i.e. multipath, communications protocols (iSCSI, IB iSER)).
+beegfs_ha_uninstall_reboot: false                                   # Whether to reboot after uninstallation.
+
 
 
 # Package version defaults

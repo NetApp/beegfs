@@ -1,0 +1,14 @@
+# all Ansible group inventory file. Place all universally common or default variable values below.
+ansible_python_interpreter: /usr/bin/python     # Python is required on remote hosts to issuing commands. Python 2 has been deprecated and should be used at your own risk!
+
+# NTP configuration parameters
+beegfs_ha_ntp_enabled: true                     # Where NTP should be installed and configured. Time synchronization is required for the BeeGFS HA solution.
+                                                #   This will uninstall Chrony if installed.
+#beegfs_ha_ntp_server_pools:                    # List of NTP servers.
+#  - "server 0.ubuntu.pool.ntp.org iburst"
+#  - "server 1.ubuntu.pool.ntp.org iburst"
+#  - "server 2.ubuntu.pool.ntp.org iburst"
+#  - "server 3.ubuntu.pool.ntp.org iburst"
+#beegfs_ha_ntp_restricts:                       # Restricts entries allow NTP to query for time and statistics on the network defined.
+#  - 127.0.0.1                                  #   example: restrict 192.168.1.0 mask 255.255.255.0 nomodify notrap nopeer
+#  - ::1
