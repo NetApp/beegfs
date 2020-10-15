@@ -1,7 +1,7 @@
 # Changelog
 Notable changes to the BeeGFS collection will be documented in this file.
 
-[2.0.0] - 2020-08-16
+[2.0.0] - 2020-08-15
 --------------------
 ### Added
 - The focus of this release was adding a beegfs_ha_7_1 role to deploy [NetApp's High Availability solution for BeeGFS](https://blog.netapp.com/high-availability-beegfs) to RedHat and CentOS hosts along with supporting documentation.
