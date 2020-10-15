@@ -17,7 +17,8 @@ tags:
   - beegfs
   - ha
 dependencies:
-  "netapp_eseries.santricity": '>=1.0.9'
+  "netapp_eseries.santricity": '>=1.1.0'
+  "netapp_eseries.host": ">=0.1.0"
 repository: "https://github.com/netappeseries/beegfs/"
 documentation: ""
 homepage: "https://github.com/netappeseries/beegfs/"
