@@ -365,6 +365,7 @@ General Notes
   - WARNING! If beegfs_ha_enable_fence is set to false then a fencing agent will not be configured!
 - Uninstall functionality will remove required BeeGFS 7.1 packages. This means that there will be no changes made to the kernel development/NTP/chrony packages whether they previously existed or not.
 - BeeGFS is added to the PRUNEFS list in /etc/updatedb.conf to prevent daily indexing scans on clients which causes performance degradations.
+- Please refer to the documentation for your Linux distribution/version for guidance on the maximum cluster size. For example the limitations for RedHat can be found [here](https://access.redhat.com/articles/3069031).
 
 NTP (`beegfs_ha_ntp_enabled: true`)
 -----------------------------------
