@@ -51,7 +51,7 @@
       block:
         - name: Wait 30 seconds.
           pause:
-            seconds: 30
+            seconds: 60
         - name: Retry until resources are all started
           include_tasks: install/validate_resources.yml
       when: (resources_not_started_retries | int) < 3     # Both attempts
