@@ -34,4 +34,4 @@ beegfs_targets:                             # Dictionary of E-Series storage sys
         criteria_drive_count: <DRIVE_COUNT> # Total drive count for the storage pool. RAID 1 requires even number of drives. If this storage pool is shared with
                                             #   other services this value must be the same on all definitions.
         volumes:                            # BeeGFS metadata service requires only one volume.
-          - size: <VOLUME_SIZE_MB>          # Size of the BeeGFS metadata service volume specified in Mebibytes.
+          - size: <VOLUME_SIZE_MB>          # Size of the BeeGFS metadata service volume specified in gibibytes.
