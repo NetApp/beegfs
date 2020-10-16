@@ -1,10 +1,10 @@
-- name: Ensure NTP is properly configured (All).
+- name: Ensure NTP is properly configured.
   template:
     src: common/beegfs_ntp_conf.j2
     dest: "{{ beegfs_ntp_configuration_file }}"
   register: beegfs_ntp_conf
 
-- name: Start ntp service (All).
+- name: Start ntp service.
   systemd:
     name: "{{ beegfs_ntp_service }}"
     state: "{%- if beegfs_ntp_conf.changed %}restarted{%- else %}started{%- endif %}"

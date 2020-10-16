@@ -1,0 +1,63 @@
+- name: Check each pacemaker resource status.
+  shell: "for x in $(crm_resource --list-raw); do crm_resource --resource=$x --why; done"
+  register: pacemaker_resources_status
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Determine whether any resources are not started.
+  set_fact:
+    resources_not_started: |-
+      {%- set resources = [] -%}
+      {%- for line in pacemaker_resources_status["stdout_lines"] if line and line | regex_search("is not running", ignorecase=True) -%}
+        {%- if resources.append(line.split(" ")[1]) -%}{%- endif -%}
+      {%- endfor -%}
+      {{- resources -}}
+    resources_not_started_retries: "{%- if resources_not_started_retries is not defined -%}1{%- else -%}{{ (resources_not_started_retries | int) + 1}}{%- endif -%}"
+
+- name: "Attempt to recover resources. [Attempt #{{ resources_not_started }}]."
+  block:
+    - name: Restart all resource services.
+      block:
+        - name: Stop Pacemaker.
+          systemd:
+            state: stopped
+            name: pacemaker
+          become: true
+        - name: Stop Corosync.
+          systemd:
+            state: stopped
+            name: corosync
+          become: true
+
+        - name: Start Corosync.
+          systemd:
+            state: started
+            name: corosync
+          become: true
+        - name: Start Pacemaker.
+          systemd:
+            state: started
+            name: pacemaker
+          become: true
+
+        - name: Clean up all resources on all node.
+          command: crm_resource --cleanup
+          run_once: true
+          become: true
+      when: 1 < (resources_not_started_retries | int) < 3 # Second attempt
+
+    - name: Wait and re-validate resources have started.
+      block:
+        - name: Wait 30 seconds.
+          pause:
+            seconds: 60
+        - name: Retry until resources are all started
+          include_tasks: install/validate_resources.yml
+      when: (resources_not_started_retries | int) < 3     # Both attempts
+
+    - name: Warn that not all resources are running.
+      fail:
+        msg: "Warning! Not all BeeGFS HA resources are running."
+      when: (resources_not_started_retries | int) == 3    # After last attempt
+  when: resources_not_started | length > 0

@@ -1,0 +1,8 @@
+- hosts: all
+  gather_facts: false
+  collections:
+    - netapp_eseries.solutions_automation_beegfs
+  tasks:
+    - name: Ensure BeeGFS HA cluster is setup.
+      import_role:
+        name: beegfs_ha_7_1

@@ -1,0 +1,19 @@
+- name: Purge pcs configuration directory.
+  file:
+    state: absent
+    path: "{{ beegfs_ha_uninstall_pcsd_dir }}"
+  become: true
+  when: beegfs_ha_management_tool == 'pcs'
+
+- name: Purge pacemaker configuration directory.
+  file:
+    state: absent
+    path: "{{ beegfs_ha_uninstall_pacemaker_cib_dir }}"
+  become: true
+
+- name: Purge BeeGFS service overides.
+  file:
+    state: absent
+    path: "/etc/systemd/system/beegfs-{{ item }}.service"
+  loop: ['mgmtd', 'meta@', 'storage@']
+  become: true

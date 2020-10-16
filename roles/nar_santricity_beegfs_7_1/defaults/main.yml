@@ -90,3 +90,7 @@ beegfs_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_1/gpg/RPM-
 beegfs_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7_1/dists/sles12
 beegfs_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_1/gpg/RPM-GPG-KEY-beegfs
 
+# Volume Discovery Protocol Action Lists
+beegfs_discovery_protocol_list: ["iscsi", "fc", "sas", "ib_srp", "ib_iser", "nvme_ib", "nvme_fc", "nvme_roce"]
+beegfs_discovery_rescan_iscsi_session_protocol_list: ["iscsi", "ib_iser"]
+beegfs_discovery_rescan_scsi_bus_protocol_list: ["iscsi", "fc", "sas", "ib_srp", "ib_iser"]

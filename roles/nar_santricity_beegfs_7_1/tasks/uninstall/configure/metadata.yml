@@ -1,0 +1,48 @@
+- name: Stop BeeGFS metadata service.
+  systemd:
+    name: beegfs-meta.service
+    state: stopped
+  when: "'beegfs-meta.service' in (ansible_facts['services'].keys() | list)"
+  become: true
+
+#DEVNOTE: This two tiered approach is a workaround for observed behavior on systems (e.g. SUSE) where systemd will immediately try to remount volumes if we just use "state: absent".
+
+- name: Unmount all BeeGFS metadata targets.
+  mount:
+    path: "{{ beegfs_data_directory }}beegfs/{{item.name}}"
+    state: unmounted
+  loop: "{{ metadata_volumes }}"
+  become: true
+
+- name: Remove entries for BeeGFS metadata targets from /etc/fstab.
+  mount:
+    path: "{{ beegfs_data_directory }}beegfs/{{item.name}}"
+    state: absent
+  loop: "{{ metadata_volumes }}"
+  become: true
+
+- name: Wipe filesystem signature from BeeGFS metadata targets.
+  command: "wipefs --all {%- if ansible_facts['os_family'] | lower == 'suse' %} --backup{%- endif %} {{ item['path'] }}"
+  loop: "{{ lookup('list', metadata_volumes) }}"
+  register: beegfs_wipefs_meta_result
+  changed_when: "beegfs_wipefs_meta_result.stdout != ''"
+  when: 'beegfs_disable_format_storage_metadata_disks == False'
+  become: true
+
+- name: Close BeeGFS metadata service TCP/UDP firewall ports if configured by the role.
+  firewalld:
+    port: "{{ item }}"
+    permanent: yes
+    state: disabled
+    immediate: yes
+  when: beegfs_open_firewall_ports == True
+  loop:
+    - "8005/tcp"
+    - "8005/udp"
+  become: true
+
+- name: Remove the systemd drop-in directory at /etc/systemd/system/beegfs-meta.service.d/ (Metadata).
+  file:
+    state: absent
+    path: /etc/systemd/system/beegfs-meta.service.d/
+  become: true

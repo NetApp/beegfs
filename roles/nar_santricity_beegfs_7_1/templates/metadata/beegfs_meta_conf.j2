@@ -19,7 +19,7 @@
 
 sysMgmtdHost                 = {{ beegfs_mgmt_node_ip }}
 
-storeMetaDirectory           = {% for volume in metadata_volumes[:-1] %}{{ beegfs_data_directory }}beegfs/{{ volume.name }},{% endfor %}{{ beegfs_data_directory }}beegfs/{{ metadata_volumes[-1].name }}
+storeMetaDirectory           = {% for volume in metadata_volumes %}{{ beegfs_data_directory }}beegfs/{{ volume.name }}{{"," if not loop["last"]}}{% endfor %}
 
 storeAllowFirstRunInit       = false
 

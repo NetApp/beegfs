@@ -1,0 +1,30 @@
+- name: Stop BeeGFS client service.
+  systemd:
+    name: beegfs-client.service
+    state: stopped
+  when:  "'beegfs-client.service' in (ansible_facts['services'].keys() | list)"
+  become: true
+
+- name: Stop BeeGFS helper daemon (Client).
+  systemd:
+    name: beegfs-helperd.service
+    state: stopped
+  when:  "'beegfs-helperd.service' in (ansible_facts['services'].keys() | list)"
+  become: true
+
+- name: Close BeeGFS client service firewall ports if configured by the role.
+  firewalld:
+    port: 8004/udp
+    permanent: yes
+    state: disabled
+    immediate: yes
+  when: beegfs_open_firewall_ports == True
+  become: true
+
+- name: Revert change allowing unsupported modules (SUSE - Client).
+  replace:
+    path: /etc/modprobe.d/10-unsupported-modules.conf
+    regexp: 'allow_unsupported_modules 1'
+    replace: 'allow_unsupported_modules 0'
+  when: 'ansible_facts["os_family"] | lower == "suse" and beegfs_allow_unsupported_module == True'
+  become: true
