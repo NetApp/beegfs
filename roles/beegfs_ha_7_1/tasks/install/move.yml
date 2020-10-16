@@ -1,0 +1,33 @@
+- name: Determine preferred service-nodes.
+  set_fact:
+    preferred_resource_node_list: |-
+      {%- set resource_node_list = {} -%}
+      {%- for host in groups[beegfs_ha_ansible_cluster_group] if "node_info" in (hostvars[host].keys() | list) -%}
+        {%- set node_info = hostvars[host]["node_info"] -%}
+        {%- for service in node_info["services"] -%}
+          {%- for resource_group_info in node_info[service] if host == resource_group_info["preferred_node_order"][0] -%}
+            {%- if resource_node_list.update({resource_group_info["resource_group"]: host}) -%}{%- endif -%}
+          {%- endfor -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- resource_node_list -}}
+
+- name: Attempt to return services to their preferred BeeGFS HA cluster nodes.
+  command:
+    cmd: "crm_resource --resource {{ item['key'] }}-group --move --node {{ item['value'] }}"
+  register: resource_move
+  changed_when: resource_move['rc'] == 0
+  failed_when: false
+  loop: "{{ preferred_resource_node_list | dict2items }}"
+
+- name: Wait for resource move to complete
+  pause:
+    seconds: 10
+
+- name: Remove temporary constraints to force services to their preferred nodes.
+  command:
+    cmd: "crm_resource --resource {{ item['key'] }}-group --un-move"
+  register: resource_unmove
+  changed_when: false
+  failed_when: false
+  loop: "{{ preferred_resource_node_list | dict2items }}"

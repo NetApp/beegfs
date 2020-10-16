@@ -88,7 +88,7 @@
     - beegfs_validate_deployment
 
 - name: Delete all BeeGFS data and uninstall BeeGFS services (if required tag and variable are set).
-  import_tasks: packages/beegfs_removal_packages.yml
+  import_tasks: uninstall/main.yml
   when: beegfs_delete_data_and_uninstall_beegfs == True
   tags:
     - never

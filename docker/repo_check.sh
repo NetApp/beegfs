@@ -3,8 +3,9 @@ set -euo pipefail
 echo "[repo_check.sh] Attempting to run apt-get update and apt-get install git to check if we're in an air-gapped environment."
 if apt-get update && apt-get install -y git;
 then
-    echo "[repo_check.sh] Successfully installed git, leaving default Ubuntu repositories in place. Cloning external SANtricity Ansible Collection repository."
+    echo "[repo_check.sh] Successfully installed git, leaving default Ubuntu repositories in place. Cloning external SANtricity and Host Ansible Collections."
     git clone https://github.com/netapp-eseries/santricity.git /root/.ansible/collections/ansible_collections/netapp_eseries/santricity
+    git clone https://github.com/netapp-eseries/host.git /root/.ansible/collections/ansible_collections/netapp_eseries/host
     exit 0
 fi
 
@@ -24,7 +25,7 @@ then
             mkdir /root/.ansible/collections/ansible_collections/netapp_eseries/host
             env GIT_SSL_NO_VERIFY=True git clone $env_internal_host_collection_url /root/.ansible/collections/ansible_collections/netapp_eseries/host
         fi
-        git clone $env_internal_santricity_collection_url /root/.ansible/collections/ansible_collections/netapp_eseries/santricity
+        env GIT_SSL_NO_VERIFY=True git clone $env_internal_santricity_collection_url /root/.ansible/collections/ansible_collections/netapp_eseries/santricity
         exit 0
     else
         echo "[repo_check.sh] Required variable 'internal_santricity_collection_url' is not set. Please specify a URL for this variable in the docker build command using --build-arg."

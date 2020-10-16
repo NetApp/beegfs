@@ -1,6 +1,6 @@
 namespace: "netapp_eseries"
 name: "beegfs"
-version: "1.1.0"
+version: "2.0.0"
 readme: "README.md"
 authors:
   - "Christopher Seirer (@CSeirer)"
@@ -15,8 +15,10 @@ tags:
   - eseries
   - santricity
   - beegfs
+  - ha
 dependencies:
-  "netapp_eseries.santricity": '>=1.0.8'
+  "netapp_eseries.santricity": '>=1.1.0'
+  "netapp_eseries.host": ">=0.1.0"
 repository: "https://github.com/netappeseries/beegfs/"
 documentation: ""
 homepage: "https://github.com/netappeseries/beegfs/"

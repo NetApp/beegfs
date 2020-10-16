@@ -48,15 +48,32 @@ FAQs
             .
             ├── ansible
             │   └── ansible-2.9.2.tar.gz
+            ├── certifi
+            │   └── certifi-2020.6.20.tar.gz
+            ├── chardet
+            │   └── chardet-3.0.4.tar.gz
+            ├── docker
+            │   └── docker-4.2.2.tar.gz
+            ├── ipaddr
+            │   └── ipaddr-2.2.0.tar.gz
             ├── jinja2
-            │   └── Jinja2-2.10.3.tar.gz
+            │   ├── Jinja2-2.10.3.tar.gz
+            │   └── Jinja2-2.11.2.tar.gz
             ├── markupsafe
             │   └── MarkupSafe-1.1.1.tar.gz
-            └── pyyaml
-                └── PyYAML-5.3b1.tar.gz
+            ├── netaddr
+            │   └── netaddr-0.7.19.tar.gz
+            ├── pyyaml
+            │   └── PyYAML-5.3b1.tar.gz
+            ├── requests
+            │   └── requests-2.24.0.tar.gz
+            ├── urllib3
+            │   └── urllib3-1.25.10.tar.gz
+            └── websocket-client
+                └── websocket-client-0.57.0.tar.gz
         ```
 
-    - Lastly you will need an internal Git repository containing the NetApp E-Series SANtricity collection available at https://github.com/netappeseries/santricity. When you build the Docker image specify the URL to this repo as a Docker build arg: `docker build -f docker/Dockerfile . -t nar_eseries_ansible --build-arg internal_santricity_collection_url <URL>`.
+    - Lastly you will need an internal Git repository containing the NetApp E-Series SANtricity and Host collections available at https://github.com/netappeseries/santricity and https://github.com/netappeseries/host. When you build the Docker image specify the URL to this repo as a Docker build arg: `docker build -f docker/Dockerfile . -t nar_eseries_ansible --build-arg internal_santricity_collection_url=<URL> --build-arg internal_host_collection_url=<URL>`
 
 Advanced Configuration
 ----------------------

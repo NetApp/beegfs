@@ -2,17 +2,17 @@
   set_fact:
     storage_volumes: |-
       {%- set volumes = [] %}
-      {%- for index in range(storage_volumes | length) -%}
-        {%- set volume = storage_volumes[index] -%}
-        {%- if volume.update({"path": storage_volume_paths["results"][index]["files"][0]["path"]}) -%}{%- endif -%}
+      {%- for volume in storage_volumes -%}
+        {%- if volume.update({"path": storage_volume_paths[volume["name"]]["path"],
+                              "host_wwid": storage_volume_paths[volume["name"]]["host_wwid"]}) -%}{%- endif -%}
         {%- if volumes.append(volume) -%}{%- endif -%}
       {%- endfor -%}
-      {{ volumes or storage_volumes | list }}
+      {{ volumes | list }}
     metadata_volumes: |-
       {%- set volumes = [] %}
-      {%- for index in range(metadata_volumes | length) -%}
-        {%- set volume = metadata_volumes[index] -%}
-        {%- if volume.update({"path": metadata_volume_paths["results"][index]["files"][0]["path"]}) -%}{%- endif -%}
+      {%- for volume in metadata_volumes -%}
+        {%- if volume.update({"path": metadata_volume_paths[volume["name"]]["path"],
+                              "host_wwid": metadata_volume_paths[volume["name"]]["host_wwid"]}) -%}{%- endif -%}
         {%- if volumes.append(volume) -%}{%- endif -%}
       {%- endfor -%}
-      {{ volumes or metadata_volumes | list }}
+      {{ volumes | list }}
