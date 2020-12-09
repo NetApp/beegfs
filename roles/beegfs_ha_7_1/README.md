@@ -1,6 +1,6 @@
 netappeseries.beegfs.beegfs_ha_7_1 Role
 =======================================
-This role is a complete end-to-end deployment of the (NetApp E-Series BeeGFS HA (High-Availability) solution)[BeeGFS High Availability with NetApp E-Series]. This role utilizes the NetApp E-Series SANtricity, Host, and BeeGFS collections which allows users to not only configure the BeeGFS file system with HA but also provision, map storage and ensure the cluster storage is ready for use.
+This role is a complete end-to-end deployment of the [NetApp E-Series BeeGFS HA (High-Availability) solution](https://blog.netapp.com/high-availability-beegfs). This role utilizes the NetApp E-Series SANtricity, Host, and BeeGFS collections which allows users to not only configure the BeeGFS file system with HA but also provision, map storage and ensure the cluster storage is ready for use.
 
 Requirements
 ------------
@@ -36,7 +36,7 @@ The BeeGFS role has been tested with the following E-Series storage systems and 
 
 Notes:
 - While not explicitly included in testing, other firmware versions and storage systems including the E2800, EF570, and EF600 (iSER only).
-- Other SAN protocols including InfiniBand SRP, Fibre Channel, NVMe over IB, NVMe over FC, and NVMe over RoCE are expected to work when (netappeseries.host collection)[https://galaxy.ansible.com/netapp_eseries/host] implements them. At the time of writing only iSCSI and InfiniBand iSER have been implemented.
+- Other SAN protocols including InfiniBand SRP, Fibre Channel, NVMe over IB, NVMe over FC, and NVMe over RoCE are expected to work when [netappeseries.host collection](https://galaxy.ansible.com/netapp_eseries/host) implements them. At the time of writing only iSCSI and InfiniBand iSER have been implemented.
 
 Getting Started
 ----------------
