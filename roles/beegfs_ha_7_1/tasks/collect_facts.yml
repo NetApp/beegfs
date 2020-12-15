@@ -332,7 +332,8 @@
     eseries_storage_pool_configuration: |-
       {%- set storage_pool_configuration = [] -%}
       {%- for service_node in ansible_play_hosts_all if "node_info" in (hostvars[service_node].keys() | list) -%}
-        {%- for target in (hostvars[service_node]["node_info"]["target_info"].keys() | list) -%}
+
+        {%- for target in (hostvars[service_node]["node_info"]["target_info"].keys() | list) if target == inventory_hostname -%}
             {%- for target_sp in hostvars[service_node]["node_info"]["target_info"][target] -%}
               {%- for existing_sp in storage_pool_configuration if existing_sp["name"] == target_sp["name"] -%}
 
