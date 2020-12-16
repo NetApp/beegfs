@@ -74,29 +74,22 @@
   become: true
 
 - name: Determine whether locate's updatedb.conf file exists.
-  find:
-    path: "{{ beegfs_ha_client_updatedb_conf_path }}"
-  register: updatedb_conf_find
+  command:
+    cmd: "grep -o PRUNEFS.* {{ beegfs_ha_client_updatedb_conf_path }}"
+  register: updatedb_prunefs
+  changed_when: false
+  failed_when: false
   become: true
 
 - name: Ensure locate system scan will not scan beegfs.
   lineinfile:
     state: present
-    dest: "{{ beegfs_ha_client_updatedb_conf_path }}"
+    path: "{{ beegfs_ha_client_updatedb_conf_path }}"
     backup: true
-    backrefs: true
-    regexp: "^PRUNEFS = \".*\"$"
-    line: "PRUNEFS = \"{{ prunefs_list | join(' ') }}\""
-  when: updatedb_conf_find['files'] | length == 1 and prunefs_list | length > 0
+    regexp: "^PRUNEFS.*$"
+    line: 'PRUNEFS = "{{ existing_prunefs }} beegfs"'
+  when: updatedb_prunefs['rc'] == 0 and 'beegfs' not in existing_prunefs
   become: true
   vars:
-    prunefs_list: |-
-      {%- set prunefs_list = [] -%}
-      {%- for line in lookup('file', beegfs_ha_client_updatedb_conf_path).split('\n') if line | regex_search("PRUNEFS=\".*\"") -%}
-        {%- set current_entries = (line | regex_replace("PRUNEFS=|\"", "")).split(" ") -%}
-        {%- if "beegfs" not in current_entries -%}
-          {%- if prunefs_list.extend(current_entries) -%}{%- endif -%}
-          {%- if prunefs_list.append("beegfs") -%}{%- endif -%}
-        {%- endif -%}
-      {%- endfor -%}
-      {{- prunefs_list -}}
+    existing_prunefs: |-
+      {{- updatedb_prunefs["stdout"] | default("") | regex_replace('PRUNEFS\s*=\s*|"', "", ignorecase=True) -}}
