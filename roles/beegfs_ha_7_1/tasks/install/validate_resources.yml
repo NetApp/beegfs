@@ -43,6 +43,10 @@
 
         - name: Clean up all resources on all node.
           command: crm_resource --cleanup
+          register: crm_resource_cleanup
+          delay: 1
+          retries: 15
+          until: crm_resource_cleanup['rc'] == 0
           run_once: true
           become: true
       when: 1 < (resources_not_started_retries | int) < 3 # Second attempt
@@ -51,7 +55,7 @@
       block:
         - name: Wait 30 seconds.
           pause:
-            seconds: 60
+            seconds: 30
         - name: Retry until resources are all started
           include_tasks: install/validate_resources.yml
       when: (resources_not_started_retries | int) < 3     # Both attempts
