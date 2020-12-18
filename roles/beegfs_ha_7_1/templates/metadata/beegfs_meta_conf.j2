@@ -60,7 +60,7 @@ sysTargetAttachmentFile      =
 sysTargetOfflineTimeoutSecs  = 180
 sysAllowUserSetPattern       = false
 
-tuneBindToNumaZone           =
+tuneBindToNumaZone           = {{ item['beegfs_numa '] | default('') }}
 tuneNumStreamListeners       = 1
 tuneNumWorkers               = 0
 tuneTargetChooser            = randomized

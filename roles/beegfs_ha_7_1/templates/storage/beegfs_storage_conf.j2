@@ -54,7 +54,7 @@ runDaemonized                = true
 sysResyncSafetyThresholdMins = 10
 sysTargetOfflineTimeoutSecs  = 180
 
-tuneBindToNumaZone           =
+tuneBindToNumaZone           = {{ item['beegfs_numa '] | default('') }}
 tuneFileReadAheadSize        = 0m
 tuneFileReadAheadTriggerSize = 4m
 tuneFileReadSize             = 128k
