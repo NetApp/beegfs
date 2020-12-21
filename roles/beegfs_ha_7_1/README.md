@@ -381,6 +381,8 @@ All templates found in beegfs_ha_7_1/templates/ can be overridden by create a te
         playbook.yml
         inventory.yml
 
+You may wish to override some configuration parameters found in these templates on a per-resource group basis. While common parameters (for example NUMA zones) already have a variable that can be set in each resource group's "group_vars" file, you can easily modify the templates to be able to specify your own variables by replacing the default configuration value with a Jinja2 expression. For consistency and to ensure a default is provided if the variable is unset, we recommend the following Jinja2 expression: {{ beegfs_ha_X | default(<DEFAULT_VALUE>) }}. For example you could replace the line tuneNumStreamListeners = 1 with tuneNumStreamListeners = {{ beegfs_ha_tuneNumeStreamListeners | default('1') }}. Then simply set beegfs_ha_tuneNumeStreamListeners under any of the group_vars/<resource_group>.yml you want to override.
+
 NTP (`beegfs_ha_ntp_enabled: true`)
 -----------------------------------
 Time synchronization is required for BeeGFS to function properly. As a convenience to users the BeeGFS role provides functionality that can configure the ntpd service on all BeeGFS nodes by setting `beegfs_ha_ntp_enabled: True`. By default this variable is set to `False` to avoid conflicts with any existing NTP configuration that might be in place. If this variable is set to `True` please note any existing Chrony installations will be removed as they would conflict with ntpd.
