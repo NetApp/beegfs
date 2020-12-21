@@ -1,6 +1,6 @@
 - name: Ensure NTP is properly configured.
   template:
-    src: common/ntp_conf.j2
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/ntp_conf.j2') }}"
     dest: "{{ beegfs_ha_ntp_configuration_file }}"
   register: beegfs_ha_ntp_conf
   become: true

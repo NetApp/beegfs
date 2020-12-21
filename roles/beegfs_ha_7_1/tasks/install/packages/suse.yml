@@ -11,7 +11,7 @@
 
 - name: Create BeeGFS repo file (SUSE).
   template:
-    src: common/suse_repo.j2
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/suse_repo.j2') }}"
     dest: "/etc/zypp/repos.d/beegfs.repo"
   when: "'.repo' not in beegfs_ha_suse_repository_base_url"
   become: true

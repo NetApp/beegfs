@@ -48,7 +48,7 @@
 
 - name: Ensure each node has the expected corosync authkey.
   template:
-    src: common/corosync_authkey.j2
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/corosync_authkey.j2') }}"
     dest: "{{ corosync_authkey_path }}"
   become: true
 
@@ -56,7 +56,7 @@
 # Ensure each node in the BeeGFS HA cluster has a common corosync.conf file.
 - name: Ensure each node has the expected corosync.conf file.
   template:
-    src: common/corosync_conf.j2
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/corosync_conf.j2') }}"
     dest: "{{ corosync_conf_path }}"
   become: true
 
