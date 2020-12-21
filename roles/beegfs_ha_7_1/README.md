@@ -367,6 +367,20 @@ General Notes
 - BeeGFS is added to the PRUNEFS list in /etc/updatedb.conf to prevent daily indexing scans on clients which causes performance degradations.
 - Please refer to the documentation for your Linux distribution/version for guidance on the maximum cluster size. For example the limitations for RedHat can be found [here](https://access.redhat.com/articles/3069031).
 
+Override Default Templates
+--------------------------
+All templates found in beegfs_ha_7_1/templates/ can be overridden by create a template in <PLAYBOOK_DIRECTORY>/templates/beegfs_ha_7_1/<RELATIVE_TEMPLATE_PATH>/<TEMPLATE_NAME>. Start by copying the default template and make your modifications to it. Do not modify the existing Jinja2 statements.
+
+    beegfs_project/
+        templates/
+            beegfs_ha_7_1/
+                metadata/
+                    beegfs_meta_conf.j2
+                storage/
+                    beegfs_storage_conf.j2
+        playbook.yml
+        inventory.yml
+
 NTP (`beegfs_ha_ntp_enabled: true`)
 -----------------------------------
 Time synchronization is required for BeeGFS to function properly. As a convenience to users the BeeGFS role provides functionality that can configure the ntpd service on all BeeGFS nodes by setting `beegfs_ha_ntp_enabled: True`. By default this variable is set to `False` to avoid conflicts with any existing NTP configuration that might be in place. If this variable is set to `True` please note any existing Chrony installations will be removed as they would conflict with ntpd.
