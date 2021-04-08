@@ -91,7 +91,6 @@
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'storage/beegfs_storage_conf.j2') }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config/beegfs-storage.conf"
   loop: "{{ node_info['storage'] }}"
-  register: beegfs_meta_conf
   when: inventory_hostname == item['preferred_node_order'][0]
   become: true
 

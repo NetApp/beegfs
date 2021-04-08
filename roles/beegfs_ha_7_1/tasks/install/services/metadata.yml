@@ -75,7 +75,6 @@
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'metadata/beegfs_meta_conf.j2') }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/beegfs-meta.conf"
   loop: "{{ node_info['metadata'] }}"
-  register: beegfs_meta_conf
   when: inventory_hostname == item['preferred_node_order'][0]
   become: true
 

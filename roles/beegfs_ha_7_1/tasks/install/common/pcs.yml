@@ -31,9 +31,13 @@
               {%- endif -%}
             {%- endfor -%}
 
-          {%- set tokens_nodes = (scratch["previous"] | from_json)["tokens"].keys() | list | sort -%}
-          {%- set expected_nodes = groups[beegfs_ha_ansible_cluster_group] | sort -%}
-          {{- not scratch["valid_token_files"] or tokens_nodes != expected_nodes -}}
+          {%- if scratch["valid_token_files"] == False -%}
+            {%- set tokens_nodes = (scratch["previous"] | from_json)["tokens"].keys() | list | sort -%}
+            {%- set expected_nodes = groups[beegfs_ha_ansible_cluster_group] | sort -%}
+            {{- tokens_nodes != expected_nodes -}}
+          {%- else -%}
+            {{- True -}}
+          {%- endif -%}
       run_once: true
       ignore_errors: true
 
@@ -62,5 +66,5 @@
       command:
         cmd: "pcs cluster auth -u {{ beegfs_ha_cluster_username }} -p {{ beegfs_ha_cluster_password }}"
       when: inventory_hostname == preferred_management_node
-  when: update_pcs_required is not defined or update_pcs_required == True
+  when: update_pcs_required == True
   become: true
