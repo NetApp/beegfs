@@ -20,13 +20,12 @@ beegfs_ha_alert_email_list: []                                      # E-mail rec
 beegfs_ha_fencing_agents:                                           # Fencing agent definitions. This variable takes a dictionary of fence agent types with a list
                                                                     #   of fence definitions.
   ## APC fencing agent example.
-  #fence_apc:                                                       # To discover the fencing agent parameters:
-  #  - pcmk_host_list: "node_mm1,node_mm2"                          #   1) Search the BeeGFS HA node's package manager for fence- for your device and install it.
-  #    pcmk_host_map: "node_mm1:1;node_mm2:2"                       #   2) Run 'man -w -I --wildcard fence_*' to get the manual page name for the need fencing agent.
-  #    ipaddr: 192.168.1.200                                        #   3) Use man to view the manual entry which contains the needed parameters (ie man fence_apc).
-  #    login: admin
-  #    passwd: adminpass
-
+  #fence_apc:
+  #  - pcmk_host_map: "node_mm1:1;node_mm2:2"                       # (Required) Pacemaker host to fence mappings (ie port, switch, name) separated by semicolons.
+  #    ip: 192.168.1.200                                            # To discover the fencing agent parameters:
+  #    login: admin                                                 #   1) Search the BeeGFS HA node's package manager for fence- for your device and install it.
+  #    passwd: adminpass                                            #   2) Run 'man -w -I --wildcard fence_*' to get the manual page name for the need fencing agent.
+                                                                    #   3) Use man to view the manual entry which contains the needed parameters (ie man fence_apc).
   ## VMware fencing agent example
   #fence_vmware_rest:
   #  - pcmk_host_map: "node_mm1:vm_node_name1;node_mm2:vm_node_name2"
