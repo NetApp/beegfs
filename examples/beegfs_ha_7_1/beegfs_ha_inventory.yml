@@ -37,6 +37,7 @@ all:
         # BeeGFS HA Metadata Resource Groups - List all the BeeGFS HA metadata resource groups in this section.
         # ----------------------------------
         meta_01:  # Metadata resource group. meta_01 will be used to define a Pacemaker resource group.
+                  #    Metadata resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
           hosts:
             node_mm1:   # Most preferred BeeGFS metadata node. If everything is running correctly then your BeeGFS metadata service (meta_01) will be running on node_mm1.
             node_mm2:   # Next preferred node. If something happens to node_mm1 then Pacemaker will migrate the BeeGFS metadata service (meta_01) to node_mm2.
@@ -53,6 +54,7 @@ all:
         # BeeGFS HA Storage Resource Groups - List all the BeeGFS HA storage resource groups in this section.
         # ---------------------------------
         stor_01:  # Storage resource group. stor_01 will be used to define a Pacemaker resource group.
+                  #    Storage resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
           hosts:
             node_ss1:   # Most preferred BeeGFS storage node. If everything is running correctly then your BeeGFS storage service (stor_01) will be running on node_ss1.
             node_ss2:   # Next preferred node. If something happens to node_mm1 then Pacemaker will migrate the BeeGFS storage service (stor_01) to node_ss2.

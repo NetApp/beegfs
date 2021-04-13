@@ -127,7 +127,7 @@ The variables in this section are described in greater detail under the "Role Va
                         criteria_drive_count: 2            # Required number of drives
                         volumes:                           # Do not specify volume name parameter; it will be automatically determined.
                           - size: 10                       # Size parameter default size is gibibytes.
-            meta_01:
+            meta_01:   # Metadata resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
               hosts:
                 node_mm1:
                 node_mm2:
@@ -145,7 +145,7 @@ The variables in this section are described in greater detail under the "Role Va
                         criteria_drive_count: 2
                         volumes:
                           - size: 100
-            stor_01:
+            stor_01:    # Storage resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
               hosts:
                 node_ss1:
                 node_ss2:

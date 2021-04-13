@@ -49,6 +49,7 @@
       {{- cluster_group -}}
   run_once: true
 
+
 # Determine list of resource groups for each Ansible host.
 - name: Determine inventory group with all the BeeGFS HA resource groups.
   set_fact:
@@ -62,6 +63,38 @@
         {%- endfor -%}
       {%- endfor -%}
       {{- resources -}}
+
+- name: Check for invalid resource group names
+  set_fact:
+    invalid_resource_group_names: |-
+      {%- set invalid_names = [] -%}
+      {%- set scratch = {"management_found": False} -%}
+      {%- for resource_name in cluster_resource_groups -%}
+        {%- if resource_name | regex_search("^[A-Za-z0-9]+_[0-9]+$") -%}
+          {#- DO NOTHING - METADATA/STORAGE RESOURCE GROUP -#}
+        {%- elif resource_name | regex_search("^[A-Za-z]+$") and scratch["management_found"] == False -%}
+          {%- if scratch.update({"management_found": True}) -%}{%- endif -%}
+        {%- else -%}
+          {%- if invalid_names.append(resource_name) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- invalid_names -}}
+
+- name: Check for invalid resource group names
+  fail:
+    msg: "Invalid resource group name(s)! Resource group names must end with and underscore followed by the unique nodeNumID that is designated for the
+     service resource. Invalid names {{ invalid_names }}."
+  when: invalid_names | length > 0
+  run_once: true
+  vars:
+    invalid_names: |-
+      {%- set invalid_names = [] -%}
+      {%- for host in ansible_play_hosts_all if "invalid_resource_group_names" in (hostvars[host].keys() | list) and
+                                                hostvars[host]["invalid_resource_group_names"] | length > 0 -%}
+        {%- if invalid_names.extend(hostvars[host]["invalid_resource_group_names"]) -%}{%- endif -%}
+      {%- endfor -%}
+      {{- invalid_names | unique | sort -}}
+
 
 # Determine each resources group's preferred node order.
 - name: Determine preferred_node_order for each resource group.
