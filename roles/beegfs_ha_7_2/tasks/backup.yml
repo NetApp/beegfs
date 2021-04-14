@@ -1,0 +1,6 @@
+- name: Backup BeeGFS HA configuration. See pcs config command options to restore to checkpoints.
+  command:
+    cmd: "pcs config backup {{ beegfs_ha_backup_path }}beegfs_ha_pcs_config.backup-{{ ansible_date_time['date'] }}T{{ ansible_date_time['time'] }}"
+  failed_when: false
+  when: beegfs_ha_backup == True
+  become: true
