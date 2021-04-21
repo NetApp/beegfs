@@ -31,4 +31,5 @@ beegfs_targets:                             # Dictionary of E-Series storage sys
                                             #   other services this value must be the same on all definitions.
 
         volumes:                            # BeeGFS metadata service requires only one volume.
-          - size: 1024                      # Size of the BeeGFS metadata service volume specified in gibibytes.
+          - size: 45                        # Size of the BeeGFS metadata service volume in percentage of total storage pool capacity.
+            size: 45

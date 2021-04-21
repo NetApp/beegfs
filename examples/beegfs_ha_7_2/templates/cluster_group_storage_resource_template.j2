@@ -27,7 +27,7 @@ beegfs_targets:                             # Dictionary of E-Series storage sys
         criteria_drive_count: 10            # Total drive count for the storage pool.
 
         volumes:                            # BeeGFS storage service volume list. In order to get the best performance it is recommended that you use a minimum
-          - size: 4096                      #   of four volumes per storage service. Size of each BeeGFS storage service volume specified in gibibytes.
-          - size: 4096
-          - size: 4096
-          - size: 4096
+          - size: 25                        #   of four volumes per storage service. Size of each BeeGFS storage service volume in percentage of total storage pool capacity.
+          - size: 25
+          - size: 25
+          - size: 25
