@@ -16,6 +16,7 @@
     file: "{{ ansible_inventory_sources[0] }}"
   run_once: true
 
+
 # Collection the BeeGFS HA cluster's ansible inventory definition from the raw inventory file.
 - name: Determine the raw inventory for the BeeGFS HA cluster ansible host group.
   set_fact:
@@ -129,20 +130,30 @@
       {{- resource_node_order -}}
     run_once: true
 
+
 # Collect resource group's inventory files and add their content to the resource group variable for each Ansible-BeeGFS HA host.
 - name: Get cluster group_vars inventory file.
   include_vars:
     name: cluster_group_vars
-    dir: "{{ playbook_dir }}/group_vars/"
+    dir: "{{ inventory_dir }}/group_vars/"
     files_matching: "{{ beegfs_ha_ansible_cluster_group }}.(yml|yaml)"
+  run_once: true
+
+- name: "Determine whether {{ inventory_dir }}/group_vars directory exists."
+  stat:
+    path: "{{ inventory_dir }}/group_vars/"
+  connection: local
+  register: inventory_group_vars_stat
   run_once: true
 
 - name: Get group_vars inventory files.
   include_vars:
     name: "{{ item }}_resource_group_vars"
-    dir: "{{ playbook_dir }}/group_vars/"
+    dir: "{{ inventory_dir }}/group_vars/"
     files_matching: "{{ item }}.(yml|yaml)"
   loop: "{{ cluster_resource_groups }}"
+  failed_when: false
+  when: inventory_group_vars_stat["stat"]["exists"] == True
 
 - name: Set top-level variables.
   set_fact:
@@ -221,6 +232,7 @@
 
       {{- final_hostgroups -}}
   run_once: true
+
 
 # These dynamic hosts groups are used to map volumes on the E-Series storage systems.
 - name: Create new inventory hostgroups.
