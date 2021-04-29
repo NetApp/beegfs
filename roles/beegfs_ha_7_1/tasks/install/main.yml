@@ -136,7 +136,9 @@
             msg: "Warning! The following cluster resources are not running: {{ resources_not_started }}"
           when: resources_not_started | length > 0
           ignore_errors: true
-      when: inventory_hostname == preferred_management_node
+          run_once: true
+      when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("management" in node_info["services"] or
+                                                                                "metadata" in node_info["services"] or "storage" in node_info["services"])'
       tags:
         - always
 

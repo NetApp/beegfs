@@ -3,6 +3,8 @@
   register: pacemaker_resources_status
   changed_when: false
   failed_when: false
+  delegate_to: "{{ preferred_management_node }}"
+  run_once: true
   become: true
 
 - name: Determine whether any resources are not started.
@@ -14,6 +16,7 @@
       {%- endfor -%}
       {{- resources -}}
     resources_not_started_retries: "{%- if resources_not_started_retries is not defined -%}1{%- else -%}{{ (resources_not_started_retries | int) + 1}}{%- endif -%}"
+  run_once: true
 
 - name: "Attempt to recover resources. [Attempt #{{ resources_not_started }}]."
   block:
