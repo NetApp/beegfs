@@ -40,7 +40,7 @@ Notes:
 
 Getting Started
 ----------------
-To build an inventory and playbook based your BeeGFS cluster requirements, checkout the [beegfs_ha_7_1 example project readme](https://github.com/netappeseries/beegfs/tree/release-2.0.0/examples/beegfs_ha_7_1/README.md).
+To build an inventory and playbook based your BeeGFS cluster requirements, checkout the [beegfs_ha_7_1 example project readme](https://github.com/netappeseries/beegfs/tree/release-2.1.0/examples/beegfs_ha_7_1/README.md).
 
 This is the recommended way to get started with the BeeGFS HA role. Alternatively users can jump into the examples and detailed descriptions of the various variables found in the sections below.
 
