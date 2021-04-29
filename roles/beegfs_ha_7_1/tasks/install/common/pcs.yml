@@ -36,7 +36,7 @@
             {%- set expected_nodes = groups[beegfs_ha_ansible_cluster_group] | sort -%}
             {{- tokens_nodes != expected_nodes -}}
           {%- else -%}
-            {{- True -}}
+            {{- False -}}
           {%- endif -%}
       run_once: true
       ignore_errors: true
