@@ -7,7 +7,7 @@ beegfs_ha_cluster_name: hacluster
 # THESE MAY ONLY BE NEEDED TO AUTHENTICATE USING THE PCS TOOL. ANSIBLE MAYBE A VIABLE REPLACEMENT FOR THIS TASK.
 beegfs_ha_cluster_username: hacluster
 beegfs_ha_cluster_password: hapassword
-beegfs_ha_cluster_password_sha512_salt: random$alt
+beegfs_ha_cluster_password_sha512_salt: randomSalt
 beegfs_ha_ntp_enabled: true
 beegfs_ha_allow_firewall_high_availability_service: true   # Allow high-availability firewall services.
 beegfs_ha_alert_email_subject: "ClusterNotification"
