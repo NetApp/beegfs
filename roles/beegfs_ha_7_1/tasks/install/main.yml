@@ -5,6 +5,18 @@
       tags:
         - always
 
+    # Client IP over IB needs to be configured prior to storage configuration to avoid unnecessary configuration.
+    #   This is because ipoib role variables are defined for other IB related storage protocols.
+    - name: Ensure InfiniBand IPoIB is configured.
+      block:
+        - name: Ensure InfiniBand IPoIB is configured.
+          include_role:
+            name: netapp_eseries.host.ipoib
+          when: eseries_ipoib_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_client_group]
+      tags:
+        - beegfs_ha_client
+        - beegfs_ha
+
     - name: Provision storage and present the storage to hosts.
       block:
         - name: Ensure storage has been provisioned for hosts.
