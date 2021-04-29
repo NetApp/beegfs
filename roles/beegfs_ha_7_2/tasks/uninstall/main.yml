@@ -56,6 +56,12 @@
     eseries_unmount_wipe_format_signatures: "{{ beegfs_ha_uninstall_wipe_format_volumes }}"
     eseries_unmount_delete: "{{ beegfs_ha_uninstall_delete_volumes or beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
 
+- name: Ensure InfiniBand IPoIB is unconfigured.
+  include_role:
+    name: netapp_eseries.host.ipoib
+    tasks_from: uninstall.yml
+  when: eseries_ipoib_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_client_group]
+
 - name: Ensure host-storage communications are uninstalled.
   include_role:
     name: netapp_eseries.host.storage_setup

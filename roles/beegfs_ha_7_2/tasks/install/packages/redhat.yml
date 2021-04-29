@@ -10,13 +10,6 @@
   register: yum_repository
   become: true
 
-# `yum clean all' when removing existing repository to clear old metadata cache.
-- name: Ensure yum repositories are clean
-  command:
-    cmd: yum clean all
-  when: yum_repository['changed'] == True
-  become: true
-
 - name: Ensure the BeeGFS management package is installed (RedHat/CentOS - Management).
   yum:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
