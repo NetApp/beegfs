@@ -1,17 +1,17 @@
 Overview
 --------
 
-The Dockerfile and supporting files in this directory are used to create a containerized Ansible 2.9+ control node with the SANtricity Ansible collection (pulled from an internal repo mirror or external GitHub repo), and the BeeGFS Ansible collection copied from the root of this repository. This allows users to quickly create a runtime environment with all requirements needed to run roles in the BeeGFS Ansible collection.
+The Dockerfile and supporting files in this directory are used to create a containerized Ansible 2.10 control node with the NetApp E-Series Ansible collections (externally from Ansible Galaxy or from an internal repository), and, optionally, a local collection for development purposes. This allows users to quickly create a runtime environment with all requirements needed to utilize any NetApp E-Series Ansible content such the BeeGFS HA role.
 
 Prerequisites
 -------------
 - A server with Docker installed and password-less SSH setup to all servers being managed by Ansible.
-    - Note the Dockerfile was tested with Docker version 19.03.5 running on RedHat 7.6 though alternate configurations are expected to work.
+    - Note the Dockerfile was tested with Docker version 20.10.2 running on Ubuntu 18.04 LTS though alternate configurations are expected to work.
     
 Getting Started
 ---------------
 
-#### Building the nar_eseries_ansible Docker image:
+#### Building the eseries_ansible Docker image for beegfs development:
 
 1) If you haven't already, clone the BeeGFS Ansible collection's repository to the host you'll be using to run Docker, then checkout the desired branch (if needed).
 
@@ -20,60 +20,33 @@ Getting Started
 
 2) Next you'll need to build and tag the Docker image. With the current/working directory set to the root of the BeeGFS collection's repository run:
 
-- `docker build -f docker/Dockerfile . -t nar_eseries_ansible`
+- `docker build -f docker/Dockerfile . -t eseries_ansible`
  
 Important: 
-- Being in the correct current/working directory is important because we need Docker to copy the entire BeeGFS Ansible collection into the Docker image, so the build context needs to be the repository's root.
-- If you make changes to the BeeGFS collection you will need to re-run the `docker build` command for the changes to be included in the Docker image.
-- After initially building the Docker image if you need to update the SANtricity Ansible collection or force a change between internal/external repos without updating the repomirror* files you'll need to run `docker build` with  `--no-cache=true`.
-    - This is due to how Docker caching works when we use a script (`repo_check.sh`) to detect if we're in an air-gapped environment.
+- When importing the local beegfs collection it is important to be in the repository's root directory since the entire collection will be copied into the Docker image.
+- If you make changes to the beegfs collection you will need to re-run the `docker build` command for the changes to be included in the Docker image.
+    - Alternatively, you can add `-v <PATH TO BEEGFS REPO>:/root/.ansible/collections/ansible_collections/netapp_eseries/beegfs` to the run command which will create a bind mount within container that can be edited externally. 
+    - If working with an air-gapped environment (e.g. no internet access) then you'll need to run `docker build` with `--no-cache=true` to update any of the remote collections.
 
-#### Running the nar_eseries_ansible Docker image:
+#### Running the eseries_ansible Docker image:
 
-Once you have the nar_eseries_ansible Docker image created, to run the containerized Ansible control node change the current/working directory to the one containing your inventory, playbook, and any other group_vars/host_vars files/subdirectories before running:
+Once the eseries_ansible Docker image is created, you can run the containerized Ansible control node by changing the current/working directory to the one containing your inventory, playbook, and any other group_vars/host_vars files/subdirectories before running:
 
-- `docker run --rm -it -v "/root/.ssh:/root/.ssh" -v "$(pwd):/ansible/playbooks" nar_eseries_ansible -i inventory.yml playbook.yml`
+- `docker run --rm -it -v "${HOME}/.ssh:/root/.ssh" -v "${PWD}:/ansible/playbooks" eseries_ansible -i inventory.yml playbook.yml`
  
 Additional Notes:
 - If your inventory and/or playbook files aren't named `inventory.yml` and/or `playbook.yml`, modify the filenames used in the command as needed.
 - If you're using a user other than root on the server running Docker, simply substitute the `/root/.ssh` path before the colon in `-v "/root/.ssh:/root/.ssh"` with the desired path. For example if the username is "admin" use `-v "/home/admin/.ssh:/root/.ssh"`. The latter half should always stay the same unless you're also planning to change the user in the container, which is outside the scope of this README.
-- Instead of using `-v $(pwd):/ansible/playbooks` you can specify an absolute path for `$(pwd)`, allowing you to run the container without first changing the current/working directory. For example `-v /home/admin/website_01:/ansible/playbooks`.
+- All Ansible commands (ansible, ansible-inventory, ansible-galaxy, ansible-doc) are available by specifying the command --entrypoint otherwise the run command will execute the ansible-playbook.
+    - (TIP) create aliases for your commands. For example, `alias ansible-doc="docker run -it --entrypoint <ANY_ANSIBLE_COMMAND> -v ${HOME}/.ssh:/root/.ssh -v ${PWD}:/ansible/playbooks eseries_ansible`
+- Instead of using the shell variables, $HOME and $PWD, you can specify absolute paths which, for example, allows you to run playbooks from the container without changing the current/working directory. For example `-v "/home/admin/.ssh:/root/.ssh" -v /home/admin/website_01:/ansible/playbooks`.
 
 FAQs
 ----
-- I'm wanting to build/run the Docker container in an air-gapped environment (e.g. no internet access), how can I use the files in this directory?
-    - Provided you have repository mirrors setup in the air-gapped environment for both Ubuntu and PIP, there are two files in the docker/ directory that can be updated to point at your internal repository mirror URLs. Update repomirror_sources.list with the URL(s) for Ubuntu, and repomirror_pip.conf with the URL to a pip mirror containing the following packages (minimum versions): 
-        ```    
-            /public_html/pip_mirror> tree
-            .
-            ├── ansible
-            │   └── ansible-2.9.2.tar.gz
-            ├── certifi
-            │   └── certifi-2020.6.20.tar.gz
-            ├── chardet
-            │   └── chardet-3.0.4.tar.gz
-            ├── docker
-            │   └── docker-4.2.2.tar.gz
-            ├── ipaddr
-            │   └── ipaddr-2.2.0.tar.gz
-            ├── jinja2
-            │   ├── Jinja2-2.10.3.tar.gz
-            │   └── Jinja2-2.11.2.tar.gz
-            ├── markupsafe
-            │   └── MarkupSafe-1.1.1.tar.gz
-            ├── netaddr
-            │   └── netaddr-0.7.19.tar.gz
-            ├── pyyaml
-            │   └── PyYAML-5.3b1.tar.gz
-            ├── requests
-            │   └── requests-2.24.0.tar.gz
-            ├── urllib3
-            │   └── urllib3-1.25.10.tar.gz
-            └── websocket-client
-                └── websocket-client-0.57.0.tar.gz
-        ```
-
-    - Lastly you will need an internal Git repository containing the NetApp E-Series SANtricity and Host collections available at https://github.com/netappeseries/santricity and https://github.com/netappeseries/host. When you build the Docker image specify the URL to this repo as a Docker build arg: `docker build -f docker/Dockerfile . -t nar_eseries_ansible --build-arg internal_santricity_collection_url=<URL> --build-arg internal_host_collection_url=<URL>`
+- I'm wanting to build/run the Docker container in an air-gapped environment (e.g. no internet access), what do I do?
+    - Provided you have a repository for the air-gapped environment for APK and PIP, override the source urls for APK and PIP. So, when you build the Docker image specify the URLs as Docker --build-args: `docker build -f docker/Dockerfile . -t eseries_ansible --build-arg internal_apk_url=<URL> --build-arg internal_pip_url=<URL>`
+    - You will also need internal GIT repositories for netapp_eseries collections specifying the --build-args for internal_santricity_collection_url, internal_host_collection_url, internal_beegfs_collection_url, and internal_collection_dependencies_url. Alternatively, just define internal_collection_dependencies_url with not only netapp_eseries collection dependencies but also the collections themselves. To collect all collection dependencies (ie tar.gz files) run the following commands on a system with access to https://galaxy.ansible.com/ with Ansible 2.10 installed, `ansible-galaxy collection download netapp_eseries.{santricity,host,beegfs}`. 
+    - Lastly, when you build the Docker image specify the URL to these repositories as Docker --build-args: `--build-arg internal_santricity_collection_url=<URL> --build-arg internal_host_collection_url=<URL> --build-arg internal_beegfs_collection_url=<URL> --build-arg internal_collection_dependencies_url=<URL>` or, if you're using a single repository with the collections and the dependencies from Ansible-Galaxy: `--build-arg internal_collection_dependencies_url=<URL>`
 
 Advanced Configuration
 ----------------------
