@@ -1,0 +1,21 @@
+- name: Remove BeeGFS sysctl.conf entries if performance tuning is enabled (Metadata/Storage).
+  sysctl:
+    name: "{{ item['key'] }}"
+    value: "{{ item['value'] }}"
+    state: absent
+    reload: true
+    sysctl_file: "{{ sysctl_conf_path }}"
+  loop: "{{ lookup('dict', beegfs_ha_sysctl_entries) }}"
+  become: true
+
+- name: Delete /etc/sysctl.d/99-eseries-beegfs.conf file if performance tuning is enabled.
+  file:
+    path: "{{ sysctl_conf_path }}"
+    state: absent
+  become: true
+
+- name: Delete udev rule at /etc/udev/rules.d/99-eseries-beegfs.rules if performance tuning is enabled (Metadata/Storage).
+  file:
+    path: "/etc/udev/rules.d/99-eseries-beegfs.rules"
+    state: absent
+  become: true

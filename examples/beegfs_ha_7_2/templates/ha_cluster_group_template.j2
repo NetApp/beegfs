@@ -1,0 +1,37 @@
+# ha_cluster Ansible group inventory file. Place all default/common variables for BeeGFS HA cluster resources below.
+
+# Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+beegfs_ha_cluster_ansible_host_group: ha_cluster                    # ha_cluster is the default BeeGFS HA cluster Ansible group name. Do not change.
+beegfs_ha_ansible_client_group: ha_clients                          # ha_clients is the default BeeGFS client Ansible group name. Do not change.
+beegfs_ha_cluster_ansible_storage_group: eseries_storage_systems    # eseries_storage_systems is the default BeeGFS E-Series storage Ansible group name. Do not change.
+
+beegfs_ha_cluster_name: hacluster                                   # BeeGFS HA cluster name.
+beegfs_ha_cluster_username: hacluster                               # BeeGFS HA cluster username.
+beegfs_ha_cluster_password: hapassword                              # BeeGFS HA cluster username's password.
+beegfs_ha_cluster_password_sha512_salt: randomSalt                  # BeeGFS HA cluster username's password salt.
+beegfs_ha_mgmtd_floating_ip: {{ beegfs_mgmt_ip['user_input'] }}                            # BeeGFS management service IP address.
+#beegfs_ha_filter_ip_ranges:                                        # (Optional) Constrains the BeeGFS subnet.
+#  - 192.168.2.0/24
+
+beegfs_ha_storage_system_hostgroup_prefix: beegfs                   # This value will be prefixed to the E-Series storage host groups.
+
+beegfs_ha_alert_email_list: []                                      # E-mail recipient list for notifications when BeeGFS HA resources change or fail.
+beegfs_ha_fencing_agents:                                           # Fencing agent definitions. This variable takes a dictionary of fence agent types with a list
+                                                                    #   of fence definitions.
+  ## APC fencing agent example.
+  #fence_apc:
+  #  - pcmk_host_map: "node_mm1:1;node_mm2:2"                       # (Required) Pacemaker host to fence mappings (ie port, switch, name) separated by semicolons.
+  #    ipaddr: 192.168.1.200                                        # To discover the fencing agent parameters:
+  #    login: admin                                                 #   1) Search the BeeGFS HA node's package manager for fence- for your device and install it.
+  #    passwd: adminpass                                            #   2) Run 'man -w -I --wildcard fence_*' to get the manual page name for the need fencing agent.
+                                                                    #   3) Use man to view the manual entry which contains the needed parameters (ie man fence_apc).
+                                                                    #   4) Define any required parameters from the section entitled 'STDIN PARAMETERS'.
+  ## VMware fencing agent example
+  #fence_vmware_rest:
+  #  - pcmk_host_map: "node_mm1:vm_node_name1;node_mm2:vm_node_name2"
+  #    ipaddr: vmware.example.com
+  #    ssl: 1
+  #    ssl_insecure: 1
+  #    login: admin@vsphere.local
+  #    passwd: adminpass

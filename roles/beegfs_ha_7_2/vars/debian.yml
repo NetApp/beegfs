@@ -1,0 +1,3 @@
+beegfs_ha_management_tool: pcs
+beegfs_ha_ntp_service: ntp.service
+sysctl_conf_path: "/etc/sysctl.d/99-eseries-beegfs.conf"

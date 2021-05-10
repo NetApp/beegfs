@@ -1,6 +1,15 @@
 # Changelog
 Notable changes to the BeeGFS collection will be documented in this file.
 
+[2.1.0]
+### Added
+- Addition of the beegfs_ha_7_2 role and corresponding interactive example for getting started with beegfs_ha_7_2.
+- Added IP over IB configuration for clients.
+
+### Fixed
+- Role specific fixes: beegfs_ha_7_1
+  - Fixed inventory path issues for resource group information building.
+
 [2.0.0] - 2020-08-16
 --------------------
 ### Added

@@ -1,0 +1,26 @@
+# Ensure opt-in constraints are configured.
+- name: Query current pacemaker metadata group resources.
+  command:
+    cmd: "cibadmin --query --scope constraints"
+  register: constraints_query
+  changed_when: false
+  become: true
+
+- name: Determine whether changes are required.
+  command:
+    cmd: "crm_diff -O '{{ constraints_query['stdout'] }}' -N '{{ lookup('template', 'management/constraints.j2') }}'"
+  register: constraints_diff
+  failed_when: constraints_diff['rc'] not in [0, 1]
+  changed_when: false
+  become: true
+
+- name: Modify pacemaker constraints.
+  block:
+    - name: Set pacemaker into maintenance-mode.
+      command:
+        cmd: "crm_attribute --name maintenance-mode --update true"
+    - name: Modify pacemaker constraints.
+      command:
+        cmd: "cibadmin --replace --scope constraints --xml-text '{{ lookup('template', 'management/constraints.j2') }}'"
+  when: constraints_diff['rc'] == 1
+  become: true

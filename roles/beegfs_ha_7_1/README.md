@@ -40,7 +40,7 @@ Notes:
 
 Getting Started
 ----------------
-To build an inventory and playbook based your BeeGFS cluster requirements, checkout the [beegfs_ha_7_1 example project readme](https://github.com/netappeseries/beegfs/tree/release-2.0.0/examples/beegfs_ha_7_1/README.md).
+To build an inventory and playbook based your BeeGFS cluster requirements, checkout the [beegfs_ha_7_1 example project readme](https://github.com/netappeseries/beegfs/tree/release-2.1.0/examples/beegfs_ha_7_1/README.md).
 
 This is the recommended way to get started with the BeeGFS HA role. Alternatively users can jump into the examples and detailed descriptions of the various variables found in the sections below.
 
@@ -127,7 +127,7 @@ The variables in this section are described in greater detail under the "Role Va
                         criteria_drive_count: 2            # Required number of drives
                         volumes:                           # Do not specify volume name parameter; it will be automatically determined.
                           - size: 10                       # Size parameter default size is gibibytes.
-            meta_01:
+            meta_01:   # Metadata resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
               hosts:
                 node_mm1:
                 node_mm2:
@@ -145,7 +145,7 @@ The variables in this section are described in greater detail under the "Role Va
                         criteria_drive_count: 2
                         volumes:
                           - size: 100
-            stor_01:
+            stor_01:    # Storage resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
               hosts:
                 node_ss1:
                 node_ss2:

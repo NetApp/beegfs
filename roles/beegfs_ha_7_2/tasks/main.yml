@@ -1,0 +1,6 @@
+- name: Ensure BeeGFS HA cluster is installed.
+  import_tasks: install/main.yml
+
+- name: Ensure BeeGFS HA cluster is uninstalled.
+  include_tasks: uninstall/main.yml
+  when: beegfs_ha_uninstall == True
