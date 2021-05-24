@@ -5,15 +5,14 @@ The Dockerfile and supporting files in this directory are used to create a conta
 
 Prerequisites
 -------------
-- A server with Docker installed and password-less SSH setup to all servers being managed by Ansible.
+- A server with Docker installed and password-less SSH setup to all servers to be managed by Ansible.
     - Note the Dockerfile was tested with Docker version 20.10.2 running on Ubuntu 18.04 LTS though alternate configurations are expected to work.
     
 Getting Started
 ---------------
+#### Build eseries_ansible Docker image:
 
-#### Building the eseries_ansible Docker image for beegfs development:
-
-1) If you haven't already, clone the BeeGFS Ansible collection's repository to the host you'll be using to run Docker, then checkout the desired branch (if needed).
+1) If you haven't already, clone the BeeGFS Ansible collection's repository to the host you'll use as an Ansible control node then checkout the desired branch (if needed).
 
 - `git clone <url>`
 - `git checkout <branch>`
@@ -23,10 +22,10 @@ Getting Started
 - `docker build -f docker/Dockerfile . -t eseries_ansible`
  
 Important: 
-- When importing the local beegfs collection it is important to be in the repository's root directory since the entire collection will be copied into the Docker image.
-- If you make changes to the beegfs collection you will need to re-run the `docker build` command for the changes to be included in the Docker image.
-    - Alternatively, you can add `-v <PATH TO BEEGFS REPO>:/root/.ansible/collections/ansible_collections/netapp_eseries/beegfs` to the run command which will create a bind mount within container that can be edited externally. 
-    - If working with an air-gapped environment (e.g. no internet access) then you'll need to run `docker build` with `--no-cache=true` to update any of the remote collections.
+- When importing the local BeeGFS collection it is important to be in the repository's root directory since the entire collection will be copied into the Docker image.
+- If you intend to make changes to the BeeGFS collection you will need to re-run the `docker build` command for the changes to be included in the Docker image.
+    - Alternatively, you can add `-v <PATH TO BEEGFS REPO>:/root/.ansible/collections/ansible_collections/netapp_eseries/beegfs` to the run command which will create a bind mount within container that can be edited externally.
+- If working with an air-gapped environment (e.g. no internet access) then you'll need to run `docker build` with `--no-cache=true` to update any of the remote collections.
 
 #### Running the eseries_ansible Docker image:
 
