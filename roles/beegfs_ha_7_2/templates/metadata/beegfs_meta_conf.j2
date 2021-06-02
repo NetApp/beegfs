@@ -29,12 +29,12 @@ connAuthFile                 =
 connBacklogTCP               = 128
 connFallbackExpirationSecs   = 900
 connInterfacesFile           = {{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/connInterfacesFile.conf
-connMaxInternodeNum          = 32
+connMaxInternodeNum          = {{ item['beegfs_metadata_maximum_node_connections'] | default(32) }}
 
-connMetaPortTCP              = {{ item['tcp_port'] | default(item['port'] | default('8005')) }}
-connMetaPortUDP              = {{ item['udp_port'] | default(item['port'] | default('8005')) }}
-connMgmtdPortTCP             = {{ management_info['tcp_port'] | default(management_info['port'] | default('8008')) }}
-connMgmtdPortUDP             = {{ management_info['udp_port'] | default(management_info['port'] | default('8008')) }}
+connMetaPortTCP              = {{ item['tcp_port'] | default(item['port'] | default(8005)) }}
+connMetaPortUDP              = {{ item['udp_port'] | default(item['port'] | default(8005)) }}
+connMgmtdPortTCP             = {{ management_info['tcp_port'] | default(management_info['port'] | default(8008)) }}
+connMgmtdPortUDP             = {{ management_info['udp_port'] | default(management_info['port'] | default(8008)) }}
 connPortShift                = 0
 
 connNetFilterFile            = {% if (item['filter_ip_ranges'] | default(beegfs_ha_filter_ip_ranges)) | length > 0 %}{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/connNetFilterFile.conf{% endif %}
@@ -62,8 +62,8 @@ sysAllowUserSetPattern       = false
 
 tuneBindToNumaZone           = {{ item['beegfs_numa '] | default('') }}
 tuneNumStreamListeners       = 1
-tuneNumWorkers               = 0
-tuneTargetChooser            = randomized
+tuneNumWorkers               = {{ item['beegfs_metadata_worker_threads'] | default(0) }}
+tuneTargetChooser            = {{ item['beegfs_metadata_file_creation_target_algorithm'] | default('randomized') }}
 tuneUseAggressiveStreamPoll  = false
 tuneUsePerUserMsgQueues      = false
 

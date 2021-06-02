@@ -247,6 +247,28 @@ This section gives a quick summary of the available variables to configure the B
       vm.min_free_kbytes: 262144
       vm.zone_reclaim_mode: 1
 
+    # Performance tuning defaults for client settings
+    beegfs_client_maximum_node_connections: 128                 # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 12
+        
+    # Performance tuning defaults for metadata service settings
+    beegfs_metadata_maximum_node_connections: 128               # beegfs_meta.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 32
+    beegfs_metadata_worker_threads: 32                          # beegfs_meta.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel.
+                                                                #   On dedicated metadata servers, this is typically set to a value between four and eight times the number of CPU cores. Note: 0 means use twice the number
+                                                                #   of CPU cores (but at least 4). Default: 0
+    beegfs_metadata_file_creation_target_algorithm: roundrobin  # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file creation.
+                                                                #   Choices: [randomized, roundrobin, randomrobin, randominternode, randomintranode] Default: randomized
+        
+    # Performance tuning defaults for storage service settings
+    beegfs_storage_maximum_node_connections: 128                # beegfs_storage.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 12
+    beegfs_storage_incoming_data_event_threads: 2               # The number of threads waiting for incoming data events. Connections with incoming data will be handed over to the worker threads for actual message processing. Default: 1
+    beegfs_storage_worker_threads: 14                           # beegfs_storage.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel.
+                                                                #   On dedicated metadata servers, this is typically set to a value between four and eight times the number of CPU cores.
+                                                                #   Note: 0 means use twice the number of CPU cores (but at least 4). Default: 12
+    beegfs_storage_use_aggressive_stream_polling: true          # If set to true, the StreamListener component, which waits for incoming requests, will keep actively polling for events instead of sleeping until an event occurs.
+                                                                #   Active polling will reduce latency for processing of incoming requests at the cost of higher CPU usage. Default: false
+    beegfs_storage_maximum_write_chunk_size: 2048k              # The maximum amount of data that the server should write to the underlying local file system in a single operation. Default: 2048k
+    beegfs_storage_maximum_read_chunk_size: 2048k               # The maximum amount of data that the server should read to the underlying local file system in a single operation. Default: 2048k
+
     # NTP configuration defaults (see the `NTP` section below for more information) 
     beegfs_ha_ntp_configuration_file: /etc/ntp.conf             # Absolute file path for ntp.conf
     beegfs_ha_ntp_server_pools:                                 # List of ntp server pools.
