@@ -1,0 +1,307 @@
+#!/bin/sh
+# OCF Resource Agent compliant beegfs-monitor script.
+#
+# License: BSD-3-Clause
+# Author: Nathan Swartz
+
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+
+###############################################################################
+
+get_interfaces() {
+  # Determine BeeGFS service network IP interfaces.
+  connInterfacesFile_path=$(grep "^connInterfacesFile\s*=.*$" "$conf_path" | cut -d "=" -f 2)
+  if [ -f $connInterfacesFile_path ]; then
+    cat $connInterfacesFile_path | while IFS= read -r line; do echo "$line" | cut -d ':' -f 1; done
+  fi
+}
+
+get_subnet_ips() {
+  # Determine all possible BeeGFS service network IP addresses.
+  connNetFilterFile_path=$(grep "^connNetFilterFile\s*=.*$" "$conf_path" | cut -d "=" -f 2)
+  filter_ips=""
+  if [ -f $connNetFilterFile_path ]; then
+    for filter in $(cat $connNetFilterFile_path); do
+      filter_ips_cmd="from ipaddress import ip_network; ips=[str(ip) for ip in ip_network(u'${filter}')]; print(' '.join(ips))"
+      filter_ips="$filter_ips $(echo "$filter_ips_cmd" | python)"
+    done
+    echo "$filter_ips"
+  fi
+}
+
+ping_interface() {
+  test_interface=$1
+  test_address=$2
+
+  for _ in $(seq 1 $ping_count); do
+    if ping -I $test_interface -W $ping_timeout -c 1 $test_address; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+check_network_connectivity() {
+  # Wait for configuration files to be available.
+  while ! [ -e $conf_path ]; do
+    sleep 1
+  done
+
+  # Test for interface transmissions
+  for interface in $interfaces; do
+    timeout $monitor_timeout ip monitor > ~tmp_ip_monitor
+    if cat ~tmp_ip_monitor | grep "$interface.*REACHABLE"; then
+      return $OCF_SUCCESS
+    fi
+  done
+  ocf_log info "No network activity on BeeGFS communication interfaces ($interfaces)."
+
+  # Test network interfaces by pinging previously used IP addresses per interface
+  ocf_log info "Checking BeeGFS communication via ping."
+  interfaces=$(get_interfaces)
+  filter_ips=$(get_subnet_ips)
+
+  for interface in $interfaces; do
+    for neighbor_entry in $(ip neigh show dev $interface  | egrep "(REACHABLE|STALE)" | sort '-t ' -k 4 | cut -d ' ' -f 1 | head -n $ping_max_count); do
+      ocf_log info "$interface->$neighbor_entry"
+
+      if [ -n "$filter_ips" ]; then
+        for filter_ip in $filter_ips; do
+          if [ $neighbor_entry = $filter_ip ]; then
+            if ping_interface $interface $neighbor_entry; then
+              return $OCF_SUCCESS
+            else
+              ocf_log info "$neighbor_entry was not reachable on $interface!"
+            fi
+          fi
+        done
+      elif ping_interface $interface $neighbor_entry; then
+        return $OCF_SUCCESS
+      else
+        ocf_log info "$neighbor_entry was not reachable on $interface!"
+      fi
+    done
+  done
+
+  ocf_log error "Interfaces were not reachable!"
+  return $OCF_ERR_GENERIC
+}
+
+###############################################################################
+
+# Output the usage information
+beegfs_monitor_usage() {
+  cat <<END
+Usage: $0 (start|stop|monitor|meta-data|validate-all)
+
+Requires: ping, ip
+Parameters:
+  service_type                  (Required) Beegfs service (Choices: management, metadata, storage)
+  service_name                  (Required) BeeGFS service name
+  service_configuration_mount   (Required) BeeGFS service configuration mount path
+  monitor_timeout_sec           Timeout measured in seconds for the monitoring interface connections (Default 15)
+  ping_count                    Number of times attempt to ping IP address (Default 3)
+  ping_timeout_sec              Individual ping timeout measured in seconds (Default 2)
+
+* This resource will never fail so it must be co-located with an infinite score to allow the BeeGFS group to fail and migrate before moving beegfs-monitor.
+END
+}
+
+# Output the meta-data XML
+beegfs_monitor_meta_data() {
+  cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="beegfs-monitor">
+  <version>1.0</version>
+  <longdesc lang="en">This resource agent monitors a single BeeGFS service.</longdesc>
+  <shortdesc lang="en">BeeGFS service monitor</shortdesc>
+  <parameters>
+    <parameter name="service_group" unique="1" required="0">
+      <longdesc lang="en">The BeeGFS resource group name.</longdesc>
+      <shortdesc lang="en">BeeGFS service group name</shortdesc>
+      <content type="string"/>
+    </parameter>
+    <parameter name="service_type" unique="1" required="0">
+      <longdesc lang="en">Type of BeeGFS service which can be one of the following: management, metadata, storage.</longdesc>
+      <shortdesc lang="en">BeeGFS service type</shortdesc>
+      <content type="string"/>
+    </parameter>
+    <parameter name="service_name" unique="1" required="0">
+      <longdesc lang="en">Name of the BeeGFS systemd service to monitor.</longdesc>
+      <shortdesc lang="en">BeeGFS service name</shortdesc>
+      <content type="string"/>
+    </parameter>
+    <parameter name="service_configuration_mount" unique="1" required="0">
+      <longdesc lang="en">Path to the BeeGFS service configuration file.</longdesc>
+      <shortdesc lang="en">BeeGFS service configuration file</shortdesc>
+      <content type="string"/>
+    </parameter>
+    <parameter name="monitor_timeout_sec" unique="1" required="1">
+      <longdesc lang="en">Timeout measured in seconds for the monitoring interface connections.</longdesc>
+      <shortdesc lang="en">Timeout for interface monitoring.</shortdesc>
+      <content type="integer" default="15"/>
+    </parameter>
+    <parameter name="ping_count" unique="1" required="1">
+      <longdesc lang="en">Number of ping attempts before considering the IP address unreachable from the interface.</longdesc>
+      <shortdesc lang="en">Ping count</shortdesc>
+      <content type="integer" default="3"/>
+    </parameter>
+    <parameter name="ping_timeout_sec" unique="1" required="1">
+      <longdesc lang="en">Timeout for individual ping requests.</longdesc>
+      <shortdesc lang="en">Ping timeout</shortdesc>
+      <content type="integer" default="2"/>
+    </parameter>
+  </parameters>
+    <parameter name="ping_max_count" unique="1" required="1">
+      <longdesc lang="en">Maximum number of addresses to test. These tests will continue until either a ping is successful or the maximum ping count is reached.</longdesc>
+      <shortdesc lang="en">Maximum ping tests.</shortdesc>
+      <content type="integer" default="3"/>
+    </parameter>
+  </parameters>
+  <actions>
+    <action name="start"          timeout="60" />
+    <action name="stop"           timeout="10" />
+    <action name="monitor"        timeout="60" interval="60" depth="0" />
+    <action name="meta-data"      timeout="5" />
+    <action name="validate-all"   timeout="10" />
+  </actions>
+</resource-agent>
+END
+}
+
+# Wait for BeeGFS service to start.
+beegfs_monitor_start() {
+  # Create resource tracking file and wait for BeeGFS service to be started.
+  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
+  while ! beegfs_monitor_monitor; do
+    ocf_log debug "$service has not started, waiting..."
+    sleep 1
+  done
+
+  attrd_updater --name="$group-beegfs-monitor" --name="$group-beegfs-monitor" --update="1" --delay="5s"
+  return $OCF_SUCCESS
+}
+
+# Wait for BeeGFS service to stop.
+beegfs_monitor_stop() {
+  # Create resource tracking file and ensure BeeGFS resources are started.
+
+  # TODO: ??? This can create a race condition  if the network comes back up
+  # TODO: ??? Unecessary since it is colocated with the BeeGFS resource group.
+  #while beegfs_monitor_monitor; do
+  #  ocf_log debug "$service has not stopped, waiting..."
+  #  sleep 1
+  #done
+
+  attrd_updater --delete --name="$group-beegfs-monitor" --delay="5s"  # TODO: IS THIS A GOOD DELAY???
+  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
+  return $OCF_SUCCESS
+}
+
+
+# Validate BeeGFS service is running.
+beegfs_monitor_monitor() {
+  # Check resource tracking file.
+  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} monitor
+  ha_pseudo_resource_status=$?
+  if [ $ha_pseudo_resource_status -ne $OCF_SUCCESS ]; then
+    return $ha_pseudo_resource_status
+  fi
+
+  # Validate network connectivity.
+  if check_network_connectivity; then
+    attrd_updater --name="$group-beegfs-monitor" --update="1" --delay="5s"
+    return $OCF_SUCCESS
+  fi
+
+  attrd_updater --name="$group-beegfs-monitor" --update="0" --delay="5s"  # Changing the attribute to 0 will force the service to migrate.
+  return $OCF_SUCCESS   # Allow monitoring to continue until the co-located resource fails which will move the resource
+  #return $OCF_ERR_GENERIC
+
+  #output=$(beegfs-ctl --listnodes --nodetype=$type --reachable)
+  #if echo "$output" | grep -Pzo "^$service.*\[ID: [0-9]*\]\n\s*Reachable: <yes>"; then
+  #  return $OCF_SUCCESS
+  #elif echo "$output" | grep -Pzo "^$service.*\[ID: [0-9]*\]\n\s*Reachable: <no>"; then
+  #  return $OCF_NOT_RUNNING
+  #fi
+}
+
+# Validate beegfs-monitor requirements
+beegfs_monitor_validate_all() {
+  return $OCF_SUCCESS
+}
+
+###############################################################################
+
+# Provide information for metadata and usage requests
+case $__OCF_ACTION in
+  meta-data)
+    beegfs_monitor_meta_data
+    exit $OCF_SUCCESS
+    ;;
+  usage|help)
+    beegfs_monitor_usage
+    exit $OCF_SUCCESS
+    ;;
+esac
+
+
+# Set argument variables
+monitor_timeout=${OCF_RESKEY_monitor_timeout_sec:-15}
+ping_count=${OCF_RESKEY_ping_count:-3}
+ping_timeout=${OCF_RESKEY_ping_timeout_sec:-2}
+ping_max_count=${OCF_RESKEY_ping_max_count:-3}
+group=${OCF_RESKEY_service_group:-""}
+type=${OCF_RESKEY_service_type:-""}
+service=${OCF_RESKEY_service_name:-""}
+configuration_mount=${OCF_RESKEY_service_configuration_mount:-""}
+configuration_mount=${configuration_mount%%/}
+
+# Not sure what's going on here
+#if (! (ocf_is_decimal "$monitor_timeout" || ocf_is_decimal "$ping_count" || ocf_is_decimal "$ping_timeout")) || [ -n "$type" ] || [ -n "$service" ] || [ -n "$configuration_mount" ]; then
+#  beegfs_monitor_usage
+#  exit $OCF_ERR_ARGS
+#fi
+
+case $type in
+  management)
+    conf_path="${configuration_mount}/mgmt_config/beegfs-mgmtd.conf"
+    ;;
+  metadata)
+    conf_path="${configuration_mount}/metadata_config/beegfs-meta.conf"
+    ;;
+  storage)
+    conf_path="${configuration_mount}/storage_config/beegfs-storage.conf"
+    ;;
+  *)
+    beegfs_monitor_usage
+    exit $OCF_ERR_ARGS
+    ;;
+esac
+
+
+# Perform action requests
+case $__OCF_ACTION in
+  start)
+    beegfs_monitor_start
+    ;;
+  stop)
+    beegfs_monitor_stop
+    ;;
+  monitor)
+    beegfs_monitor_monitor
+    ;;
+  validate-all)
+    ;;
+  *)
+    beegfs_monitor_usage
+    exit $OCF_ERR_UNIMPLEMENTED
+    ;;
+esac
+
+rc=$?
+ocf_log debug "${OCF_RESOURCE_INSTANCE} $__OCF_ACTION returned $rc"
+exit $rc

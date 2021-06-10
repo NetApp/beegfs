@@ -81,6 +81,9 @@ corosync_log_path: /var/log/corosync.log
 # Pcs defaults
 beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/
 
+# Resource agent defaults
+beegfs_ha_resource_agent_path: /usr/lib/ocf/resource.d/
+
 
 # Uninstall defaults
 beegfs_ha_uninstall: false                                          # Whether to uninstall the entire BeeGFS HA solution excluding the storage provisioning and host storage setup.

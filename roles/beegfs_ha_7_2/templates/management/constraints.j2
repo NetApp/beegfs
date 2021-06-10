@@ -7,10 +7,27 @@
     {%- endfor -%}
   {%- endfor -%}
 {%- endfor -%}
-{%- for group in (resource_group_node_preference.keys() | list) -%}
-  {%- for node in resource_group_node_preference[group] | reverse -%}
-    {%- set priority = loop["index0"] * beegfs_ha_node_preference_scope_step -%}
-  <rsc_location id="location-{{ group }}-group-{{ node }}-{{ priority }}" node="{{ node }}" rsc="{{ group }}-group" score="{{ priority }}"/>
-  {%- endfor -%}
-{%- endfor -%}
+
+{%- for service in ["management", "metadata", "storage"] -%}
+  {%- for group in (resource_group_node_preference.keys() | list) if resource_group_info[group]["beegfs_service"] == service -%}
+    {%- for node in resource_group_node_preference[group] | reverse -%}
+      {% set priority = loop["index0"] * (beegfs_ha_node_preference_scope_step | int) %}
+  <rsc_location id="location-{{ group }}-group-{{ node }}" rsc="{{ group }}-group">
+    <rule id="location-{{ group }}-group-{{ node }}-rule-fail" score="-INFINITY" >
+      <expression id="location-{{ group }}-group-{{ node }}-rule-fail-value" attribute="{{ group }}-beegfs-monitor" operation="eq" value="0"/>
+      <expression id="location-{{ group }}-group-{{ node }}-rule-fail-location" attribute="#uname" operation="eq" value="{{ node }}"/>
+    </rule>
+    <rule id="location-{{ group }}-group-{{ node }}-rule-success" score="{{ priority }}">
+      <rule id="location-{{ group }}-group-{{ node }}-rule-success-values" score="{{ priority }}" boolean-op="or">
+        <expression id="location-{{ group }}-group-{{ node }}-rule-success-undefined" attribute="{{ group }}-beegfs-monitor" operation="not_defined"/>
+        <expression id="location-{{ group }}-group-{{ node }}-rule-success-value" attribute="{{ group }}-beegfs-monitor" operation="eq" value="1"/>
+      </rule>
+      <expression id="location-{{ group }}-group-{{ node }}-rule-success-location" attribute="#uname" operation="eq" value="{{ node }}"/>
+    </rule>
+  </rsc_location>
+  <rsc_location id="location-{{ group }}-monitor-{{ node }}" node="{{ node }}" rsc="{{ group }}-monitor" score="0"/>
+    {%- endfor %}
+  <rsc_colocation id="colocation-{{ group }}-monitor" rsc="{{ group }}-monitor" with-rsc="{{ group }}-group" score="INFINITY"/>
+  {% endfor %}
+{% endfor %}
 </constraints>

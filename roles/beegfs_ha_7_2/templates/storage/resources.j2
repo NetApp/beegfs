@@ -3,7 +3,32 @@
     {%- set group = info["resource_group"] -%}
     {%- set volumes = info["volumes"] -%}
     {%- set floating_ips = info["floating_ips"] %}
+
 <group id="{{ group }}-group">
+
+    {%- for floating_ip in floating_ips -%}
+      {%- set floating_ip_info = floating_ip.split(":") -%}
+      {%- set interface = floating_ip_info[0] -%}
+      {%- set address = floating_ip_info[1].split("/")[0] -%}
+      {%- set cidr_netmask = floating_ip_info[1].split("/")[1] -%}
+      {%- set iflabel = group[:12] ~ "_" ~ loop.index -%}
+      {%- set ipaddr_id = group ~ "-IP" ~ loop["index"] %}
+  <primitive class="ocf" id="{{ ipaddr_id }}" provider="heartbeat" type="IPaddr2">
+    <instance_attributes id="{{ ipaddr_id }}-instance_attributes">
+      <nvpair id="{{ ipaddr_id }}-instance_attributes-cidr_netmask" name="cidr_netmask" value="{{ cidr_netmask }}"/>
+      <nvpair id="{{ ipaddr_id }}-instance_attributes-flush_routes" name="flush_routes" value="1"/>
+      <nvpair id="{{ ipaddr_id }}-instance_attributes-iflabel" name="iflabel" value="{{ iflabel }}"/>
+      <nvpair id="{{ ipaddr_id }}-instance_attributes-ip" name="ip" value="{{ address }}"/>
+      <nvpair id="{{ ipaddr_id }}-instance_attributes-nic" name="nic" value="{{ interface }}"/>
+    </instance_attributes>
+    <operations>
+      <op id="{{ ipaddr_id }}-monitor-interval-10s" interval="10s" name="monitor" timeout="20s"/>
+      <op id="{{ ipaddr_id }}-start-interval-0s" interval="0s" name="start" timeout="20s"/>
+      <op id="{{ ipaddr_id }}-stop-interval-0s" interval="0s" name="stop" timeout="20s"/>
+    </operations>
+  </primitive>
+    {%- endfor %}
+
     {%- for volume in volumes -%}
       {%- set volume_name = volume["name"] -%}
       {%- set mount_dir = volume["metadata"]["mount_dir"] -%}
@@ -24,42 +49,12 @@
       <op id="{{ group }}-FS{{ loop["index"] }}-stop-interval-0s" interval="0s" name="stop" timeout="60s"/>
     </operations>
   </primitive>
-    {%- endfor %}
-    {%- for floating_ip in floating_ips -%}
-      {%- set floating_ip_info = floating_ip.split(":") -%}
-      {%- set interface = floating_ip_info[0] -%}
-      {%- set address = floating_ip_info[1].split("/")[0] -%}
-      {%- set cidr_netmask = floating_ip_info[1].split("/")[1] -%}
-      {%- set iflabel = group[:12] ~ "_" ~ loop.index -%}
-      {%- set ipaddr_id = group ~ "-IP" ~ loop["index"] %}
 
-  <primitive class="ocf" id="{{ ipaddr_id }}" provider="heartbeat" type="IPaddr2">
-    <instance_attributes id="{{ ipaddr_id }}-instance_attributes">
-      <nvpair id="{{ ipaddr_id }}-instance_attributes-cidr_netmask" name="cidr_netmask" value="{{ cidr_netmask }}"/>
-      <nvpair id="{{ ipaddr_id }}-instance_attributes-flush_routes" name="flush_routes" value="1"/>
-      <nvpair id="{{ ipaddr_id }}-instance_attributes-iflabel" name="iflabel" value="{{ iflabel }}"/>
-      <nvpair id="{{ ipaddr_id }}-instance_attributes-ip" name="ip" value="{{ address }}"/>
-      <nvpair id="{{ ipaddr_id }}-instance_attributes-nic" name="nic" value="{{ interface }}"/>
-    </instance_attributes>
-    <operations>
-      <op id="{{ ipaddr_id }}-monitor-interval-10s" interval="10s" name="monitor" timeout="20s"/>
-      <op id="{{ ipaddr_id }}-start-interval-0s" interval="0s" name="start" timeout="20s"/>
-      <op id="{{ ipaddr_id }}-stop-interval-0s" interval="0s" name="stop" timeout="20s"/>
-    </operations>
-  </primitive>
-    {%- endfor %}
+      {%- endfor %}
 
-  <primitive class="systemd" id="{{ group }}-service" type="beegfs-storage@{{ volumes[0]["name"] }}">
-    <operations>
-      <op id="{{ group }}-service-monitor-interval-13s" interval="13s" name="monitor"/>
-      <op id="{{ group }}-service-start-interval-0s" interval="0s" name="start" timeout="100"/>
-      <op id="{{ group }}-service-stop-interval-0s" interval="0s" name="stop" timeout="100"/>
-    </operations>
-  </primitive>
     {%- if beegfs_ha_enable_alerts == True -%}
-    {%- for email in beegfs_ha_alert_email_list -%}
-    {%- set alert_id = group ~ "-mailto-" ~ loop["index"] %}
-
+      {%- for email in beegfs_ha_alert_email_list -%}
+        {%- set alert_id = group ~ "-mailto" ~ loop["index"] %}
   <primitive class="ocf" id="{{ alert_id }}" provider="heartbeat" type="MailTo">
     <instance_attributes id="{{ alert_id }}-instance_attributes">
       <nvpair id="{{ alert_id }}-instance_attributes-email" name="email" value="{{ email }}"/>
@@ -70,10 +65,35 @@
       <op id="{{ alert_id }}-start-interval-0s" interval="0s" name="start" timeout="10s"/>
       <op id="{{ alert_id }}-stop-interval-0s" interval="0s" name="stop" timeout="10s"/>
     </operations>
+    <meta_attributes id="{{ alert_id }}-meta_attributes">
+      <nvpair id="{{ alert_id }}-meta_attributes-migration-threshold" name="migration-threshold" value="0"/>
+    </meta_attributes>
   </primitive>
-    {%- endfor -%}
-  {%- endif %}
+      {%- endfor -%}
+    {%- endif %}
 
+  <primitive class="systemd" id="{{ group }}-service" type="beegfs-storage@{{ volumes[0]["name"] }}">
+    <operations>
+      <op id="{{ group }}-service-monitor-interval-13s" interval="13s" name="monitor"/>
+      <op id="{{ group }}-service-start-interval-0s" interval="0s" name="start" timeout="100"/>
+      <op id="{{ group }}-service-stop-interval-0s" interval="0s" name="stop" timeout="100"/>
+    </operations>
+  </primitive>
 </group>
-{% endfor %}
+
+<primitive class="ocf" id="{{ group }}-monitor" provider="eseries" type="beegfs-monitor">
+  <instance_attributes id="{{ group }}-monitor-instance_attributes">
+    <nvpair id="{{ group }}-monitor-instance_attributes-service_group" name="service_group" value="{{ group }}"/>
+    <nvpair id="{{ group }}-monitor-instance_attributes-service_type" name="service_type" value="storage"/>
+    <nvpair id="{{ group }}-monitor-instance_attributes-service_name" name="service_name" value="beegfs-storage@{{ volumes[0]['name'] }}"/>
+    <nvpair id="{{ group }}-monitor-instance_attributes-service_configuration_mount" name="service_configuration_mount" value="{{ volumes[0]["metadata"]["mount_dir"] }}{{  volumes[0]["name"] }}/"/>
+  </instance_attributes>
+  <operations>
+    <op id="{{ group }}-monitor-start-interval-0s" interval="0s" name="start" timeout="60s"/>
+    <op id="{{ group }}-monitor-monitor-interval-30s" interval="30s" name="monitor" timeout="60s"/>
+    <op id="{{ group }}-monitor-stop-interval-0s" interval="0s" name="stop" timeout="600s"/>
+  </operations>
+</primitive>
+
+  {% endfor %}
 {% endfor %}

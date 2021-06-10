@@ -331,6 +331,25 @@
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 
+# Determine resource group information
+- name: Determine resource group information.
+  set_fact:
+    resource_group_info: |-
+      {%- set resource_group_info = {} -%}
+      {%- for host in ansible_play_hosts_all -%}
+        {%- if "node_info" in (hostvars[host].keys() | list) -%}
+          {%- for service in hostvars[host]["node_info"]["services"] -%}
+            {%- for resource_group in hostvars[host]["node_info"][service] -%}
+              {%- if resource_group["resource_group"] not in (resource_group_info.keys() | list) -%}
+                {%- if resource_group_info.update({resource_group["resource_group"]: resource_group}) -%}{%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endfor -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- resource_group_info -}}
+  run_once: true
+
 # Determine management information.
 - name: Determine management group information.
   set_fact:

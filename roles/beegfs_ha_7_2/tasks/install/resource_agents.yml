@@ -1,0 +1,19 @@
+- name: Ensure beegfs-client.conf is properly configured on all service nodes (Required for HA service validation).
+  template:
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'client/beegfs_client_conf.j2') }}"
+    dest: "{{ beegfs_ha_client_configuration_directory }}beegfs-client.conf"
+  become: true
+
+- name: Ensure eseries resource agent path exists
+  file:
+    state: directory
+    path: "{{ beegfs_ha_resource_agent_path }}eseries"
+    mode: 0755
+  become: true
+
+- name: Install E-Series BeeGFS HA resource agent for monitoring individual resources.
+  template:
+    src: common/beegfs-monitor
+    dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-monitor"
+    mode: 0755
+  become: true
