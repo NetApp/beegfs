@@ -4,7 +4,7 @@
 
 # Basic Variables (see README > Basic Variables):
 # beegfs_mgmt_node_ip: xxx.yyy.zzz
-beegfs_enable_rdma: False
+beegfs_enable_rdma: true
 # beegfs_ofed_include_path: /usr/src/openib/include
 beegfs_data_directory: "/data/"                       #IMPORTANT: The BeeGFS role will always append "beegfs/" to this path.
 # beegfs_connInterfaces:
