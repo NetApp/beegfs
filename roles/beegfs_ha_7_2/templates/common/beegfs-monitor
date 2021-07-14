@@ -9,6 +9,16 @@
 
 ###############################################################################
 
+# Returns whether the resource is active.
+check_resource_service() {
+  if systemctl is-active "$service"; then
+    return 0
+  fi
+
+  return 1
+}
+
+# Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
 get_interfaces() {
   # Determine BeeGFS service network IP interfaces.
   connInterfacesFile_path=$(grep "^connInterfacesFile\s*=.*$" "$conf_path" | cut -d "=" -f 2)
@@ -17,6 +27,7 @@ get_interfaces() {
   fi
 }
 
+# Return list containing all the BeeGFS resource's usable IP addresses. *Note that these are filtered by the connNetFilterFile entries.
 get_subnet_ips() {
   # Determine all possible BeeGFS service network IP addresses.
   connNetFilterFile_path=$(grep "^connNetFilterFile\s*=.*$" "$conf_path" | cut -d "=" -f 2)
@@ -30,6 +41,7 @@ get_subnet_ips() {
   fi
 }
 
+# Ping specified IP address from select interface until successful or retries are exhaused.
 ping_interface() {
   test_interface=$1
   test_address=$2
@@ -43,6 +55,7 @@ ping_interface() {
   return 1
 }
 
+# Returns whether at least one of the BeeGFS resource group's communication interface(s) are able to communicate on the network.
 check_network_connectivity() {
   # Wait for configuration files to be available.
   while ! [ -e $conf_path ]; do
@@ -105,7 +118,8 @@ Parameters:
   ping_count                    Number of times attempt to ping IP address (Default 3)
   ping_timeout_sec              Individual ping timeout measured in seconds (Default 2)
 
-* This resource will never fail so it must be co-located with an infinite score to allow the BeeGFS group to fail and migrate before moving beegfs-monitor.
+* BeeGFS resource group should be co-located with this monitoring service. Where beegfs-monitor goes so does the
+  resource group; this allows the group to be fenced when monitoring fails to return successfully.
 END
 }
 
@@ -174,28 +188,13 @@ END
 
 # Wait for BeeGFS service to start.
 beegfs_monitor_start() {
-  # Create resource tracking file and wait for BeeGFS service to be started.
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
-  while ! beegfs_monitor_monitor; do
-    ocf_log debug "$service has not started, waiting..."
-    sleep 1
-  done
-
-  attrd_updater --name="$group-beegfs-monitor" --name="$group-beegfs-monitor" --update="1" --delay="5s"
+  attrd_updater --name="$group-beegfs-monitor" --update="1" --delay="5s"
   return $OCF_SUCCESS
 }
 
 # Wait for BeeGFS service to stop.
 beegfs_monitor_stop() {
-  # Create resource tracking file and ensure BeeGFS resources are started.
-
-  # TODO: ??? This can create a race condition  if the network comes back up
-  # TODO: ??? Unecessary since it is colocated with the BeeGFS resource group.
-  #while beegfs_monitor_monitor; do
-  #  ocf_log debug "$service has not stopped, waiting..."
-  #  sleep 1
-  #done
-
   attrd_updater --delete --name="$group-beegfs-monitor" --delay="5s"  # TODO: IS THIS A GOOD DELAY???
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
   return $OCF_SUCCESS
@@ -211,22 +210,19 @@ beegfs_monitor_monitor() {
     return $ha_pseudo_resource_status
   fi
 
+  # Check whether resource has been started
+  if ! check_resource_service; then
+    return $OCF_SUCCESS
+  fi
+
   # Validate network connectivity.
   if check_network_connectivity; then
-    attrd_updater --name="$group-beegfs-monitor" --update="1" --delay="5s"
+    attrd_updater --name="$group-beegfs-monitor" --update="2" --delay="5s"
     return $OCF_SUCCESS
   fi
 
   attrd_updater --name="$group-beegfs-monitor" --update="0" --delay="5s"  # Changing the attribute to 0 will force the service to migrate.
-  return $OCF_SUCCESS   # Allow monitoring to continue until the co-located resource fails which will move the resource
-  #return $OCF_ERR_GENERIC
-
-  #output=$(beegfs-ctl --listnodes --nodetype=$type --reachable)
-  #if echo "$output" | grep -Pzo "^$service.*\[ID: [0-9]*\]\n\s*Reachable: <yes>"; then
-  #  return $OCF_SUCCESS
-  #elif echo "$output" | grep -Pzo "^$service.*\[ID: [0-9]*\]\n\s*Reachable: <no>"; then
-  #  return $OCF_NOT_RUNNING
-  #fi
+  return $OCF_ERR_GENERIC
 }
 
 # Validate beegfs-monitor requirements

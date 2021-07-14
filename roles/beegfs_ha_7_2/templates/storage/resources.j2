@@ -65,9 +65,6 @@
       <op id="{{ alert_id }}-start-interval-0s" interval="0s" name="start" timeout="10s"/>
       <op id="{{ alert_id }}-stop-interval-0s" interval="0s" name="stop" timeout="10s"/>
     </operations>
-    <meta_attributes id="{{ alert_id }}-meta_attributes">
-      <nvpair id="{{ alert_id }}-meta_attributes-migration-threshold" name="migration-threshold" value="0"/>
-    </meta_attributes>
   </primitive>
       {%- endfor -%}
     {%- endif %}
@@ -90,9 +87,12 @@
   </instance_attributes>
   <operations>
     <op id="{{ group }}-monitor-start-interval-0s" interval="0s" name="start" timeout="60s"/>
-    <op id="{{ group }}-monitor-monitor-interval-30s" interval="30s" name="monitor" timeout="60s"/>
+    <op id="{{ group }}-monitor-monitor-interval-30s" interval="30s" name="monitor" timeout="60s" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
     <op id="{{ group }}-monitor-stop-interval-0s" interval="0s" name="stop" timeout="600s"/>
   </operations>
+  <meta_attributes id="{{ group }}-monitor-meta_attributes">
+    <nvpair id="{{ group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="1"/>
+  </meta_attributes>
 </primitive>
 
   {% endfor %}
