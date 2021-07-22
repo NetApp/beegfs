@@ -25,25 +25,26 @@
         update_pcs_required: |-
           {%- set scratch = {"valid_token_files": True} -%}
           {%- for fetched_pcs_token in fetched_pcs_tokens["results"] if "dest" in (fetched_pcs_token.keys() | list) and fetched_pcs_token["changed"] == True -%}
-
             {%- set current = lookup("file", fetched_pcs_token["dest"]) -%}
             {%- if "previous" not in (scratch.keys() | list) -%}
               {%- if scratch.update({"previous": current }) -%}{%- endif -%}
             {%- endif -%}
-
             {%- if scratch["previous"] == {} or scratch["previous"] != current -%}
               {%- if scratch.update({"valid_token_files": False}) -%}{%- endif -%}
             {%- endif -%}
+          {%- else -%}
+            {%- if scratch.update({"valid_token_files": False}) -%}{%- endif -%}
           {%- endfor -%}
 
-          {%- if scratch["valid_token_files"] == False -%}
+          {%- if "previous" not in (scratch.keys() | list) -%}
+            {{- True -}}
+          {%- elif scratch["valid_token_files"] == False -%}
             {%- set tokens_nodes = (scratch["previous"] | from_json)["tokens"].keys() | list | sort -%}
             {%- set expected_nodes = groups[beegfs_ha_ansible_cluster_group] | sort -%}
             {{- tokens_nodes != expected_nodes -}}
           {%- else -%}
             {{- False -}}
           {%- endif -%}
-      ignore_errors: true
 
     - name: Delete temporary local pcs tokens file.
       file:
@@ -52,7 +53,6 @@
       delegate_to: localhost
       changed_when: false
       failed_when: false
-      ignore_errors: true
       loop: "{{ fetched_pcs_tokens['results'] }}"
       when: item["changed"]
   run_once: true
