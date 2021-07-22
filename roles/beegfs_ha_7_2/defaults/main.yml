@@ -20,6 +20,7 @@ beegfs_ha_enable_alerts: true
 beegfs_ha_enable_quota: false
 beegfs_ha_enable_fence: true  # Fencing agents should be used to ensure failed nodes are definitely down.  WARNING! If beegfs_ha_enable_fence is set to false then a fencing agent will not be configured!
 beegfs_ha_enable_fence_action: "off"  # Fence agent will by default shutdown when stoned. Options: off, reboot
+beegfs_ha_pacemaker_cluster_node: true  # Whether node should be a pacemaker cluster node. When set to false the node will be a pacemaker remote node. Note that corosync 2 only supports 32 cluster nodes. (Default: true)
 beegfs_ha_filter_ip_ranges: []
 beegfs_ha_node_preference_scope_step: 200
 beegfs_ha_cluster_resource_defaults:
@@ -72,6 +73,10 @@ beegfs_ha_ntp_restricts:
   - ::1
 
 
+# Pacemaker defaults
+pacemaker_path: /etc/pacemaker/
+pacemaker_authkey_path: /etc/pacemaker/authkey
+
 # Corosync defaults
 corosync_authkey_path: /etc/corosync/authkey
 corosync_conf_path: /etc/corosync/corosync.conf
@@ -100,9 +105,10 @@ beegfs_ha_uninstall_reboot: false                                   # Whether to
 
 # Package version defaults
 beegfs_ha_beegfs_version: 7.2
-beegfs_ha_corosync_version: 2.4
-beegfs_ha_pacemaker_version: 1.1
-beegfs_ha_pcs_version: 0.9
+beegfs_ha_corosync_version: #2.4
+beegfs_ha_pacemaker_version: #1.1
+beegfs_ha_pcs_version: #0.9
+beegfs_ha_pacemaker_remote_version: #1.1
 
 #beegfs_ha_fence_agents_all_version: #TODO: is there a version for this???
 beegfs_ha_force_beegfs_patch_upgrade: false  # Major and master versions must not change; however the patch versions can and this flag will ensure that its the latest version.

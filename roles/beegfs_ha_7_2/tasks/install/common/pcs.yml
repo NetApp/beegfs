@@ -10,26 +10,31 @@
     - name: Fetch pcs tokens file.
       fetch:
         src: "{{ beegfs_ha_pcsd_pcsd_path }}tokens"
-        dest: "/tmp/~pcs_tokens_{{ inventory_hostname }}"
+        dest: "/tmp/~pcs_tokens_{{ item }}"
         flat: true
-      changed_when: false
+      register: fetched_pcs_tokens
+      become: true
       failed_when: false
       ignore_errors: true
+      delegate_to: "{{ item }}"
+      loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+      when: (hostvars[item]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == True
 
     - name: Determine whether only expected cluster nodes are accounted for.
       set_fact:
         update_pcs_required: |-
           {%- set scratch = {"valid_token_files": True} -%}
-            {%- for host in groups[beegfs_ha_ansible_cluster_group] -%}
-              {%- set current = lookup("file", "/tmp/~pcs_tokens_" ~ host) | default({}) -%}
-              {%- if "previous" not in (scratch.keys() | list) -%}
-                {%- if scratch.update({"previous": current }) -%}{%- endif -%}
-              {%- endif -%}
+          {%- for fetched_pcs_token in fetched_pcs_tokens["results"] if "dest" in (fetched_pcs_token.keys() | list) and fetched_pcs_token["changed"] == True -%}
 
-              {%- if scratch["previous"] == {} or scratch["previous"] != current -%}
-                {%- if scratch.update({"valid_token_files": False}) -%}{%- endif -%}
-              {%- endif -%}
-            {%- endfor -%}
+            {%- set current = lookup("file", fetched_pcs_token["dest"]) -%}
+            {%- if "previous" not in (scratch.keys() | list) -%}
+              {%- if scratch.update({"previous": current }) -%}{%- endif -%}
+            {%- endif -%}
+
+            {%- if scratch["previous"] == {} or scratch["previous"] != current -%}
+              {%- if scratch.update({"valid_token_files": False}) -%}{%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
 
           {%- if scratch["valid_token_files"] == False -%}
             {%- set tokens_nodes = (scratch["previous"] | from_json)["tokens"].keys() | list | sort -%}
@@ -38,16 +43,19 @@
           {%- else -%}
             {{- False -}}
           {%- endif -%}
-      run_once: true
       ignore_errors: true
 
     - name: Delete temporary local pcs tokens file.
       file:
         state: absent
-        path: /tmp/~pcs_tokens
+        path: "{{ item['dest'] }}"
       delegate_to: localhost
       changed_when: false
       failed_when: false
+      ignore_errors: true
+      loop: "{{ fetched_pcs_tokens['results'] }}"
+      when: item["changed"]
+  run_once: true
   become: true
 
 - name: Ensure pcs cluster has been authenticated.

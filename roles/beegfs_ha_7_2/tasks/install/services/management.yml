@@ -55,7 +55,7 @@
           {%- endfor -%}
           {{- scratch["mounted"] -}}
 
-    - name: Create directory structure is configured on management configuration volume.
+    - name: Esure directory structure is configured on management configuration volume.
       file:
         state: directory
         path: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}/{{ item }}"

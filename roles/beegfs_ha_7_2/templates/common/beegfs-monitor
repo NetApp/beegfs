@@ -41,64 +41,60 @@ get_subnet_ips() {
   fi
 }
 
-# Ping specified IP address from select interface until successful or retries are exhaused.
+# Ping specified IP address from select interface until successful or retries are exhausted.
 ping_interface() {
   test_interface=$1
   test_address=$2
 
   for _ in $(seq 1 $ping_count); do
     if ping -I $test_interface -W $ping_timeout -c 1 $test_address; then
-      return 0
+      echo 0
     fi
   done
-
-  return 1
 }
 
 # Returns whether at least one of the BeeGFS resource group's communication interface(s) are able to communicate on the network.
 check_network_connectivity() {
-  # Wait for configuration files to be available.
-  while ! [ -e $conf_path ]; do
-    sleep 1
-  done
-
-  # Test for interface transmissions
-  for interface in $interfaces; do
-    timeout $monitor_timeout ip monitor > ~tmp_ip_monitor
-    if cat ~tmp_ip_monitor | grep "$interface.*REACHABLE"; then
-      return $OCF_SUCCESS
-    fi
-  done
-  ocf_log info "No network activity on BeeGFS communication interfaces ($interfaces)."
 
   # Test network interfaces by pinging previously used IP addresses per interface
-  ocf_log info "Checking BeeGFS communication via ping."
   interfaces=$(get_interfaces)
   filter_ips=$(get_subnet_ips)
 
+  # Monitor for interface activity
+  ip_monitor_stdout=$(timeout $monitor_timeout ip monitor)
   for interface in $interfaces; do
-    for neighbor_entry in $(ip neigh show dev $interface  | egrep "(REACHABLE|STALE)" | sort '-t ' -k 4 | cut -d ' ' -f 1 | head -n $ping_max_count); do
-      ocf_log info "$interface->$neighbor_entry"
+    if echo $ip_monitor_stdout | grep "$interface.*REACHABLE"; then
+      return $OCF_SUCCESS
+    fi
+  done
 
+  # Ping each interface using ip neighbors in the background
+  true > /tmp/~beegfs-monitor-$group-ping_interface_results
+  for interface in $interfaces; do
+    for neighbor_entry in $(ip neigh show dev $interface | egrep "(REACHABLE|STALE)" | sort '-t ' -k 4 | cut -d ' ' -f 1 | head -n $ping_max_count); do
       if [ -n "$filter_ips" ]; then
         for filter_ip in $filter_ips; do
           if [ $neighbor_entry = $filter_ip ]; then
-            if ping_interface $interface $neighbor_entry; then
-              return $OCF_SUCCESS
-            else
-              ocf_log info "$neighbor_entry was not reachable on $interface!"
-            fi
+            ping_interface $interface $neighbor_entry >> /tmp/~beegfs-monitor-$group-ping_interface_results &
           fi
         done
-      elif ping_interface $interface $neighbor_entry; then
-        return $OCF_SUCCESS
       else
-        ocf_log info "$neighbor_entry was not reachable on $interface!"
+        ping_interface $interface $neighbor_entry >> /tmp/~beegfs-monitor-$group-ping_interface_results &
       fi
     done
   done
 
+  # Evaluate ping results
+  for _ in $(seq 0 $ping_count); do
+    if grep "0" /tmp/~beegfs-monitor-$group-ping_interface_results > /dev/null; then
+      rm -f /tmp/~beegfs-monitor-$group-ping_interface_results
+      return $OCF_SUCCESS
+    fi
+    sleep $ping_timeout
+  done
+
   ocf_log error "Interfaces were not reachable!"
+  rm -f /tmp/~beegfs-monitor-$group-ping_interface_results
   return $OCF_ERR_GENERIC
 }
 
@@ -211,15 +207,17 @@ beegfs_monitor_monitor() {
   fi
 
   # Check whether resource has been started
-  if ! check_resource_service; then
+  if ! monitor_query=$(attrd_updater --query --name="$group-beegfs-monitor") || ( (echo "$monitor_query" | grep 'value="1"' > /dev/null) && ! check_resource_service); then
     return $OCF_SUCCESS
   fi
 
-  # Validate network connectivity.
-  if check_network_connectivity; then
+  # Validate BeeGFS service and network connectivity.
+  if check_resource_service && check_network_connectivity; then
     attrd_updater --name="$group-beegfs-monitor" --update="2" --delay="5s"
     return $OCF_SUCCESS
   fi
+
+  # TODO: Add any other BeeGFS related validation tests here...
 
   attrd_updater --name="$group-beegfs-monitor" --update="0" --delay="5s"  # Changing the attribute to 0 will force the service to migrate.
   return $OCF_ERR_GENERIC
@@ -255,12 +253,6 @@ type=${OCF_RESKEY_service_type:-""}
 service=${OCF_RESKEY_service_name:-""}
 configuration_mount=${OCF_RESKEY_service_configuration_mount:-""}
 configuration_mount=${configuration_mount%%/}
-
-# Not sure what's going on here
-#if (! (ocf_is_decimal "$monitor_timeout" || ocf_is_decimal "$ping_count" || ocf_is_decimal "$ping_timeout")) || [ -n "$type" ] || [ -n "$service" ] || [ -n "$configuration_mount" ]; then
-#  beegfs_monitor_usage
-#  exit $OCF_ERR_ARGS
-#fi
 
 case $type in
   management)

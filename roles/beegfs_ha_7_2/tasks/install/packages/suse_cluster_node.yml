@@ -1,0 +1,38 @@
+- name: Ensure ha-cluster-bootstrap is installed.
+  zypper:
+    state: present
+    name: ha-cluster-bootstrap
+  become: true
+
+- name: Ensure ha-cluster-bootstrap is installed.
+  zypper:
+    state: present
+    name: pacemaker
+  become: true
+
+- name: Ensure ha-cluster-bootstrap is installed.
+  zypper:
+    state: present
+    name: corosync
+  become: true
+
+- name: Ensure mailx is installed for alerts (SUSE).
+  zypper:
+    state: present
+    name: mailx
+  when: beegfs_ha_enable_alerts == True
+  become: true
+
+- name: Ensure NTP is installed (SUSE).
+  zypper:
+    state: latest
+    name: ntp
+  when: beegfs_ha_ntp_enabled | bool == True
+  become: true
+
+- name: Ensure Chrony is uninstalled (SUSE).
+  zypper:
+    state: absent
+    name: chrony
+  when: beegfs_ha_ntp_enabled | bool == True
+  become: true

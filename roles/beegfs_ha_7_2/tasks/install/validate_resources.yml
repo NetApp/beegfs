@@ -18,6 +18,8 @@
     resources_not_started_retries: "{%- if resources_not_started_retries is not defined -%}1{%- else -%}{{ (resources_not_started_retries | int) + 1}}{%- endif -%}"
   run_once: true
 
+
+# TODO: Do I need to start/stop remote_nodes??? Leaning towards no
 - name: "Attempt to recover resources. [Attempt #{{ resources_not_started }}]."
   block:
     - name: Restart all resource services.
@@ -26,22 +28,26 @@
           systemd:
             state: stopped
             name: pacemaker
+          when: beegfs_ha_pacemaker_cluster_node == True
           become: true
         - name: Stop Corosync.
           systemd:
             state: stopped
             name: corosync
+          when: beegfs_ha_pacemaker_cluster_node == True
           become: true
 
         - name: Start Corosync.
           systemd:
             state: started
             name: corosync
+          when: beegfs_ha_pacemaker_cluster_node == True
           become: true
         - name: Start Pacemaker.
           systemd:
             state: started
             name: pacemaker
+          when: beegfs_ha_pacemaker_cluster_node == True
           become: true
 
         - name: Clean up all resources on all node.

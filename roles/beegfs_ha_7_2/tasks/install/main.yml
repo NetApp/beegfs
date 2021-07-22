@@ -143,7 +143,11 @@
       when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("management" in node_info["services"] or
                                                                                 "metadata" in node_info["services"] or "storage" in node_info["services"])'
       tags:
-        - always
+        - beegfs_ha_validation
+        - beegfs_ha_configure_resource
+        - beegfs_ha_configure
+        - beegfs_ha_client
+        - beegfs_ha
 
     - name: Backup current BeeGFS HA configuration.
       block:

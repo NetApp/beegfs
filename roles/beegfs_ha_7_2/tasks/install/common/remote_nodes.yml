@@ -1,0 +1,1 @@
+- name: Ensure pacemaker_remote service is started on all remote nodes
