@@ -233,7 +233,7 @@
       {{- final_hostgroups -}}
   run_once: true
 
-
+# TODO: Merge groups that contain shared hosts (this would be important if groups shared volume group mappings; otherwise groups are created then hosts are removed...mappings fail)
 # These dynamic hosts groups are used to map volumes on the E-Series storage systems.
 - name: Create new inventory hostgroups.
   add_host:
@@ -290,13 +290,21 @@
           {%- endif -%}
 
           {%- for storage_pool in resource["beegfs_targets"][target]["eseries_storage_pool_configuration"] -%}
+            {%- if scratch.update({"volume_metadata": beegfs_ha_service_volume_configuration[resource["beegfs_service"]]}) -%}{%- endif -%}
+            {%- if "volume_metadata" in (storage_pool.keys() | list) -%}
+              {%- if scratch.update({"volume_metadata": storage_pool["volume_metadata"]}) -%}{%- endif -%}
+            {%- endif -%}
+
             {%- if "name" not in (storage_pool.keys() | list) -%}
               {%- if storage_pool.update({"name": resource_group ~ "_" ~ (loop.index | string)}) -%}{%- endif -%}
             {%- endif -%}
 
             {%- for volume in storage_pool["volumes"] -%}
+              {%- if "volume_metadata" in (volume.keys() | list) -%}
+                {%- if scratch.update({"volume_metadata": volume["volume_metadata"]}) -%}{%- endif -%}
+              {%- endif -%}
 
-              {%- set volume_metadata = resource["beegfs_ha_service_volume_configuration"][resource["beegfs_service"]] | default(beegfs_ha_service_volume_configuration[resource["beegfs_service"]]) -%}
+              {%- set volume_metadata = scratch["volume_metadata"] -%}
               {%- if volume_metadata.update({"group": group,
                                              "vol_num": scratch["volume_index"],
                                              "service": resource["beegfs_service"]}) -%}{%- endif -%}
