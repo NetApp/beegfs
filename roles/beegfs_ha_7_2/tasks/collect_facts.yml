@@ -296,7 +296,7 @@
 
             {%- for volume in storage_pool["volumes"] -%}
 
-              {%- set volume_metadata = beegfs_ha_service_volume_configuration[resource["beegfs_service"]] -%}
+              {%- set volume_metadata = resource["beegfs_ha_service_volume_configuration"][resource["beegfs_service"]] | default(beegfs_ha_service_volume_configuration[resource["beegfs_service"]]) -%}
               {%- if volume_metadata.update({"group": group,
                                              "vol_num": scratch["volume_index"],
                                              "service": resource["beegfs_service"]}) -%}{%- endif -%}
