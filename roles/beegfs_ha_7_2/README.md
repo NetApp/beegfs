@@ -27,6 +27,7 @@ Notes:
 - While not explicitly tested, it is reasonable to expect implicit support for the following:
   - Versions of BeeGFS within the same major/minor release family (i.e. BeeGFS 7.2.X).
 - SLES 12 SP4 has been tested with the Pacemaker and Corosync packages but not the SLES HAE package that may be required for a SUSE support subscription. The crm tool that comes with the HAE package has not been added to the automation so the crm_X tools that come with pacemaker will need to be used in its stead.
+- BeeGFS requires time synchronization. NTP or Chrony can be configured using `beegfs_ha_ntp_enabled` or `beegfs_ha_chrony_enabled` respectively. Disable both of these flags if this requirement is already handled.
 
 The BeeGFS role has been tested with the following E-Series storage systems and protocols:
 
@@ -214,7 +215,8 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_cluster_password_sha512_salt: random$alt          # Pcs cluster password sha512 encryption salt.
         
     # The default values for these variables may need to be overridden:      
-    beegfs_ha_ntp_enabled: true                                 # Whether NTP should be enabled.
+    beegfs_ha_ntp_enabled: true                                 # Whether NTP should be enabled. **This will disable Chrony!
+    beegfs_ha_chrony_enabled: false                             # Whether Chrony should be enabled. **This will disable NTP!
     beegfs_ha_allow_firewall_high_availability_service: true    # Open firewall ports required by the high-availability services.
     beegfs_ha_alert_email_subject: "ClusterNotification"        # Alert email subject line.
     beegfs_ha_alert_email_list: []                              # Pacemaker alert email recipients.

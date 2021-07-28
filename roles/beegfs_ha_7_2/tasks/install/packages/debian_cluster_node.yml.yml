@@ -1,4 +1,4 @@
-- name: Ensure the required HA packages are installed (Debian/Ubuntu - Management/Metadata/Storage).
+- name: Ensure the required HA packages are installed (Debian/Ubuntu - Cluster Nodes).
   apt:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     name:
@@ -15,23 +15,37 @@
     enabled: true
   become: true
 
-- name: Ensure mailx is installed for alerts (Debian/Ubuntu).
+- name: Ensure mailx is installed for alerts (Debian/Ubuntu - Cluster Nodes).
   apt:
     state: present
     name: mailx
   when: beegfs_ha_enable_alerts == True
   become: true
 
-- name: Ensure NTP is installed (Debian/Ubuntu).
-  apt:
-    state: latest
-    name: ntp
+- name: Ensure NTP is installed (Debian/Ubuntu - Cluster Nodes).
+  block:
+    - name: Ensure NTP is installed (Debian/Ubuntu - Cluster Nodes).
+      apt:
+        state: latest
+        name: ntp
+      become: true
+    - name: Ensure Chrony is uninstalled (Debian/Ubuntu - Cluster Nodes).
+      apt:
+        state: absent
+        name: chrony
+      become: true
   when: beegfs_ha_ntp_enabled == True
-  become: true
 
-- name: Ensure Chrony is uninstalled (Debian/Ubuntu).
-  apt:
-    state: absent
-    name: chrony
-  when: beegfs_ha_ntp_enabled == True
-  become: true
+- name: Ensure Chrony is installed (Debian/Ubuntu - Cluster Nodes).
+  block:
+    - name: Ensure Chrony is installed (Debian/Ubuntu - Cluster Nodes).
+      apt:
+        state: latest
+        name: chrony
+      become: true
+    - name: Ensure NTP is uninstalled (Debian/Ubuntu - Cluster Nodes).
+      apt:
+        state: absent
+        name: ntp
+      become: true
+  when: beegfs_ha_chrony_enabled == True

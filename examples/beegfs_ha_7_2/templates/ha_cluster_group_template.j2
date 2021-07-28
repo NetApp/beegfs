@@ -35,3 +35,8 @@ beegfs_ha_fencing_agents:                                           # Fencing ag
   #    ssl_insecure: 1
   #    login: admin@vsphere.local
   #    passwd: adminpass
+
+# BeeGFS requires time synchronization. NTP or Chrony can be configured using `beegfs_ha_ntp_enabled` or `beegfs_ha_chrony_enabled` respectively. Disable both
+#   of these flags if this requirement is already handled. **Note that NTP may not be available on new distributions.
+beegfs_ha_chrony_enabled: true                                      # Installs and configures Chron and removes NTP if installed since they conflict with each other.
+beegfs_ha_ntp_enabled: false                                        # Installs and configures NTP and removes Chrony if installed since they conflict with each other.

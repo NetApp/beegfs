@@ -1,39 +1,50 @@
-# TODO: ONLY INSTALL REMOTE_NODE PACKAGES
-
-- name: Ensure the required HA packages are installed (Debian/Ubuntu - Management/Metadata/Storage).
+- name: Ensure the required HA packages are installed (Debian/Ubuntu - Remote Nodes).
   apt:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     name:
-      - "corosync={{ beegfs_ha_corosync_version }}*"
-      - "pacemaker={{ beegfs_ha_pacemaker_version }}*"
+      - "pacemaker-remote={{ beegfs_ha_pacemaker_remote_version }}*"
       - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined%}={{beegfs_ha_fence_agents_all_version}}*{% endif %}"
       - "pcs={{ beegfs_ha_pcs_version }}*"
   become: true
 
-- name: Ensure pcsd daemon is running and enabled.
+- name: Ensure pcsd daemon is running and enabled (Debian/Ubuntu - Remote Nodes)..
   systemd:
     name: pcsd
     state: started
     enabled: true
   become: true
 
-- name: Ensure mailx is installed for alerts (Debian/Ubuntu).
+- name: Ensure mailx is installed for alerts (Debian/Ubuntu - Remote Nodes).
   apt:
     state: present
     name: mailx
   when: beegfs_ha_enable_alerts == True
   become: true
 
-- name: Ensure NTP is installed (Debian/Ubuntu).
-  apt:
-    state: latest
-    name: ntp
+- name: Ensure NTP is installed (Debian/Ubuntu - Remote Nodes).
+  block:
+    - name: Ensure NTP is installed (Debian/Ubuntu - Remote Nodes).
+      apt:
+        state: latest
+        name: ntp
+      become: true
+    - name: Ensure Chrony is uninstalled (Debian/Ubuntu - Remote Nodes).
+      apt:
+        state: absent
+        name: chrony
+      become: true
   when: beegfs_ha_ntp_enabled == True
-  become: true
 
-- name: Ensure Chrony is uninstalled (Debian/Ubuntu).
-  apt:
-    state: absent
-    name: chrony
-  when: beegfs_ha_ntp_enabled == True
-  become: true
+- name: Ensure Chrony is installed (Debian/Ubuntu - Remote Nodes).
+  block:
+    - name: Ensure Chrony is installed (Debian/Ubuntu - Remote Nodes).
+      apt:
+        state: latest
+        name: chrony
+      become: true
+    - name: Ensure NTP is uninstalled (Debian/Ubuntu - Remote Nodes).
+      apt:
+        state: absent
+        name: ntp
+      become: true
+  when: beegfs_ha_chrony_enabled == True

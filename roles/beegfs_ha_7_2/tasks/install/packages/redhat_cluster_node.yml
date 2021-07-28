@@ -1,4 +1,4 @@
-- name: Ensure the required HA packages are installed (RedHat/CentOS - Management/Metadata/Storage).
+- name: Ensure the required HA packages are installed (RedHat/CentOS - Cluster Node).
   yum:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     allow_downgrade: true
@@ -10,30 +10,44 @@
   when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
   become: true
 
-- name: Ensure pcsd daemon is running and enabled.
+- name: Ensure pcsd daemon is running and enabled (RedHat/CentOS - Cluster Node)..
   systemd:
     name: pcsd
     state: started
     enabled: true
   become: true
 
-- name: Ensure mailx is installed for alerts (RedHat/CentOS).
+- name: Ensure mailx is installed for alerts (RedHat/CentOS - Cluster Node).
   yum:
     state: present
     name: mailx
   when: beegfs_ha_enable_alerts == True
   become: true
 
-- name: Ensure NTP is installed (RedHat/CentOS).
-  yum:
-    state: latest
-    name: ntp
+- name: Ensure NTP is installed (RedHat/CentOS - Cluster Node).
+  block:
+    - name: Ensure NTP is installed (RedHat/CentOS - Cluster Node).
+      yum:
+        state: latest
+        name: ntp
+      become: true
+    - name: Ensure Chrony is uninstalled (RedHat/CentOS - Cluster Node).
+      yum:
+        state: absent
+        name: chrony
+      become: true
   when: beegfs_ha_ntp_enabled == True
-  become: true
 
-- name: Ensure Chrony is uninstalled (RedHat/CentOS).
-  yum:
-    state: absent
-    name: chrony
-  when: beegfs_ha_ntp_enabled == True
-  become: true
+- name: Ensure Chrony is installed (RedHat/CentOS - Cluster Node).
+  block:
+    - name: Ensure Chrony is installed (RedHat/CentOS - Cluster Node).
+      yum:
+        state: latest
+        name: chrony
+      become: true
+    - name: Ensure NTP is uninstalled (RedHat/CentOS - Cluster Node).
+      yum:
+        state: absent
+        name: ntp
+      become: true
+  when: beegfs_ha_chrony_enabled == True

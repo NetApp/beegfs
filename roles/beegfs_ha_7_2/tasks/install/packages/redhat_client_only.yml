@@ -1,4 +1,4 @@
-- name: Add BeeGFS YUM repository (RedHat/CentOS).
+- name: Add BeeGFS YUM repository (RedHat/CentOS - Client).
   yum_repository:
     name: beegfs
     description: BeeGFS YUM Repo
@@ -10,18 +10,32 @@
   become: true
 
 - name: Ensure NTP is installed (RedHat/CentOS).
-  yum:
-    state: latest
-    name: ntp
+  block:
+    - name: Ensure NTP is installed (RedHat/CentOS).
+      yum:
+        state: latest
+        name: ntp
+      become: true
+    - name: Ensure Chrony is uninstalled (RedHat/CentOS - Client).
+      yum:
+        state: absent
+        name: chrony
+      become: true
   when: beegfs_ha_ntp_enabled == True
-  become: true
 
-- name: Ensure Chrony is uninstalled (RedHat/CentOS).
-  yum:
-    state: absent
-    name: chrony
-  when: beegfs_ha_ntp_enabled == True
-  become: true
+- name: Ensure Chrony is installed (RedHat/CentOS - Client).
+  block:
+    - name: Ensure Chrony is installed (RedHat/CentOS - Client).
+      yum:
+        state: latest
+        name: chrony
+      become: true
+    - name: Ensure NTP is uninstalled (RedHat/CentOS - Client).
+      yum:
+        state: absent
+        name: ntp
+      become: true
+  when: beegfs_ha_chrony_enabled == True
 
 - name: Get kernel version (RedHat/CentOS - Client).
   command: "uname -r"

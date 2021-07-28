@@ -1,16 +1,37 @@
-- name: Ensure NTP is properly configured.
-  template:
-    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/ntp_conf.j2') }}"
-    dest: "{{ beegfs_ha_ntp_configuration_file }}"
-  register: beegfs_ha_ntp_conf
-  become: true
+- name: Ensure NTP client is configured and the service started.
+  block:
+    - name: Ensure NTP is configured
+      template:
+        src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/ntp_conf.j2') }}"
+        dest: "{{ beegfs_ha_ntp_configuration_file }}"
+      register: beegfs_ha_ntp_conf
+      become: true
 
-- name: Start ntp service.
-  systemd:
-    name: "{{ beegfs_ha_ntp_service }}"
-    state: "{%- if beegfs_ha_ntp_conf['changed'] %}restarted{%- else %}started{%- endif %}"
-    daemon-reload: true
-    enabled: true
-  become: true
+    - name: Ensure NTP service is running.
+      systemd:
+        name: "{{ beegfs_ha_ntp_service }}"
+        state: "{%- if beegfs_ha_ntp_conf['changed'] %}restarted{%- else %}started{%- endif %}"
+        daemon-reload: true
+        enabled: true
+      become: true
+  when: beegfs_ha_ntp_enabled == true
+
+- name: Ensure Chrony client is configured and the service is running.
+  block:
+    - name: Ensure Chrony is configured
+      template:
+        src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/chrony_conf.j2') }}"
+        dest: "{{ beegfs_ha_chrony_configuration_file }}"
+      register: beegfs_ha_chrony_conf
+      become: true
+
+    - name: Ensure Chrony service is running.
+      systemd:
+        name: chronyd.service
+        state: "{%- if beegfs_ha_chrony_conf['changed'] %}restarted{%- else %}started{%- endif %}"
+        daemon-reload: true
+        enabled: true
+      become: true
+  when: beegfs_ha_chrony_enabled == true
 
 # TODO - name: Ensure BeeGFS HA nodes are in sync.

@@ -9,6 +9,7 @@ beegfs_ha_cluster_username: hacluster
 beegfs_ha_cluster_password: hapassword
 beegfs_ha_cluster_password_sha512_salt: randomSalt
 beegfs_ha_ntp_enabled: true
+beegfs_ha_chrony_enabled: false
 beegfs_ha_allow_firewall_high_availability_service: true   # Allow high-availability firewall services.
 beegfs_ha_alert_email_subject: "ClusterNotification"
 beegfs_ha_alert_email_list: []  # List of emails to alert when changes occur.
@@ -99,14 +100,16 @@ beegfs_storage_maximum_read_chunk_size: 2048k               # The maximum amount
 
 # NTP configuration defaults
 beegfs_ha_ntp_configuration_file: /etc/ntp.conf
+beegfs_ha_chrony_configuration_file: /etc/chrony.conf
+beegfs_ha_chrony_driftfile_file: /var/lib/chrony/drift
+beegfs_ha_chrony_keyfile_file: /etc/chrony.keys
 beegfs_ha_ntp_server_pools:
-  - "server 0.ubuntu.pool.ntp.org iburst"
-  - "server 1.ubuntu.pool.ntp.org iburst"
-  - "server 2.ubuntu.pool.ntp.org iburst"
-  - "server 3.ubuntu.pool.ntp.org iburst"
+  - "pool pool.ntp.org iburst"
 beegfs_ha_ntp_restricts:
   - 127.0.0.1
   - ::1
+
+
 
 
 # Pacemaker defaults
@@ -141,10 +144,10 @@ beegfs_ha_uninstall_reboot: false                                   # Whether to
 
 # Package version defaults
 beegfs_ha_beegfs_version: 7.2
-beegfs_ha_corosync_version: #2.4
-beegfs_ha_pacemaker_version: #1.1
-beegfs_ha_pcs_version: #0.9
-beegfs_ha_pacemaker_remote_version: #1.1
+beegfs_ha_corosync_version:          # corosync 2.4
+beegfs_ha_pacemaker_version:         # pacemaker 1.1
+beegfs_ha_pcs_version:               # pcs 0.9
+beegfs_ha_pacemaker_remote_version:  # pacemaker_remote 1.1
 
 #beegfs_ha_fence_agents_all_version: #TODO: is there a version for this???
 beegfs_ha_force_beegfs_patch_upgrade: false  # Major and master versions must not change; however the patch versions can and this flag will ensure that its the latest version.
