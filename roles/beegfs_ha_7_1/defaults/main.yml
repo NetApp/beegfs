@@ -42,7 +42,7 @@ beegfs_ha_client_updatedb_conf_path: "/etc/updatedb.conf"
 
 
 # RDMA defaults
-beegfs_ha_enable_rdma: false
+beegfs_ha_enable_rdma: true
 #beegfs_ha_ofed_include_path:
 
 
