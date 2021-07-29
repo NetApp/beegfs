@@ -14,7 +14,7 @@
   yum:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     allow_downgrade: true
-    name: "beegfs-mgmtd-{{ beegfs_ha_beegfs_version }}*"
+    name: "beegfs-mgmtd{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}-{{ beegfs_ha_beegfs_version }}*{% endif %}"
   register: beegfs_mgmtd_package
   when: '"management" in node_info["services"]'
   become: true
@@ -31,7 +31,7 @@
   yum:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     allow_downgrade: true
-    name: "beegfs-meta-{{ beegfs_ha_beegfs_version }}*"
+    name: "beegfs-meta{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}-{{ beegfs_ha_beegfs_version }}*{% endif %}"
   register: beegfs_meta_package
   when: '"metadata" in node_info["services"]'
   become: true
@@ -48,7 +48,7 @@
   yum:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     allow_downgrade: true
-    name: "beegfs-storage-{{ beegfs_ha_beegfs_version }}*"
+    name: "beegfs-storage{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}-{{ beegfs_ha_beegfs_version }}*{% endif %}"
   register: beegfs_storage_package
   when: '"storage" in node_info["services"]'
   become: true

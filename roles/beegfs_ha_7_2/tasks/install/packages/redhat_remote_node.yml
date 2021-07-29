@@ -3,7 +3,9 @@
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     allow_downgrade: true
     name:
-      - "pacemaker-remote-{{ beegfs_ha_pacemaker_remote_version }}*"
+      - "pacemaker-remote{% if beegfs_ha_pacemaker_remote_version is defined and beegfs_ha_pacemaker_remote_version %}-{{ beegfs_ha_pacemaker_remote_version }}*{% endif %}"
+      - "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version -%}-{{ beegfs_ha_pcs_version }}*{% endif %}"
+      - "resource-agents{% if beegfs_ha_resource_agent_version is defined and beegfs_ha_resource_agent_version -%}-{{ beegfs_ha_resource_agent_version }}*{% endif %}"
   when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
   become: true
 

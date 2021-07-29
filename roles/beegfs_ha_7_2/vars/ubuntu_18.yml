@@ -1,0 +1,3 @@
+# Prefix all variables with 'default_'. The variable without the 'default_' prefix will be set when it is not defined.
+default_beegfs_ha_ntp_enabled: true
+default_beegfs_ha_chrony_enabled: false

@@ -3,10 +3,10 @@
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     allow_downgrade: true
     name:
-      - "corosync-{{ beegfs_ha_corosync_version }}*"
-      - "pacemaker-{{ beegfs_ha_pacemaker_version }}*"
-      - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined%}-{{beegfs_ha_fence_agents_all_version}}*{% endif %}"
-      - "pcs-{{ beegfs_ha_pcs_version }}*"
+      - "corosync{% if beegfs_ha_corosync_version is defined and beegfs_ha_corosync_version %}-{{ beegfs_ha_corosync_version }}*{% endif %}"
+      - "pacemaker{% if beegfs_ha_pacemaker_version is defined and beegfs_ha_pacemaker_version %}-{{ beegfs_ha_pacemaker_version }}*{% endif %}"
+      - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined and beegfs_ha_fence_agents_all_version %}-{{beegfs_ha_fence_agents_all_version}}*{% endif %}"
+      - "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version -%}-{{ beegfs_ha_pcs_version }}*{% endif %}"
   when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
   become: true
 
