@@ -29,7 +29,7 @@ connAuthFile                 =
 connBacklogTCP               = 128
 connFallbackExpirationSecs   = 900
 connInterfacesFile           = {{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/connInterfacesFile.conf
-connMaxInternodeNum          = {{ item['beegfs_ha_metadata_maximum_node_connections'] | default(32) }}
+connMaxInternodeNum          = {{ item['beegfs_ha_metadata_maximum_node_connections'] | default(beegfs_ha_metadata_maximum_node_connections) }}
 
 connMetaPortTCP              = {{ item['tcp_port'] | default(item['port'] | default(8005)) }}
 connMetaPortUDP              = {{ item['udp_port'] | default(item['port'] | default(8005)) }}
@@ -62,8 +62,8 @@ sysAllowUserSetPattern       = false
 
 tuneBindToNumaZone           = {{ item['beegfs_ha_numa '] | default('') }}
 tuneNumStreamListeners       = 1
-tuneNumWorkers               = {{ item['beegfs_ha_metadata_worker_threads'] | default(0) }}
-tuneTargetChooser            = {{ item['beegfs_ha_metadata_file_creation_target_algorithm'] | default('randomized') }}
+tuneNumWorkers               = {{ item['beegfs_ha_metadata_worker_threads'] | default(beegfs_ha_metadata_worker_threads) }}
+tuneTargetChooser            = {{ item['beegfs_ha_metadata_file_creation_target_algorithm'] | default(beegfs_ha_metadata_file_creation_target_algorithm) }}
 tuneUseAggressiveStreamPoll  = false
 tuneUsePerUserMsgQueues      = false
 
