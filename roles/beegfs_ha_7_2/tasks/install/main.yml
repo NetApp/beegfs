@@ -107,7 +107,7 @@
           command:
             cmd: "crm_attribute --name maintenance-mode --query --quiet"
           register: maintenance_mode_query
-          failed_when: maintenance_mode_query['rc'] not in [0,6]
+          failed_when: maintenance_mode_query['rc'] not in [0, 6, 105]
           changed_when: false
 
         - name: Move cluster out of maintenance mode.
