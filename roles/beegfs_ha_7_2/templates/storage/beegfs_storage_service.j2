@@ -7,6 +7,7 @@ Requires=network-online.target
 After=network-online.target beegfs-mgmtd.service openibd.service openib.service rdma.service opensmd.service opensm.service zfs.target
 
 [Service]
+ExecStartPre=
 ExecStart=/opt/beegfs/sbin/beegfs-storage cfgFile=/mnt/%I/storage_config/beegfs-storage.conf runDaemonized=false
 Type=simple
 

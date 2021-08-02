@@ -28,7 +28,7 @@ storeAllowFirstRunInit       = false
 connAuthFile                 =
 connBacklogTCP               = 128
 connInterfacesFile           = {{ item["volumes"][0]["metadata"]["mount_dir"] }}{{ item["volumes"][0]["name"] }}/storage_config/connInterfacesFile.conf
-connMaxInternodeNum          = {{ item['beegfs_storage_maximum_node_connections '] | default(12) }}
+connMaxInternodeNum          = {{ item['beegfs_ha_storage_maximum_node_connections '] | default(12) }}
 
 connMgmtdPortTCP             = {{ management_info["tcp_port"] | default(management_info["port"] | default(8008)) }}
 connMgmtdPortUDP             = {{ management_info["udp_port"] | default(management_info["port"] | default(8008)) }}
@@ -54,18 +54,18 @@ runDaemonized                = true
 sysResyncSafetyThresholdMins = 10
 sysTargetOfflineTimeoutSecs  = 180
 
-tuneBindToNumaZone           = {{ item['beegfs_numa '] | default('') }}
+tuneBindToNumaZone           = {{ item['beegfs_ha_numa '] | default('') }}
 tuneFileReadAheadSize        = 0m
 tuneFileReadAheadTriggerSize = 4m
-tuneFileReadSize             = {{ item['beegfs_storage_maximum_read_chunk_size'] | default('128k') }}
-tuneFileWriteSize            = {{ item['beegfs_storage_maximum_write_chunk_size'] | default('128k') }}
+tuneFileReadSize             = {{ item['beegfs_ha_storage_maximum_read_chunk_size'] | default('128k') }}
+tuneFileWriteSize            = {{ item['beegfs_ha_storage_maximum_write_chunk_size'] | default('128k') }}
 tuneFileWriteSyncSize        = 0m
 
 tuneNumResyncGatherSlaves    = 6
 tuneNumResyncSlaves          = 12
-tuneNumStreamListeners       = {{ item['beegfs_storage_incoming_data_event_threads'] | default(1) }}
-tuneNumWorkers               = {{ item['beegfs_storage_worker_threads'] | default(12) }}
-tuneUseAggressiveStreamPoll  = {{ item['beegfs_storage_use_aggressive_stream_polling'] | default(false) }}
+tuneNumStreamListeners       = {{ item['beegfs_ha_storage_incoming_data_event_threads'] | default(1) }}
+tuneNumWorkers               = {{ item['beegfs_ha_storage_worker_threads'] | default(12) }}
+tuneUseAggressiveStreamPoll  = {{ item['beegfs_ha_storage_use_aggressive_stream_polling'] | default(false) }}
 tuneUsePerTargetWorkers      = true
 tuneUsePerUserMsgQueues      = false
 tuneWorkerBufSize            = 4m
