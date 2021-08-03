@@ -60,7 +60,7 @@ sysTargetAttachmentFile      =
 sysTargetOfflineTimeoutSecs  = 180
 sysAllowUserSetPattern       = false
 
-tuneBindToNumaZone           = {{ item['beegfs_ha_numa '] | default('') }}
+tuneBindToNumaZone           = {{ item['beegfs_ha_numa'] | default('') }}
 tuneNumStreamListeners       = 1
 tuneNumWorkers               = {{ item['beegfs_ha_metadata_worker_threads'] | default(beegfs_ha_metadata_worker_threads) }}
 tuneTargetChooser            = {{ item['beegfs_ha_metadata_file_creation_target_algorithm'] | default(beegfs_ha_metadata_file_creation_target_algorithm) }}
