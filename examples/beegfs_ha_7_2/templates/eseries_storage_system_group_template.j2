@@ -5,19 +5,4 @@
 ansible_connection: local    # DO NOT CHANGE. E-Series storage system modules and roles interact with E-Series storage systems using SANtricity Web Services REST
                              #   API. The REST API commands are issued from the localhost.
 
-# Storage System Credential Defaults
-eseries_subnet: <CIDR_SUBNET_MASK>        # Network subnet to search for the storage system specified in CIDR form. Example: 192.168.1.0/24
-                                          #   Note: This is only used when the storage system needs to be discovered.
-
-# Storage System Defaults   # Uncomment and replace capitalized words in angled brackets if required.
-#eseries_management_config_method: <CONFIG_METHOD>              # Default config method for all management interfaces. Choices: static, dhcp
-#eseries_management_subnet_mask: <SUBNET_MASK>                  # Default subnet mask for all management interfaces
-#eseries_management_gateway: <GATEWAY>                          # Default gateway for all management interfaces
-#eseries_management_dns_config_method: <DNS_CONFIG_METHOD>      # Default DNS config method for all management interfaces
-#eseries_management_dns_address: <DNS_ADDRESS>                  # Default primary DNS address for all management interfaces
-#eseries_management_dns_address_backup: <BACKUP_DNS_ADDRESS>    # Default backup DNS address for all management interfaces
-#eseries_management_ntp_config_method: <NTP_CONFIG_METHOD>      # Default NTP config method for all management interfaces
-#eseries_management_ntp_address: <NTP_ADDRESS>                  # Default primary NTP address for all management interfaces
-#eseries_management_ntp_address_backup: <BACKUP_NTP_ADDRESS>    # Default backup NTP address for all management interfaces
-
 eseries_volume_size_unit: pct             # Volume size unit which is a percentage of storage pool size.
