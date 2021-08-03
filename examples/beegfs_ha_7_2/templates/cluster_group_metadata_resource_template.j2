@@ -32,3 +32,6 @@ beegfs_targets:                             # Dictionary of E-Series storage sys
 
         volumes:                            # BeeGFS metadata service requires only one volume.
           - size: 90                        # Size of the BeeGFS metadata service volume in percentage of total storage pool capacity.
+
+beegfs_ha_numa: <NUMA_NODE>                 # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be applied whenever and
+                                            #   wherever the BeeGFS service resides. This can provide significant performance increases by avoiding the cache misses between NUMA nodes.

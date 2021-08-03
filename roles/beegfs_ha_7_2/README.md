@@ -309,14 +309,38 @@ This section gives a quick summary of the available variables to configure the B
     # Pcs defaults
     beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/                    # Absolute path for the pcsd directory.
 
+    # Performance tuning defaults for client settings
+    beegfs_ha_client_maximum_node_connections:                  # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 128
+
+    # Performance tuning defaults for both metadata and storage service settings
+    beegfs_ha_numa:                                             # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be applied whenever and
+                                                                #   wherever the BeeGFS service resides. This can provide significant performance increases by avoiding the cache misses between NUMA nodes.
+
+    # Performance tuning defaults for metadata service settings
+    beegfs_ha_metadata_maximum_node_connections:                # beegfs_meta.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 32
+    beegfs_ha_metadata_worker_threads:                          # beegfs_meta.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel. On dedicated metadata
+                                                                #   servers, this is typically set to a value between four and eight times the number of CPU cores. Note: 0 means use twice the number of CPU cores (but at least 4). Default: 32
+    beegfs_ha_metadata_file_creation_target_algorithm:          # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file creation.
+                                                                #   Choices: [randomized, roundrobin, randomrobin, randominternode, randomintranode] Default: roundrobin
+
+    # Performance tuning defaults for storage service settings
+    beegfs_ha_storage_maximum_node_connections:                 # beegfs_storage.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 128
+    beegfs_ha_storage_incoming_data_event_threads:              # The number of threads waiting for incoming data events. Connections with incoming data will be handed over to the worker threads for actual message processing. Default: 2
+    beegfs_ha_storage_worker_threads:                           # beegfs_storage.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel. On dedicated metadata servers,
+                                                                #   this is typically set to a value between four and eight times the number of CPU cores. Note: 0 means use twice the number of CPU cores (but at least 4). Default: 14
+    beegfs_ha_storage_use_aggressive_stream_polling:            # If set to true, the StreamListener component, which waits for incoming requests, will keep actively polling for events instead of sleeping until an
+                                                                #   event occurs. Active polling will reduce latency for processing of incoming requests at the cost of higher CPU usage. Default: true
+    beegfs_ha_storage_maximum_write_chunk_size:                 # The maximum amount of data that the server should write to the underlying local file system in a single operation. Default: 2048k
+    beegfs_ha_storage_maximum_read_chunk_size:                  # The maximum amount of data that the server should read to the underlying local file system in a single operation. Default: 2048k
+
+
     # Package version defaults (Warning! Only the patch version can change.)
-    beegfs_ha_beegfs_version: 7.2                               # BeeGFS package version.
-    beegfs_ha_pacemaker_version: 1.1                            # Pacemaker package version.
-    beegfs_ha_corosync_version: 2.4                             # Corosync package version.
-    beegfs_ha_pcs_version: 0.9                                  # PCS package version.
+    beegfs_ha_beegfs_version:                                   # BeeGFS package version.
+    beegfs_ha_pacemaker_version:                                # Pacemaker package version.
+    beegfs_ha_corosync_version:                                 # Corosync package version.
+    beegfs_ha_pcs_version:                                      # PCS package version.
     beegfs_ha_fence_agents_all_version:                         # Fence-agent-all package.
-    beegfs_ha_force_beegfs_patch_upgrade: false                 # Major and master versions must not change; however the patch versions can and this flag will
-                                                                #   ensure that its the latest version.
+    beegfs_ha_force_beegfs_patch_upgrade:                       # Major and master versions must not change; however the patch versions can and this flag will ensure that its the latest version. Default: false
 
     # Uninstall defaults (See `Uninstall` section below more information)
     beegfs_ha_uninstall: false                                          # Whether to uninstall the entire BeeGFS HA solution excluding the storage provisioning and host storage setup.
@@ -335,7 +359,7 @@ This section gives a quick summary of the available variables to configure the B
       management:                                                           # BeeGFS management service volume definition.
         format_type: ext4                                                   # Volume format type
         format_options: "-i 2048 -I 512 -J size=400 -Odir_index,filetype"   # Volume format options
-        mount_options: "sync,noatime,nodiratime,nobarrier"               # Volume mount options
+        mount_options: "sync,noatime,nodiratime,nobarrier"                  # Volume mount options
         mount_dir: /mnt/                                                    # Volume mount directory
       metadata:                                                             # BeeGFS metadata service volume definition.
         format_type: ext4                                                   # (...)
