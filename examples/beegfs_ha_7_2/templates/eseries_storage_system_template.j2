@@ -3,8 +3,23 @@
 # Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
 
 eseries_system_api_url: https://<ADDRESS>:8443/devmgr/v2/    # Verify that this is the correct SANtricity Web Services REST API.
+eseries_system_serial: "<SERIAL_NUMBER>"                     # Storage system's serial number that is located on the top of the chassis. Keep quotes!
 eseries_system_password: <ADMIN_PASSWORD>                    # Storage system's admin password.
 eseries_validate_certs: false                                # Whether to validate SSL certificates.
 
-eseries_initiator_protocol: {{"iscsi" if beegfs_storage_protocol['user_input'] == "1" -}}
-                            {{- "ib_iser" if beegfs_storage_protocol['user_input'] == "2" }}                                # Communication's protocol between storage and hosts. Choices: ib_iser, iscsi
+eseries_management_interfaces:
+  config_method: static
+  controller_a:
+    - address: <CONTROLLER_A_MANAGEMENT_ADDRESS>
+  controller_b:
+    - address: <CONTROLLER_B_MANAGEMENT_ADDRESS>
+
+eseries_initiator_protocol: {% if beegfs_storage_protocol['user_input'] == "1" %}fc
+                            {%- elif beegfs_storage_protocol['user_input'] == "2" %}ib_iser
+                            {%- elif beegfs_storage_protocol['user_input'] == "3" %}ib_srp
+                            {%- elif beegfs_storage_protocol['user_input'] == "4" %}iSCSI
+                            {%- elif beegfs_storage_protocol['user_input'] == "5" %}nvme_fc
+                            {%- elif beegfs_storage_protocol['user_input'] == "6" %}nvme_ib
+                            {%- elif beegfs_storage_protocol['user_input'] == "7" %}nvme_roce
+                            {%- elif beegfs_storage_protocol['user_input'] == "8" %}sas
+                            {%- else %}<PROTOCOL>{% endif %}  # Communication's protocol between storage and hosts. Choices: fc, ib_iser, ib_srp, iscsi, nvme_fc, nvme_ib, nvme_roce
