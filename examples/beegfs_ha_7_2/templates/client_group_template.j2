@@ -2,8 +2,5 @@
 
 beegfs_ha_client_installed: true    # Whether to install BeeGFS client on the host.
 beegfs_ha_client_started: true      # Whether BeeGFS client should be running on the host.
-beegfs_ha_helperd_tcp_port: 8006    # Common or default BeeGFS client TCP port.
-beegfs_ha_client_udp_port: 8004     # Common or default BeeGFS client UDP port.
-
-#beegfs_ha_client_connInterfaces:   # List of interfaces to connect to the BeeGFS services.
-#  - eth0
+beegfs_ha_client_connInterfaces:    # List of interfaces to connect to the BeeGFS services.
+  - ib0

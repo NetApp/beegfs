@@ -30,6 +30,17 @@ beegfs_ha_storage_system_hostgroup_prefix: beegfs
 
 beegfs_ha_force_resource_move: true   # Forces node and resource changes to migrate services to preferred nodes.
 
+# BeeGFS management service defaults
+beegfs_ha_management_tcp_port: 8008
+beegfs_ha_management_udp_port: 8008
+
+# BeeGFS metadata service defaults
+beegfs_ha_metadata_tcp_port: 8005
+beegfs_ha_metadata_udp_port: 8005
+
+# BeeGFS storage service defaults
+beegfs_ha_storage_tcp_port: 8003
+beegfs_ha_storage_udp_port: 8003
 
 # BeeGFS client defaults
 beegfs_ha_client_installed: true           # Whether to install BeeGFS client on the host.

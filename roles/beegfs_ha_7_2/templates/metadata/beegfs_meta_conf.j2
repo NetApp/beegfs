@@ -31,10 +31,10 @@ connFallbackExpirationSecs   = 900
 connInterfacesFile           = {{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/connInterfacesFile.conf
 connMaxInternodeNum          = {{ item['beegfs_ha_metadata_maximum_node_connections'] | default(beegfs_ha_metadata_maximum_node_connections) }}
 
-connMetaPortTCP              = {{ item['tcp_port'] | default(item['port'] | default(8005)) }}
-connMetaPortUDP              = {{ item['udp_port'] | default(item['port'] | default(8005)) }}
-connMgmtdPortTCP             = {{ management_info['tcp_port'] | default(management_info['port'] | default(8008)) }}
-connMgmtdPortUDP             = {{ management_info['udp_port'] | default(management_info['port'] | default(8008)) }}
+connMetaPortTCP              = {{ item['tcp_port'] | default(item['port'] | default(beegfs_ha_metadata_tcp_port)) }}
+connMetaPortUDP              = {{ item['udp_port'] | default(item['port'] | default(beegfs_ha_metadata_udp_port)) }}
+connMgmtdPortTCP             = {{ management_info['tcp_port'] | default(management_info['port'] | default(beegfs_ha_management_tcp_port)) }}
+connMgmtdPortUDP             = {{ management_info['udp_port'] | default(management_info['port'] | default(beegfs_ha_management_udp_port)) }}
 connPortShift                = 0
 
 connNetFilterFile            = {% if (item['filter_ip_ranges'] | default(beegfs_ha_filter_ip_ranges)) | length > 0 %}{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/connNetFilterFile.conf{% endif %}
