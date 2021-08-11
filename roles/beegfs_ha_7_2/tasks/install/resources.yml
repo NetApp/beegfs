@@ -43,20 +43,32 @@
 
 - name: Update pacemaker resources.
   block:
+    - name: Create temporary resource xml file.
+      copy:
+        dest: /tmp/~tmp_beegfs_ha_cluster_resources.xml
+        content:  "{{ cluster_resources }}"
+      become: true
+
     - name: Set pacemaker into maintenance-mode.
       command:
         cmd: "crm_attribute --name maintenance-mode --update true"
+      become: true
+
     - name: Remove existing constraints.
       command:
         cmd: "cibadmin --replace --scope constraints --xml-text '<constraints/>'"
+      become: true
+
     - name: Remove existing resources.
       command:
         cmd: "cibadmin --replace --scope resources --xml-text '<resources/>'"
+      become: true
+
     - name: Update pacemaker resources.
       command:
-        cmd: "cibadmin --replace --xpath '/cib/configuration/resources' --xml-text '{{ cluster_resources }}'"
+        cmd: "cibadmin --replace --scope resources --xml-file /tmp/~tmp_beegfs_ha_cluster_resources.xml"
+      become: true
   when: resources_change_required
-  become: true
 
 - name: Ensure BeeGFS HA cluster attributes are correct.
   include_tasks: attributes.yml

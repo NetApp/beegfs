@@ -6,21 +6,28 @@
   changed_when: false
   become: true
 
-- name: Determine whether changes are required.
-  command:
-    cmd: "crm_diff -O '{{ constraints_query['stdout'] }}' -N '{{ lookup('template', 'management/constraints.j2') }}'"
-  register: constraints_diff
-  failed_when: constraints_diff['rc'] not in [0, 1]
-  changed_when: false
-  become: true
+- name: Determine whether changes are required for pacemaker constraints.
+  set_fact:
+    constraints_change_required: |-
+      {%- set existing = constraints_query["stdout"] | default("") | regex_replace("\n", "") | regex_replace("\s+", " ") | regex_replace(">\s+<", "><") -%}
+      {%- set expected = lookup('template', 'management/constraints.j2') | regex_replace("\n", "") | regex_replace("\s+", " ") | regex_replace(">\s+<", "><") -%}
+      {{- not (existing == expected) -}}
 
 - name: Modify pacemaker constraints.
   block:
+    - name: Create temporary resource xml file.
+      template:
+        src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'management/constraints.j2') }}"
+        dest: /tmp/~tmp_beegfs_ha_cluster_constraints.xml
+      become: true
+
     - name: Set pacemaker into maintenance-mode.
       command:
         cmd: "crm_attribute --name maintenance-mode --update true"
+      become: true
+
     - name: Modify pacemaker constraints.
       command:
-        cmd: "cibadmin --replace --scope constraints --xml-text '{{ lookup('template', 'management/constraints.j2') }}'"
-  when: constraints_diff['rc'] == 1
-  become: true
+        cmd: "cibadmin --replace --scope constraints --xml-file /tmp/~tmp_beegfs_ha_cluster_constraints.xml"
+      become: true
+  when: constraints_change_required
