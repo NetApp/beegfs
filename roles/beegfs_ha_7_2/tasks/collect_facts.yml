@@ -1,3 +1,18 @@
+- name: Validate storage system and host names.
+  fail:
+    msg: "Invalid inventory host names! Hosts [{{ invalid_hosts | join(', ') }}]."
+  when: invalid_hosts | length > 0
+  run_once: true
+  vars:
+    invalid_hosts: |-
+      {%- set invalid_hosts = [] -%}
+      {%- for host in ansible_play_hosts_all -%}
+        {%- if "-" in host -%}
+          {%- if invalid_hosts.append(host) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- invalid_hosts -}}
+
 - name: Gather minimally required facts for BeeGFS HA cluster and client nodes.
   setup:
     gather_subset: min
@@ -278,7 +293,7 @@
         {#- Aggregate HA resource group information -#}
         {%- set resource = hostvars[inventory_hostname][group] -%}
         {%- set resource_group = group -%}
-        {%- if scratch.update({"volume_index": 0, "group_index": group.split("_")[-1]}) -%}{%- endif -%}
+        {%- if scratch.update({"volume_index": 1, "group_index": group.split("_")[-1]}) -%}{%- endif -%}
         {%- if resource.update({"resource_group": group, "preferred_node_order": resource_preferred_node_order[group]}) -%}{%- endif -%}
 
         {#- Determine volume hostgroup mapping -#}
