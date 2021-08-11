@@ -12,6 +12,7 @@
     - name: Set pacemaker into maintenance-mode.
       command:
         cmd: "crm_attribute --name maintenance-mode --update true"
+
     - name: Set cluster to asymmetric cluster architecture.
       command:
         cmd: "crm_attribute --type crm_config --name symmetric-cluster --update false"
@@ -45,7 +46,6 @@
   ignore_errors: true
   become: true
 
-
 # Ensure pcs stonith-action property is configured as expected.
 - name: Determine whether cluster stonith action is set to shutdown.
   command:
@@ -60,13 +60,14 @@
     - name: Set pacemaker into maintenance-mode.
       command:
         cmd: "crm_attribute --name maintenance-mode --update true"
+      become: true
+
     - name: Set cluster to asymmetric cluster architecture.
       command:
         cmd: "crm_attribute --type crm_config --name stonith-action --update {{ beegfs_ha_enable_fence_action }}"
       ignore_errors: true
   when: stonith_action_query['rc'] != 0 or stonith_action_query['stdout'] != beegfs_ha_enable_fence_action
   become: true
-
 
 # Ensure pcs stonith-enabled property is configured as expected.
 - name: Determine whether cluster stonith is enabled.
@@ -82,6 +83,7 @@
     - name: Set pacemaker into maintenance-mode.
       command:
         cmd: "crm_attribute --name maintenance-mode --update true"
+
     - name: Set cluster to asymmetric cluster architecture.
       command:
         cmd: "crm_attribute --type crm_config --name stonith-enabled --update {{ beegfs_ha_enable_fence }}"

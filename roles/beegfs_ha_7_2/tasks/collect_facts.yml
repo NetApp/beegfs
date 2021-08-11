@@ -94,6 +94,7 @@
       {%- endfor -%}
       {{- resources -}}
 
+# TODO:  Add length constraint for resources (need to double check maximum length for floating ips...???)
 - name: Check for invalid resource group names
   set_fact:
     invalid_resource_group_names: |-

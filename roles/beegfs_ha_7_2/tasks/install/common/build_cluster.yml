@@ -41,8 +41,8 @@
             {{- corosync_keygen["stdout"] -}}
           {%- endif -%}
   when: beegfs_ha_corosync_authkey is not defined or not beegfs_ha_corosync_authkey != ""
-  run_once: true
   become: true
+  run_once: true
 
 - name: Ensure each node has the expected corosync authkey.
   template:
@@ -66,7 +66,6 @@
         path: "{{ pacemaker_path }}"
       delegate_to: "{{ item }}"
       loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
-      become: true
 
     - name: Determine whether an existing pacemaker authkey exists.
       command:
@@ -76,27 +75,23 @@
       register: pacemaker_authkey
       failed_when: false
       changed_when: false
-      become: true
 
     - name: Generate a temporary pacemaker authkey file.
       command:
         cmd: "dd if=/dev/urandom of=/tmp/~pacemaker_keygen_authkey bs=4096 count=1"
       changed_when: false
-      become: true
 
     - name: Get  the temporary pacemaker authkey.
       command:
         cmd: "cat /tmp/~pacemaker_keygen_authkey"
       register: pacemaker_keygen
       changed_when: false
-      become: true
 
     - name: Delete temporary pacemaker authkey file.
       file:
         state: absent
         path: /tmp/~pacemaker_keygen_authkey
       changed_when: false
-      become: true
 
     - name: Determine an usable pacemaker authkey.
       set_fact:
@@ -112,6 +107,7 @@
           {%- endif -%}
 
   when: beegfs_ha_pacemaker_authkey is not defined or not beegfs_ha_pacemaker_authkey != ""
+  become: true
   run_once: true
 
 - name: Ensure each node has the expected pacemaker authkey (cluster and remote nodes).
@@ -170,7 +166,6 @@
       loop: "{{ remove_node_list }}"
       failed_when: false   # In case pacemaker has been uninstalled.
       ignore_errors: true
-      become: true
 
     - name: Ensure corosync services are stopped and disabled on all nodes marked for removal.
       systemd:
@@ -181,13 +176,11 @@
       loop: "{{ remove_node_list }}"
       failed_when: false   # In case corosync has been uninstalled.
       ignore_errors: true
-      become: true
 
     - name: Remove node from pacemaker
       command:
         cmd: "crm_node -R {{ item }} --force"
       loop: "{{ remove_node_list }}"
-      become: true
 
     - name: Determine whether changes are required for pacemaker resources.
       set_fact:

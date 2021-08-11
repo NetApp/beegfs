@@ -13,8 +13,8 @@
         state: "{%- if beegfs_ha_ntp_conf['changed'] %}restarted{%- else %}started{%- endif %}"
         daemon-reload: true
         enabled: true
-      become: true
   when: beegfs_ha_ntp_enabled == true
+  become: true
 
 - name: Ensure Chrony client is configured and the service is running.
   block:
@@ -23,7 +23,6 @@
         src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/chrony_conf.j2') }}"
         dest: "{{ beegfs_ha_chrony_configuration_file }}"
       register: beegfs_ha_chrony_conf
-      become: true
 
     - name: Ensure Chrony service is running.
       systemd:
@@ -31,7 +30,7 @@
         state: "{%- if beegfs_ha_chrony_conf['changed'] %}restarted{%- else %}started{%- endif %}"
         daemon-reload: true
         enabled: true
-      become: true
   when: beegfs_ha_chrony_enabled == true
+  become: true
 
 # TODO - name: Ensure BeeGFS HA nodes are in sync.

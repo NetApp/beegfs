@@ -13,7 +13,6 @@
         dest: "/tmp/~pcs_tokens_{{ item }}"
         flat: true
       register: fetched_pcs_tokens
-      become: true
       failed_when: false
       ignore_errors: true
       delegate_to: "{{ item }}"
@@ -55,8 +54,8 @@
       failed_when: false
       loop: "{{ fetched_pcs_tokens['results'] }}"
       when: item["changed"]
-  run_once: true
   become: true
+  run_once: true
 
 - name: Ensure pcs cluster has been authenticated.
   block:

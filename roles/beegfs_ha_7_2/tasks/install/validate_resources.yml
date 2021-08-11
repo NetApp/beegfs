@@ -29,26 +29,24 @@
             state: stopped
             name: pacemaker
           when: beegfs_ha_pacemaker_cluster_node == True
-          become: true
+
         - name: Stop Corosync.
           systemd:
             state: stopped
             name: corosync
           when: beegfs_ha_pacemaker_cluster_node == True
-          become: true
 
         - name: Start Corosync.
           systemd:
             state: started
             name: corosync
           when: beegfs_ha_pacemaker_cluster_node == True
-          become: true
+
         - name: Start Pacemaker.
           systemd:
             state: started
             name: pacemaker
           when: beegfs_ha_pacemaker_cluster_node == True
-          become: true
 
         - name: Clean up all resources on all node.
           command: crm_resource --cleanup
@@ -57,8 +55,8 @@
           retries: 15
           until: crm_resource_cleanup['rc'] == 0
           run_once: true
-          become: true
       when: 1 < (resources_not_started_retries | int) < 3 # Second attempt
+      become: true
 
     - name: Wait and re-validate resources have started.
       block:
