@@ -17,18 +17,30 @@
         - beegfs_ha_client
         - beegfs_ha
 
-    - name: Provision storage and present the storage to hosts.
+    - name: Ensure storage has been provisioned for hosts.
       block:
         - name: Ensure storage has been provisioned for hosts.
           include_role:
             name: netapp_eseries.santricity.nar_santricity_host
           when: inventory_hostname in groups[beegfs_ha_ansible_storage_group]
+      tags:
+        - storage_provision
+        - storage
 
+    - name: Ensure multipath and iscsi protocol are setup.
+      block:
         - name: Ensure multipath and iscsi protocol are setup.
           include_role:
             name: netapp_eseries.host.storage_setup
           when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+          vars:
+            eseries_common_force_skip_uninstall: true
+      tags:
+        - storage_communication
+        - storage
 
+    - name: Ensure volumes are formatted but not mounted.
+      block:
         - name: Ensure volumes are formatted but not mounted.
           include_role:
             name: netapp_eseries.host.mount
@@ -36,7 +48,9 @@
           vars:
             eseries_mount_volumes: []   # This ensures that no volumes get mounted
             eseries_mount_skip_unmount: true
+            eseries_common_force_skip_uninstall: true
       tags:
+        - storage_mount
         - storage
 
     - name: Setup and configure BeeGFS HA on hosts.
@@ -107,13 +121,18 @@
           command:
             cmd: "crm_attribute --name maintenance-mode --query --quiet"
           register: maintenance_mode_query
+          become: true
           failed_when: maintenance_mode_query['rc'] not in [0, 6, 105]
           changed_when: false
 
         - name: Move cluster out of maintenance mode.
           command:
             cmd: "crm_attribute --name maintenance-mode --delete"
+          become: true
           when: maintenance_mode_query['rc'] == 0 and (maintenance_mode_query['stdout'] | lower) == 'true'
+
+        # TODO: - name: Wait for cluster to complete tasks.
+
       when: inventory_hostname == preferred_management_node
       tags:
         - always
@@ -132,7 +151,7 @@
     - name: Verify all Pacemaker resources are started.
       block:
         - name: Retry until resources are all started
-          include_tasks: install/validate_resources.yml
+          include_tasks: validate_resources.yml
 
         - name: Warn when resources are not all started.
           fail:
