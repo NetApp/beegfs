@@ -4,14 +4,21 @@
     name:
       - "pacemaker-remote={{ beegfs_ha_pacemaker_remote_version }}*"
       - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined%}={{beegfs_ha_fence_agents_all_version}}*{% endif %}"
-      - "pcs={{ beegfs_ha_pcs_version }}*"
   become: true
 
-- name: Ensure pcsd daemon is running and enabled (Debian/Ubuntu - Remote Nodes)..
-  systemd:
-    name: pcsd
-    state: started
-    enabled: true
+- name: Ensure pcs management tool is installed and configured (Debian/Ubuntu - Remote nodes).
+  block:
+    - name: Ensure pcs management tool is installed (Debian/Ubuntu - Remote nodes).
+      apt:
+        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+        name: "pcs={{ beegfs_ha_pcs_version }}*"
+
+    - name: Ensure pcsd daemon is running and enabled (Debian/Ubuntu - Remote Nodes)..
+      systemd:
+        name: pcsd
+        state: started
+        enabled: true
+  when: beegfs_ha_management_tool is defined and beegfs_ha_management_tool
   become: true
 
 - name: Ensure mailx is installed for alerts (Debian/Ubuntu - Remote Nodes).

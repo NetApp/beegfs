@@ -24,6 +24,12 @@ beegfs_ha_filter_ip_ranges: []
 beegfs_ha_node_preference_scope_step: 200
 beegfs_ha_cluster_resource_defaults:
   resource-stickiness: 15000
+  cluster-ipc-limit: 500
+beegfs_ha_resource_monitor_interval: 60s        # BeeGFS monitoring OCF service monitor interval
+beegfs_ha_resource_monitor_timeout: 120s        # BeeGFS monitoring OCF service monitor timeout
+beegfs_ha_resource_monitor_start_timeout: 600s  # BeeGFS monitoring OCF service start timeout
+beegfs_ha_resource_monitor_stop_timeout: 600s   # BeeGFS monitoring OCF service stop timeout
+
 beegfs_ha_fencing_agents: {}
 beegfs_ha_backup: true
 beegfs_ha_storage_system_hostgroup_prefix: beegfs
@@ -126,13 +132,15 @@ beegfs_ha_ntp_restricts:
 
 
 # Pacemaker defaults
-pacemaker_path: /etc/pacemaker/
-pacemaker_authkey_path: /etc/pacemaker/authkey
+beegfs_ha_pacemaker_path: /etc/pacemaker/
+beegfs_ha_pacemaker_authkey_path: /etc/pacemaker/authkey
+beegfs_ha_pacemaker_config_path: /etc/sysconfig/pacemaker
+beegfs_ha_pacemaker_ipc_buffer_bytes: 131072
 
 # Corosync defaults
-corosync_authkey_path: /etc/corosync/authkey
-corosync_conf_path: /etc/corosync/corosync.conf
-corosync_log_path: /var/log/corosync.log
+beegfs_ha_corosync_authkey_path: /etc/corosync/authkey
+beegfs_ha_corosync_conf_path: /etc/corosync/corosync.conf
+beegfs_ha_corosync_log_path: /var/log/corosync.log
 
 
 # Pcs defaults

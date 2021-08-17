@@ -3,75 +3,113 @@
     name: "{{ beegfs_ha_cluster_username }}"
     password: "{{ beegfs_ha_cluster_password | password_hash('sha512', beegfs_ha_cluster_password_sha512_salt) }}"
     create_home: false
+  register: pcs_cluster_password
   become: true
 
-- name: Determine whether pcs has only tokens for the expected cluster nodes.
-  block:
-    - name: Fetch pcs tokens file.
-      fetch:
-        src: "{{ beegfs_ha_pcsd_pcsd_path }}tokens"
-        dest: "/tmp/~pcs_tokens_{{ item }}"
-        flat: true
-      register: fetched_pcs_tokens
-      failed_when: false
-      ignore_errors: true
-      delegate_to: "{{ item }}"
-      loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
-      when: (hostvars[item]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == True
+- name: Ensure pcs_user.conf file is correct on all cluster and remote nodes
+  template:
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pcs_users_conf.j2') }}"
+    dest: "{{ beegfs_ha_pcsd_pcsd_path }}pcs_users.conf"
+  register: pcs_users_conf
+  become: true
 
-    - name: Determine whether only expected cluster nodes are accounted for.
-      set_fact:
-        update_pcs_required: |-
-          {%- set scratch = {"valid_token_files": True} -%}
-          {%- for fetched_pcs_token in fetched_pcs_tokens["results"] if "dest" in (fetched_pcs_token.keys() | list) and fetched_pcs_token["changed"] == True -%}
-            {%- set current = lookup("file", fetched_pcs_token["dest"]) -%}
-            {%- if "previous" not in (scratch.keys() | list) -%}
-              {%- if scratch.update({"previous": current }) -%}{%- endif -%}
-            {%- endif -%}
-            {%- if scratch["previous"] == {} or scratch["previous"] != current -%}
-              {%- if scratch.update({"valid_token_files": False}) -%}{%- endif -%}
-            {%- endif -%}
-          {%- else -%}
-            {%- if scratch.update({"valid_token_files": False}) -%}{%- endif -%}
-          {%- endfor -%}
+- name: Create PCS known_hosts file is correct on all cluster and remote nodes
+  template:
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pcs_known_hosts.j2') }}"
+    dest: "{{ beegfs_ha_pcsd_pcsd_path }}known-hosts"
+  register: pcs_known_hosts
+  become: true
 
-          {%- if "previous" not in (scratch.keys() | list) -%}
-            {{- True -}}
-          {%- elif scratch["valid_token_files"] == False -%}
-            {%- set tokens_nodes = (scratch["previous"] | from_json)["tokens"].keys() | list | sort -%}
-            {%- set expected_nodes = groups[beegfs_ha_ansible_cluster_group] | sort -%}
-            {{- tokens_nodes != expected_nodes -}}
-          {%- else -%}
-            {{- False -}}
-          {%- endif -%}
+- name: Ensure pcsd daemon is running and enabled.
+  systemd:
+    name: pcsd
+    state: '{%- if pcs_cluster_password["changed"] == true or pcs_users_conf["changed"] == true or pcs_known_hosts["changed"] == true -%}restarted{%- else -%}started{% endif %}'
+    enabled: true
+  become: true
 
-    - name: Delete temporary local pcs tokens file.
-      file:
-        state: absent
-        path: "{{ item['dest'] }}"
-      delegate_to: localhost
-      changed_when: false
-      failed_when: false
-      loop: "{{ fetched_pcs_tokens['results'] }}"
-      when: item["changed"]
+- name: Ensure pcs cluster has been authenticated for all cluster and remote nodes.
+  command:
+    cmd: "pcs host auth {{ groups[beegfs_ha_ansible_cluster_group] | join(' ') }} -u {{ beegfs_ha_cluster_username }} -p {{ beegfs_ha_cluster_password }}"
+    #cmd: "pcs cluster auth -u {{ beegfs_ha_cluster_username }} -p {{ beegfs_ha_cluster_password }}" # error pacemaker 3.0 -> Warning: Skipping nodes which do not have their name defined in corosync.conf, use the 'pcs host auth' command to authenticate them\nSending cluster config files to the nodes...\nWarning: Unable to set pcsd configs
+  delegate_to: "{{ preferred_management_node }}"
   become: true
   run_once: true
 
-- name: Ensure pcs cluster has been authenticated.
-  block:
-    - name: Delete existing pcs tokens file.
-      file:
-        state: absent
-        path: "{{ beegfs_ha_pcsd_pcsd_path }}tokens"
-
-    - name: Ensure pcs cluster has been authenticated.
-      command:
-        cmd: "pcs cluster reload corosync"
-      when: inventory_hostname == preferred_management_node
-
-    - name: Ensure pcs cluster has been authenticated.
-      command:
-        cmd: "pcs cluster auth -u {{ beegfs_ha_cluster_username }} -p {{ beegfs_ha_cluster_password }}"
-      when: inventory_hostname == preferred_management_node
-  when: update_pcs_required == True
-  become: true
+# TODO: ??? - OLDER VERSION OF PCS  -- Need to handle this some how
+#- name: Set pcs cluster password.
+#  user:
+#    name: "{{ beegfs_ha_cluster_username }}"
+#    password: "{{ beegfs_ha_cluster_password | password_hash('sha512', beegfs_ha_cluster_password_sha512_salt) }}"
+#    create_home: false
+#  become: true
+#
+#- name: Determine whether pcs has only tokens for the expected cluster nodes.
+#  block:
+#    - name: Fetch pcs tokens file.
+#      fetch:
+#        src: "{{ beegfs_ha_pcsd_pcsd_path }}tokens"
+#        dest: "/tmp/~pcs_tokens_{{ item }}"
+#        flat: true
+#      register: fetched_pcs_tokens
+#      failed_when: false
+#      ignore_errors: true
+#      delegate_to: "{{ item }}"
+#      loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+#      when: (hostvars[item]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == True
+#
+#    - name: Determine whether only expected cluster nodes are accounted for.
+#      set_fact:
+#        update_pcs_required: |-
+#          {%- set scratch = {"valid_token_files": True} -%}
+#          {%- for fetched_pcs_token in fetched_pcs_tokens["results"] if "dest" in (fetched_pcs_token.keys() | list) and fetched_pcs_token["changed"] == True -%}
+#            {%- set current = lookup("file", fetched_pcs_token["dest"]) -%}
+#            {%- if "previous" not in (scratch.keys() | list) -%}
+#              {%- if scratch.update({"previous": current }) -%}{%- endif -%}
+#            {%- endif -%}
+#            {%- if scratch["previous"] == {} or scratch["previous"] != current -%}
+#              {%- if scratch.update({"valid_token_files": False}) -%}{%- endif -%}
+#            {%- endif -%}
+#          {%- else -%}
+#            {%- if scratch.update({"valid_token_files": False}) -%}{%- endif -%}
+#          {%- endfor -%}
+#
+#          {%- if "previous" not in (scratch.keys() | list) -%}
+#            {{- True -}}
+#          {%- elif scratch["valid_token_files"] == False -%}
+#            {%- set tokens_nodes = (scratch["previous"] | from_json)["tokens"].keys() | list | sort -%}
+#            {%- set expected_nodes = groups[beegfs_ha_ansible_cluster_group] | sort -%}
+#            {{- tokens_nodes != expected_nodes -}}
+#          {%- else -%}
+#            {{- False -}}
+#          {%- endif -%}
+#
+#    - name: Delete temporary local pcs tokens file.
+#      file:
+#        state: absent
+#        path: "{{ item['dest'] }}"
+#      delegate_to: localhost
+#      changed_when: false
+#      failed_when: false
+#      loop: "{{ fetched_pcs_tokens['results'] }}"
+#      when: item["changed"]
+#  become: true
+#  run_once: true
+#
+#- name: Ensure pcs cluster has been authenticated.
+#  block:
+#    - name: Delete existing pcs tokens file.
+#      file:
+#        state: absent
+#        path: "{{ beegfs_ha_pcsd_pcsd_path }}tokens"
+#
+#    - name: Ensure pcs cluster has been authenticated.
+#      command:
+#        cmd: "pcs cluster reload corosync"
+#      when: inventory_hostname == preferred_management_node
+#
+#    - name: Ensure pcs cluster has been authenticated.
+#      command:
+#        cmd: "pcs cluster auth -u {{ beegfs_ha_cluster_username }} -p {{ beegfs_ha_cluster_password }}"
+#      when: inventory_hostname == preferred_management_node
+#  when: update_pcs_required == True
+#  become: true

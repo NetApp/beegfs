@@ -302,9 +302,9 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_client_updatedb_conf_path: "/etc/updatedb.conf"   # Client directory path for mlocate package configuration file.
     
     # Corosync defaults
-    corosync_authkey_path: /etc/corosync/authkey                # Absolute path for the Corosync authkey file.
-    corosync_conf_path: /etc/corosync/corosync.conf             # Absolute path for the Corosync configuration file.
-    corosync_log_path: /var/log/corosync.log                    # Absolute path for the Corosync log file.
+    beegfs_ha_corosync_authkey_path: /etc/corosync/authkey                # Absolute path for the Corosync authkey file.
+    beegfs_ha_corosync_conf_path: /etc/corosync/corosync.conf             # Absolute path for the Corosync configuration file.
+    beegfs_ha_corosync_log_path: /var/log/corosync.log                    # Absolute path for the Corosync log file.
 
     # Pcs defaults
     beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/                    # Absolute path for the pcsd directory.

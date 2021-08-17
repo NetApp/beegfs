@@ -115,6 +115,20 @@
         - beegfs_ha_configure
         - beegfs_ha
 
+    - name: Ensure pacemaker_remote is enabled and started on remote nodes.
+      block:
+        - name: Ensure pacemaker_remote is enabled and started on remote nodes.
+          systemd:
+            state: started
+            enabled: true
+            name: pacemaker_remote
+          when: beegfs_ha_pacemaker_cluster_node == False
+          become: true
+      tags:
+        - beegfs_ha_configure_resource
+        - beegfs_ha_configure
+        - beegfs_ha
+
     - name: Ensure BeeGFS HA cluster is out of maintenance mode.
       block:
         - name: Check whether cluster is in maintenance mode.
@@ -131,15 +145,17 @@
           become: true
           when: maintenance_mode_query['rc'] == 0 and (maintenance_mode_query['stdout'] | lower) == 'true'
 
-        # TODO: - name: Wait for cluster to complete tasks.
-
+        - name: Wait for cluster changes to stabilize.
+          command:
+            cmd: "crm_resource --wait"
+          become: true
       when: inventory_hostname == preferred_management_node
       tags:
         - always
 
     - name: Attempt to return services to their preferred BeeGFS HA cluster nodes.
       block:
-        - name: Backup current BeeGFS HA configuration.
+        - name: Attempt to return services to their preferred BeeGFS HA cluster nodes.
           include_tasks: move.yml
           when: beegfs_ha_force_resource_move == True and inventory_hostname == preferred_management_node
       tags:

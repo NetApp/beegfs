@@ -34,9 +34,16 @@
 - name: Set pacemaker into maintenance-mode.
   command:
     cmd: "crm_attribute --name maintenance-mode --update true"
-  loop: "{{ resource_default_query['results'] }}"
-  when: item['rc'] != 0 or item['stdout'] != item["item"]["value"] | string
+  when: changes_required
+  run_once: true
   become: true
+  vars:
+    changes_required: |-
+      {%- set changes = [] -%}
+      {%- for query in resource_default_query["results"] if "rc" in (query.keys() | list) and (query["rc"] != 0 or query["item"] != query["item"]["value"] | string) -%}
+        {%- if changes.append(query) -%}{%- endif -%}
+      {%- endfor -%}
+      {{- changes | length > 0 -}}
 
 - name: Set cluster resource defaults.
   command:

@@ -10,8 +10,7 @@
 
 - name: Ensure the cluster is built (Cluster nodes only).
   include_tasks: common/build_cluster.yml
-  when: beegfs_ha_pacemaker_cluster_node == True
 
-- name: "Ensure cluster configuration tool ({{ beegfs_ha_management_tool }}) is configured (Cluster nodes only)."
+- name: "Ensure cluster configuration tool ({{ beegfs_ha_management_tool }}) is configured (Cluster and remote nodes)."
   include_tasks: "common/{{ beegfs_ha_management_tool }}.yml"
-  when: beegfs_ha_pacemaker_cluster_node == True
+  when: beegfs_ha_management_tool is defined and beegfs_ha_management_tool

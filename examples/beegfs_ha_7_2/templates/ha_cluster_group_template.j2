@@ -5,6 +5,8 @@
 beegfs_ha_cluster_ansible_host_group: ha_cluster                    # ha_cluster is the default BeeGFS HA cluster Ansible group name. Do not change.
 beegfs_ha_ansible_client_group: ha_clients                          # ha_clients is the default BeeGFS client Ansible group name. Do not change.
 beegfs_ha_cluster_ansible_storage_group: eseries_storage_systems    # eseries_storage_systems is the default BeeGFS E-Series storage Ansible group name. Do not change.
+eseries_common_allow_host_reboot: true                              # Allows cluster hosts to recover when volumes were not discovered.
+
 
 beegfs_ha_cluster_name: hacluster                                   # BeeGFS HA cluster name.
 beegfs_ha_cluster_username: hacluster                               # BeeGFS HA cluster username.
@@ -40,3 +42,7 @@ beegfs_ha_fencing_agents:                                           # Fencing ag
 #   of these flags if this requirement is already handled. **Note that NTP may not be available on new distributions.
 beegfs_ha_chrony_enabled: true                                      # Installs and configures Chron and removes NTP if installed since they conflict with each other.
 beegfs_ha_ntp_enabled: false                                        # Installs and configures NTP and removes Chrony if installed since they conflict with each other.
+
+beegfs_ha_cluster_resource_defaults:
+  resource-stickiness: 15000
+  cluster-ipc-limit: <NODES> * <BEEGFS_RESOURCES> * ( 2 + VIRTUAL_IPS_COUNT + FILESYSTEMS_COUNT + MAIL_ALERT_COUNT )

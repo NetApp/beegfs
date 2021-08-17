@@ -7,6 +7,10 @@
   set_fact:
     cluster_resources: "<resources>"
 
+- name: Build pacemaker remote node resources.
+  set_fact:
+    cluster_resources: '{{ cluster_resources ~ lookup("template", "management/remote_nodes.j2") }}'
+
 - name: Build pacemaker cluster management group resources.
   set_fact:
     cluster_resources: '{{ cluster_resources ~ lookup("template", "management/resources.j2") }}'

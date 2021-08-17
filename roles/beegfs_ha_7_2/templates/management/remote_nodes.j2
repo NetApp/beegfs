@@ -1,9 +1,5 @@
-{% for host in groups[beegfs_ha_ansible_cluster_group] if "metadata" in (hostvars[host]["node_info"].keys() | list) and
-                                                          hostvars[host]["node_info"]["metadata"]["beegfs_ha_pacemaker_cluster_node'] == False %}
-<primitive class="ocf" id="" provider="pacemaker" type="remote">
-  <instance_attributes id="nodeSS3-instance_attributes">
-    <nvpair id="{{ host }}-instance_attributes-server" name="server" value="{{ host }}"/>
-  </instance_attributes>
+{% for host in groups[beegfs_ha_ansible_cluster_group] if (hostvars[host]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == False %}
+<primitive class="ocf" id="{{ host }}" provider="pacemaker" type="remote">
   <operations>
     <op id="remote-node-{{ host }}-migrate_from" interval="0s" name="migrate_from" timeout="60"/>
     <op id="remote-node-{{ host }}-migrate_tos" interval="0s" name="migrate_to" timeout="60"/>
@@ -13,5 +9,4 @@
     <op id="remote-node-{{ host }}-stop" interval="0s" name="stop" timeout="60"/>
   </operations>
 </primitive>
-  {%- endif %}
-{% endfor  %}
+{% endfor %}

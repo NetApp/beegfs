@@ -1,17 +1,3 @@
-{% for host in groups[beegfs_ha_ansible_cluster_group] if "metadata" in (hostvars[host]["node_info"].keys() | list) and
-                                                          (hostvars[host]["node_info"]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == False %}
-<primitive class="ocf" id="{{ host }}" provider="pacemaker" type="remote">
-  <operations>
-    <op id="remote-node-{{ host }}-migrate_from" interval="0s" name="migrate_from" timeout="60"/>
-    <op id="remote-node-{{ host }}-migrate_tos" interval="0s" name="migrate_to" timeout="60"/>
-    <op id="remote-node-{{ host }}-monitor" interval="60s" name="monitor" timeout="30"/>
-    <op id="remote-node-{{ host }}-reload" interval="0s" name="reload" timeout="60"/>
-    <op id="remote-node-{{ host }}-start" interval="0s" name="start" timeout="60"/>
-    <op id="remote-node-{{ host }}-stop" interval="0s" name="stop" timeout="60"/>
-  </operations>
-</primitive>
-{% endfor  %}
-
 {% for host in groups[beegfs_ha_ansible_cluster_group] if "metadata" in (hostvars[host]["node_info"].keys() | list) %}
   {%- for info in hostvars[host]["node_info"]["metadata"] if host in info["preferred_node_order"][0] -%}
     {%- set group = info["resource_group"] -%}
@@ -102,9 +88,9 @@
     <nvpair id="{{ group }}-monitor-instance_attributes-service_configuration_mount" name="service_configuration_mount" value="{{ mount_dir }}{{ volume }}/"/>
   </instance_attributes>
   <operations>
-    <op id="{{ group }}-monitor-start" interval="0s" name="start" timeout="60s"/>
-    <op id="{{ group }}-monitor-monitor" interval="30s" name="monitor" timeout="60s" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
-    <op id="{{ group }}-monitor-stop" interval="0s" name="stop" timeout="600s"/>
+    <op id="{{ group }}-monitor-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_monitor_start_timeout }}"/>
+    <op id="{{ group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_timeout }}" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
+    <op id="{{ group }}-monitor-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_monitor_stop_timeout }}"/>
   </operations>
   <meta_attributes id="{{ group }}-monitor-meta_attributes">
     <nvpair id="{{ group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="1"/>
