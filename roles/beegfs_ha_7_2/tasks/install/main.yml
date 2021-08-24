@@ -53,6 +53,11 @@
         - storage_mount
         - storage
 
+    - name: Update volume path information (Always).
+      import_tasks: ../update_facts.yml
+      tags:
+        - always
+
     - name: Setup and configure BeeGFS HA on hosts.
       block:
         - name: Ensure expected BeeGFS packages are installed.

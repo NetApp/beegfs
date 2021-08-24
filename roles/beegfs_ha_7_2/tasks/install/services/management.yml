@@ -11,7 +11,7 @@
 - name: Select details about the management volume.
   set_fact:
     mgmt_volume_name: "{{ mgmt_volume['name'] }}"
-    mgmt_volume_mount_device: "/dev/mapper/{{ mgmt_volume['name'] }}"
+    mgmt_volume_mount_device: "{{ mgmt_volume['path'] }}"
     mgmt_volume_format_type: "{{ mgmt_volume['metadata']['format_type'] }}"
     mgmt_volume_mount_options: "{{ mgmt_volume['metadata']['mount_options'] }}"
     mgmt_volume_mount: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}"
@@ -41,10 +41,10 @@
 
     - name: Mount management volume.
       command:
-        cmd: "mount -t {{ mgmt_volume_format_type }} -o {{ mgmt_volume_mount_options }} /dev/mapper/{{ mgmt_volume_name }} {{ mgmt_volume_mount }}"
+        cmd: "mount -t {{ mgmt_volume_format_type }} -o {{ mgmt_volume_mount_options }} {{ mgmt_volume_mount_device }} {{ mgmt_volume_mount }}"
         warn: false
       register: management_volume_mount
-      when: volume_mounted | bool == False
+      when: volume_mounted == False
       vars:
         volume_mounted: |-
           {%- set scratch = {"mounted": False} -%}
@@ -89,7 +89,8 @@
     - name: Unmount management volume.
       command:
         cmd: "umount {{ mgmt_volume_mount }}"
-      when: management_volume_mount['changed'] | bool == True
+      when: management_volume_mount['changed'] == True
+      ignore_errors: true
   when: inventory_hostname == preferred_management_node
   become: true
 

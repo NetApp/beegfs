@@ -25,13 +25,14 @@
 - name: Ensure the storage volumes are mounted on the preferred hosts.
   command:
     cmd: "mount -t {{ item['metadata']['format_type'] }} -o {{ item['metadata']['mount_options'] }}
-                /dev/mapper/{{ item['name'] }} {{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
+                {{ item['path'] }} {{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
     warn: false
   loop: "{{ preferred_volumes }}"
   register: storage_volume_mount
   changed_when: "storage_volume_mount['rc'] == 0"
   failed_when: "storage_volume_mount['rc'] != 0 and not (storage_volume_mount['rc'] == 32 and 'already mounted' in storage_volume_mount['stderr'])"
   when: item['name'] not in mounted_storage_volumes
+  become: true
   vars:
     preferred_volumes: |-  # Creates a list of preferred volumes for each host
       {%- set preferred_volumes = [] -%}
@@ -128,7 +129,9 @@
   command:
     cmd: "umount {{ item['item']['metadata']['mount_dir'] }}{{ item['item']['name'] }}"
   loop: "{{ storage_volume_mount['results'] }}"
-  when: storage_volume_mount['changed'] | bool == True
+  ignore_errors: true
+  when: item['changed'] == True
+  become: true
 
 # Update beegfs-storage.service to point to beegfs-storage.conf.
 - name: Override the default beegfs-beegfs-storage.service file.

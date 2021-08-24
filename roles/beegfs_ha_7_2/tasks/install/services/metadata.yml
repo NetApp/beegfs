@@ -19,7 +19,7 @@
 - name: Ensure the metadata volumes are mounted on the preferred hosts.
   command:
     cmd: "mount -t {{ item['volumes'][0]['metadata']['format_type'] }} -o {{ item['volumes'][0]['metadata']['mount_options'] }}
-                /dev/mapper/{{ item['volumes'][0]['name'] }} {{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}"
+                   {{ item['volumes'][0]['path'] }} {{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}"
     warn: false
   loop: "{{ node_info['metadata'] }}"
   register: metadata_volume_mount
@@ -96,7 +96,9 @@
   command:
     cmd: "umount {{ item['item']['volumes'][0]['metadata']['mount_dir'] }}{{ item['item']['volumes'][0]['name'] }}"
   loop: "{{ metadata_volume_mount['results'] }}"
-  when: item['changed'] | bool == True
+  ignore_errors: true
+  when: item['changed'] == True
+  become: true
 
 # Update beegfs-meta.service to point to beegfs-meta.conf.
 - name: Override the default beegfs-meta.service file.
