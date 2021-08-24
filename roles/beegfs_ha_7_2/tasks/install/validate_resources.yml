@@ -54,15 +54,22 @@
           delay: 1
           retries: 15
           until: crm_resource_cleanup['rc'] == 0
+          delegate_to: "{{ preferred_management_node }}"
           run_once: true
       when: 1 < (resources_not_started_retries | int) < 3 # Second attempt
       become: true
 
     - name: Wait and re-validate resources have started.
       block:
-        - name: Wait 30 seconds.
-          pause:
-            seconds: 30
+        - name: Wait for cluster resource to be in a stable state before continuing.
+          command:
+            cmd: "crm_resource --wait"
+          changed_when: false
+          failed_when: false
+          delegate_to: "{{ preferred_management_node }}"
+          run_once: true
+          become: true
+
         - name: Retry until resources are all started
           include_tasks: install/validate_resources.yml
       when: (resources_not_started_retries | int) < 3     # Both attempts
