@@ -58,5 +58,4 @@
       - "beegfs-client-{{ beegfs_ha_beegfs_version }}*"
       - "beegfs-helperd-{{ beegfs_ha_beegfs_version }}*"
       - "beegfs-utils-{{ beegfs_ha_beegfs_version }}*"
-      - "libelf-dev"
   become: true
