@@ -53,11 +53,6 @@
         content:  "{{ cluster_resources }}"
       become: true
 
-    - name: Set pacemaker into maintenance-mode.
-      command:
-        cmd: "crm_attribute --name maintenance-mode --update true"
-      become: true
-
     - name: Remove existing constraints.
       command:
         cmd: "cibadmin --replace --scope constraints --xml-text '<constraints/>'"

@@ -21,11 +21,6 @@
         dest: /tmp/~tmp_beegfs_ha_cluster_constraints.xml
       become: true
 
-    - name: Set pacemaker into maintenance-mode.
-      command:
-        cmd: "crm_attribute --name maintenance-mode --update true"
-      become: true
-
     - name: Modify pacemaker constraints.
       command:
         cmd: "cibadmin --replace --scope constraints --xml-file /tmp/~tmp_beegfs_ha_cluster_constraints.xml"

@@ -65,6 +65,14 @@
         - beegfs_ha
         - beegfs_ha_package
 
+    - name: Ensure BeeGFS HA cluster is in maintenance mode.
+      command:
+        cmd: "crm_attribute --name maintenance-mode --update true"
+      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+      delegate_to: "{{ preferred_management_node }}"
+      become: true
+      run_once: true
+
     - name: Configure performance tuning.
       block:
         - name: BeeGFS performance tuning (Storage/Metadata).
@@ -131,24 +139,19 @@
 
     - name: Ensure BeeGFS HA cluster is out of maintenance mode.
       block:
-        - name: Check whether cluster is in maintenance mode.
-          command:
-            cmd: "crm_attribute --name maintenance-mode --query --quiet"
-          register: maintenance_mode_query
-          become: true
-          failed_when: maintenance_mode_query['rc'] not in [0, 6, 105]
-          changed_when: false
-
         - name: Move cluster out of maintenance mode.
           command:
             cmd: "crm_attribute --name maintenance-mode --delete"
+          delegate_to: "{{ preferred_management_node }}"
           become: true
-          when: maintenance_mode_query['rc'] == 0 and (maintenance_mode_query['stdout'] | lower) == 'true'
+          run_once: true
 
         - name: Wait for cluster changes to stabilize.
           command:
             cmd: "crm_resource --wait"
+          delegate_to: "{{ preferred_management_node }}"
           become: true
+          run_once: true
       when: inventory_hostname == preferred_management_node
       tags:
         - always

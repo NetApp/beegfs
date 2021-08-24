@@ -204,9 +204,6 @@
 
     - name: Update cluster nodes.
       block:
-        - name: Set pacemaker into maintenance-mode.
-          command:
-            cmd: "crm_attribute --name maintenance-mode --update true"
         - name: Clear pacemaker cluster nodes.
           command:
             cmd: "cibadmin --replace --scope nodes --xml-text '<nodes/>'"

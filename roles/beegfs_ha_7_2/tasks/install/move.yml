@@ -20,18 +20,18 @@
   until: '"rc" in (clean_up_all_resources.keys() | list) and clean_up_all_resources["rc"] == 0'
   retries: 10
   delay: 6
-
-- name: Clear any previous failures. This is required to allow systems to migrate back after a failure.
-  command:
-    cmd: "crm_resource --resource {{ item['key'] }}-monitor --clear"
-  register: clear_resources
-  become: true
-  changed_when: clear_resources['rc'] == 0
-  failed_when: false
-  loop: "{{ preferred_resource_node_list | dict2items }}"
-  until: '"rc" in (clear_resources.keys() | list) and clear_resources["rc"] == 0'
-  retries: 10
-  delay: 6
+#
+#- name: Clear any previous failures. This is required to allow systems to migrate back after a failure.
+#  command:
+#    cmd: "crm_resource --resource {{ item['key'] }}-monitor --clear"
+#  register: clear_resources
+#  become: true
+#  changed_when: clear_resources['rc'] == 0
+#  failed_when: false
+#  loop: "{{ preferred_resource_node_list | dict2items }}"
+#  until: '"rc" in (clear_resources.keys() | list) and clear_resources["rc"] == 0'
+#  retries: 10
+#  delay: 6
 
 - name: Wait for cluster resource to be in a stable state before continuing.
   command:
