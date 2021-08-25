@@ -8,27 +8,6 @@
     {%- set mount_options = info["volumes"][0]["metadata"]["mount_options"] -%}
     {%- set floating_ips = info["floating_ips"] %}
 
-<group id="{{ group }}-group-filesystem">
-  <primitive class="ocf" id="{{ group }}-FS1" provider="heartbeat" type="Filesystem">
-    <instance_attributes id="{{ group }}-FS1-instance_attributes">
-      <nvpair id="{{ group }}-FS1-instance_attributes-device" name="device" value="{{ path }}"/>
-      <nvpair id="{{ group }}-FS1-instance_attributes-directory" name="directory" value="{{ mount_dir }}{{ volume }}"/>
-      <nvpair id="{{ group }}-FS1-instance_attributes-fstype" name="fstype" value="{{ format_type }}"/>
-      <nvpair id="{{ group }}-FS1-instance_attributes-options" name="options" value="{{ mount_options }}"/>
-    </instance_attributes>
-    <operations>
-      <op id="{{ group }}-FS1-monitor" interval="{{ beegfs_ha_resource_filesystem_monitor_interval }}" name="monitor">
-        <instance_attributes id="{{ group }}-FS1-monitor-instance_attributes">
-          <nvpair id="{{ group }}-FS1-monitor-instance_attributes-OCF_CHECK_LEVEL" name="OCF_CHECK_LEVEL" value="10"/>
-        </instance_attributes>
-      </op>
-      <op id="{{ group }}-FS1-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_filesystem_start_timeout }}"/>
-      <op id="{{ group }}-FS1-notify" interval="0s" name="notify" timeout="{{ beegfs_ha_resource_filesystem_notify_timeout }}"/>
-      <op id="{{ group }}-FS1-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_filesystem_stop_timeout }}"/>
-    </operations>
-  </primitive>
-</group>
-
 <primitive class="ocf" id="{{ group }}-monitor" provider="eseries" type="beegfs-monitor">
   <instance_attributes id="{{ group }}-monitor-instance_attributes">
     <nvpair id="{{ group }}-monitor-instance_attributes-service_group" name="service_group" value="{{ group }}"/>
@@ -47,6 +26,25 @@
 </primitive>
 
 <group id="{{ group }}-group">
+
+  <primitive class="ocf" id="{{ group }}-FS1" provider="heartbeat" type="Filesystem">
+    <instance_attributes id="{{ group }}-FS1-instance_attributes">
+      <nvpair id="{{ group }}-FS1-instance_attributes-device" name="device" value="{{ path }}"/>
+      <nvpair id="{{ group }}-FS1-instance_attributes-directory" name="directory" value="{{ mount_dir }}{{ volume }}"/>
+      <nvpair id="{{ group }}-FS1-instance_attributes-fstype" name="fstype" value="{{ format_type }}"/>
+      <nvpair id="{{ group }}-FS1-instance_attributes-options" name="options" value="{{ mount_options }}"/>
+    </instance_attributes>
+    <operations>
+      <op id="{{ group }}-FS1-monitor" interval="{{ beegfs_ha_resource_filesystem_monitor_interval }}" name="monitor">
+        <instance_attributes id="{{ group }}-FS1-monitor-instance_attributes">
+          <nvpair id="{{ group }}-FS1-monitor-instance_attributes-OCF_CHECK_LEVEL" name="OCF_CHECK_LEVEL" value="10"/>
+        </instance_attributes>
+      </op>
+      <op id="{{ group }}-FS1-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_filesystem_start_timeout }}"/>
+      <op id="{{ group }}-FS1-notify" interval="0s" name="notify" timeout="{{ beegfs_ha_resource_filesystem_notify_timeout }}"/>
+      <op id="{{ group }}-FS1-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_filesystem_stop_timeout }}"/>
+    </operations>
+  </primitive>
 
     {%- for floating_ip in floating_ips -%}
       {%- set floating_ip_info = floating_ip.split(":") -%}

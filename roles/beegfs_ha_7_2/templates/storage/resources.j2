@@ -4,7 +4,24 @@
     {%- set volumes = info["volumes"] -%}
     {%- set floating_ips = info["floating_ips"] %}
 
-<group id="{{ group }}-group-filesystem">
+<primitive class="ocf" id="{{ group }}-monitor" provider="eseries" type="beegfs-monitor">
+  <instance_attributes id="{{ group }}-monitor-instance_attributes">
+    <nvpair id="{{ group }}-monitor-instance_attributes-service_group" name="service_group" value="{{ group }}"/>
+    <nvpair id="{{ group }}-monitor-instance_attributes-service_type" name="service_type" value="storage"/>
+    <nvpair id="{{ group }}-monitor-instance_attributes-service_name" name="service_name" value="beegfs-storage@{{ volumes[0]['name'] }}"/>
+    <nvpair id="{{ group }}-monitor-instance_attributes-service_configuration_mount" name="service_configuration_mount" value="{{ volumes[0]["metadata"]["mount_dir"] }}{{  volumes[0]["name"] }}/"/>
+  </instance_attributes>
+  <operations>
+    <op id="{{ group }}-monitor-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_monitor_start_timeout }}"/>
+    <op id="{{ group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_monitor_timeout }}" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
+    <op id="{{ group }}-monitor-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_monitor_stop_timeout }}"/>
+  </operations>
+  <meta_attributes id="{{ group }}-monitor-meta_attributes">
+    <nvpair id="{{ group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="1"/>
+  </meta_attributes>
+</primitive>
+
+<group id="{{ group }}-group">
 
     {%- for volume in volumes -%}
       {%- set volume_name = volume["name"] -%}
@@ -33,26 +50,6 @@
   </primitive>
 
       {%- endfor %}
-</group>
-
-<primitive class="ocf" id="{{ group }}-monitor" provider="eseries" type="beegfs-monitor">
-  <instance_attributes id="{{ group }}-monitor-instance_attributes">
-    <nvpair id="{{ group }}-monitor-instance_attributes-service_group" name="service_group" value="{{ group }}"/>
-    <nvpair id="{{ group }}-monitor-instance_attributes-service_type" name="service_type" value="storage"/>
-    <nvpair id="{{ group }}-monitor-instance_attributes-service_name" name="service_name" value="beegfs-storage@{{ volumes[0]['name'] }}"/>
-    <nvpair id="{{ group }}-monitor-instance_attributes-service_configuration_mount" name="service_configuration_mount" value="{{ volumes[0]["metadata"]["mount_dir"] }}{{  volumes[0]["name"] }}/"/>
-  </instance_attributes>
-  <operations>
-    <op id="{{ group }}-monitor-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_monitor_start_timeout }}"/>
-    <op id="{{ group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_monitor_timeout }}" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
-    <op id="{{ group }}-monitor-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_monitor_stop_timeout }}"/>
-  </operations>
-  <meta_attributes id="{{ group }}-monitor-meta_attributes">
-    <nvpair id="{{ group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="1"/>
-  </meta_attributes>
-</primitive>
-
-<group id="{{ group }}-group">
 
     {%- for floating_ip in floating_ips -%}
       {%- set floating_ip_info = floating_ip.split(":") -%}
