@@ -15,6 +15,9 @@ check_resource_service() {
     return 0
   fi
 
+  service_status=$(systemctl status "$service")
+  ocf_log warn "$service is not active!"
+  ocf_log warn "$service_status"
   return 1
 }
 
@@ -196,7 +199,6 @@ beegfs_monitor_stop() {
   return $OCF_SUCCESS
 }
 
-
 # Validate BeeGFS service is running.
 beegfs_monitor_monitor() {
   # Check resource tracking file.
@@ -207,7 +209,17 @@ beegfs_monitor_monitor() {
   fi
 
   # Check whether resource has been started
-  if ! monitor_query=$(attrd_updater --query --name="$group-beegfs-monitor") || ( (echo "$monitor_query" | grep 'value="1"' > /dev/null) && ! check_resource_service); then
+  #if ! monitor_query=$(attrd_updater --query --name="$group-beegfs-monitor") || ( (echo "$monitor_query" | grep 'value="1"' > /dev/null) && ! check_resource_service); then
+  if ! monitor_query=$(attrd_updater --query --name="$group-beegfs-monitor"); then
+    if (echo "$monitor_query" | grep 'value="1"' > /dev/null) && ! check_resource_service; then
+      if (echo "$monitor_query" | grep 'value="1"' > /dev/null); then
+        ocf_log info "$group-beegfs-monitor has not started - $monitor_query"
+      else
+        ocf_log info "$group-beegfs-monitor has not started - $service_status"
+      fi
+    else
+      ocf_log info "$group-beegfs-monitor attribute has not been created."
+    fi
     return $OCF_SUCCESS
   fi
 
@@ -220,7 +232,10 @@ beegfs_monitor_monitor() {
   # TODO: Add any other BeeGFS related validation tests here...
 
   attrd_updater --name="$group-beegfs-monitor" --update="0" --delay="5s"  # Changing the attribute to 0 will force the service to migrate.
-  return $OCF_ERR_GENERIC
+  #return $OCF_ERR_GENERIC
+
+  ocf_log warn "$group-beegfs-monitor would have stopped...ignoring!"
+  return $OCF_SUCCESS
 }
 
 # Validate beegfs-monitor requirements
