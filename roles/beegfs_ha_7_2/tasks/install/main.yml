@@ -58,17 +58,25 @@
       tags:
         - always
 
-    - name: Setup and configure BeeGFS HA on hosts.
+    - name: Setup and configure BeeGFS on hosts.
       block:
         - name: Ensure expected BeeGFS packages are installed.
           include_tasks: packages.yml
+      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+      tags:
+        - beegfs_ha_package
+        - beegfs_ha
 
+    - name: Setup and configure Pacemaker resources on hosts.
+      block:
         - name: Ensure E-Series BeeGFS HA resources agents are installed.
           include_tasks: resource_agents.yml
       when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       tags:
-        - beegfs_ha
+        - beegfs_ha_resource_agent
+        - beegfs_ha_configure
         - beegfs_ha_package
+        - beegfs_ha
 
     - name: Ensure BeeGFS HA cluster is in maintenance mode.
       command:
@@ -87,7 +95,6 @@
       tags:
         - beegfs_ha
         - beegfs_ha_performance_tuning
-
 
     - name: Ensure common BeeGFS HA tasks are applied to BeeGFS service nodes (Management/Metadata/Storage).
       block:
