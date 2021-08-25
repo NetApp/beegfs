@@ -7,8 +7,7 @@ Requires=network-online.target
 After=network-online.target beegfs-mgmtd.service openibd.service openib.service rdma.service opensmd.service opensm.service zfs.target
 
 [Service]
-#ExecStart=/bin/bash -c 'numa_num=$$(awk "/^tuneBindToNuma/ {print $3}" /mnt/%I/storage_config/beegfs-storage.conf); if [ -n $$numa_num ]; then exec /usr/bin/numactl --cpunodebind=$$numa_num --membind=$$numa_num /opt/beegfs/sbin/beegfs-storage cfgFile=/mnt/%I/storage_config/beegfs-storage.conf runDaemonized=false; else /opt/beegfs/sbin/beegfs-storage cfgFile=/mnt/%I/storage_config/beegfs-storage.conf runDaemonized=false; fi'
-ExecStart=/opt/beegfs/sbin/beegfs-storage cfgFile=/mnt/%I/storage_config/beegfs-storage.conf runDaemonized=false
+ExecStart=/bin/bash -c 'numa_num=$$(awk "/^tuneBindToNuma/ {print $3}" /mnt/%I/storage_config/beegfs-storage.conf); if [ -n $$numa_num ]; then exec /usr/bin/numactl --cpunodebind=$$numa_num --membind=$$numa_num /opt/beegfs/sbin/beegfs-storage cfgFile=/mnt/%I/storage_config/beegfs-storage.conf runDaemonized=false; else /opt/beegfs/sbin/beegfs-storage cfgFile=/mnt/%I/storage_config/beegfs-storage.conf runDaemonized=false; fi'
 Type=simple
 
 [Install]
