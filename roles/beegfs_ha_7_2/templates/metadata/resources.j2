@@ -35,11 +35,7 @@
       <nvpair id="{{ group }}-FS1-instance_attributes-options" name="options" value="{{ mount_options }}"/>
     </instance_attributes>
     <operations>
-      <op id="{{ group }}-FS1-monitor" interval="{{ beegfs_ha_resource_filesystem_monitor_interval }}" name="monitor">
-        <instance_attributes id="{{ group }}-FS1-monitor-instance_attributes">
-          <nvpair id="{{ group }}-FS1-monitor-instance_attributes-OCF_CHECK_LEVEL" name="OCF_CHECK_LEVEL" value="10"/>
-        </instance_attributes>
-      </op>
+      <op id="{{ group }}-FS1-monitor" interval="{{ beegfs_ha_resource_filesystem_monitor_interval }}" name="monitor"/>
       <op id="{{ group }}-FS1-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_filesystem_start_timeout }}"/>
       <op id="{{ group }}-FS1-notify" interval="0s" name="notify" timeout="{{ beegfs_ha_resource_filesystem_notify_timeout }}"/>
       <op id="{{ group }}-FS1-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_filesystem_stop_timeout }}"/>
