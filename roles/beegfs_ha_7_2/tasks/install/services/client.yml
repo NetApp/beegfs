@@ -48,16 +48,6 @@
   become: true
   when: client_autobuild_conf['changed']
 
-- name: Wait for BeeGFS to be ready.
-  command:
-    cmd: "beegfs-check-servers -e"
-  register: beegfs_check_servers
-  changed_when: false
-  retries: 60
-  delay: 3
-  until: beegfs_check_servers['rc'] == 0
-  become: true
-
 - name: Ensure client service is running.
   systemd:
     name: beegfs-client.service
@@ -93,3 +83,13 @@
   vars:
     existing_prunefs: |-
       {{- updatedb_prunefs["stdout"] | default("") | regex_replace('PRUNEFS\s*=\s*|"', "", ignorecase=True) -}}
+
+- name: Wait for BeeGFS to be ready.
+  command:
+    cmd: "beegfs-check-servers -e"
+  register: beegfs_check_servers
+  changed_when: false
+  retries: 60
+  delay: 3
+  until: beegfs_check_servers['rc'] == 0
+  become: true
