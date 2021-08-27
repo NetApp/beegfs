@@ -191,7 +191,7 @@ beegfs_ha_uninstall_reboot: false                                   # Whether to
 
 
 # Package version defaults
-beegfs_ha_beegfs_version: 7.2
+beegfs_ha_beegfs_version:            # beegfs-* 7.2 (Control BeeGFS versioning with the installed repository)
 beegfs_ha_corosync_version:          # corosync 2.4
 beegfs_ha_pacemaker_version:         # pacemaker 1.1
 beegfs_ha_pcs_version:               # pcs 0.9

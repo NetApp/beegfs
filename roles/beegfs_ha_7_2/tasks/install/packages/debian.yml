@@ -20,7 +20,7 @@
 - name: Ensure the BeeGFS management package is installed (Debian/Ubuntu - Management).
   apt:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
-    name: "beegfs-mgmtd={{ beegfs_ha_beegfs_version }}*"
+    name: "beegfs-mgmtd{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}={{ beegfs_ha_beegfs_version }}*{% endif %}"
   register: beegfs_mgmtd_package
   when: '"management" in node_info["services"]'
   become: true
@@ -36,7 +36,7 @@
 - name: Ensure the BeeGFS metadata package is installed (Debian/Ubuntu - Metadata).
   apt:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
-    name: "beegfs-meta={{ beegfs_ha_beegfs_version }}*"
+    name: "beegfs-meta{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}={{ beegfs_ha_beegfs_version }}*{% endif %}"
   register: beegfs_meta_package
   when: '"metadata" in node_info["services"]'
   become: true
@@ -52,7 +52,7 @@
 - name: Ensure the BeeGFS storage package is installed (Debian/Ubuntu - Storage).
   apt:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
-    name: "beegfs-storage={{ beegfs_ha_beegfs_version }}*"
+    name: "beegfs-storage{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}={{ beegfs_ha_beegfs_version }}*{% endif %}"
   register: beegfs_storage_package
   when: '"storage" in node_info["services"]'
   become: true

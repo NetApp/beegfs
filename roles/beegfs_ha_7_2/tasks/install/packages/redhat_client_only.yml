@@ -55,7 +55,7 @@
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     allow_downgrade: true
     name:
-      - "beegfs-client-{{ beegfs_ha_beegfs_version }}*"
-      - "beegfs-helperd-{{ beegfs_ha_beegfs_version }}*"
-      - "beegfs-utils-{{ beegfs_ha_beegfs_version }}*"
+      - "beegfs-client{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}-{{ beegfs_ha_beegfs_version }}*{% endif %}"
+      - "beegfs-helperd{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}-{{ beegfs_ha_beegfs_version }}*{% endif %}"
+      - "beegfs-utils{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}-{{ beegfs_ha_beegfs_version }}*{% endif %}"
   become: true
