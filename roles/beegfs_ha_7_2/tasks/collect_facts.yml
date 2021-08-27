@@ -93,8 +93,6 @@
         {%- endfor -%}
       {%- endfor -%}
       {{- resources -}}
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-
 
 # TODO:  Add length constraint for resources (need to double check maximum length for floating ips...???)
 - name: Check for invalid resource group names
@@ -112,7 +110,6 @@
         {%- endif -%}
       {%- endfor -%}
       {{- invalid_names -}}
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 - name: Check for invalid resource group names
   fail:
@@ -188,13 +185,13 @@
   failed_when: false
   when: inventory_group_vars_stat["stat"]["exists"] == True
 
-- name: Set top-level variables for cluster nodes.
+- name: Set top-level variables.
   set_fact:
     "{{ item['key'] }}": "{{ item['value'] }}"
   loop: "{{ (cluster_group_vars | default({}) | combine(cluster_group_raw_inventory['vars'] | default({}))) | dict2items }}"
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  when: 'item["key"] | regex_search(beegfs_ha_top_level_variable_inclusion_pattern) and not (item["key"] | regex_search(beegfs_ha_top_level_variable_exclusion_pattern))'
   run_once: true
-
+  #when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 # Determine and create resource groups to map volumes.
 - name: Create resource group information in each host inventory.

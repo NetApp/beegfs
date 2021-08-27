@@ -4,6 +4,12 @@ beegfs_ha_ansible_client_group: ha_clients
 beegfs_ha_ansible_storage_group: eseries_storage_systems
 beegfs_ha_cluster_name: hacluster
 
+# Patterns for top-level variables collected from cluster group inventory to be added to each resource inventory.
+#   The resource inventories are generated at the beginning of the role's execution. High-availability requires
+#   resources to be available on multiple hosts these patterns help select what information is used.
+beegfs_ha_top_level_variable_exclusion_pattern: "^ansible.*"
+beegfs_ha_top_level_variable_inclusion_pattern: "^(beegfs|eseries).*"
+
 # THESE MAY ONLY BE NEEDED TO AUTHENTICATE USING THE PCS TOOL. ANSIBLE MAYBE A VIABLE REPLACEMENT FOR THIS TASK.
 beegfs_ha_cluster_username: hacluster
 beegfs_ha_cluster_password: hapassword
