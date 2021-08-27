@@ -4,6 +4,9 @@
 # This is a generic template for BeeGFS HA resource groups. You are seeing this for a resource due to not provided a beegfs service or an invalid one during the
 #   create_inventory_structure.yml playbook runtime. Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
 
+port: <SERVICE_PORT>                        # BeeGFS HA resource service port. Each BeeGFS HA service resource must have a unique port number. The default BeeGFS
+                                            #    service port is 8008 for management, 8005 for metadata, and 8012 for storage.
+
 floating_ips:                               # List of floating IP definitions in the form host_interface:ip_address/cidr_subnet_mask (i.e. eth0:192.168.2.102/24).
   - <INTERFACE:ADDRESS/CIDR_SUBNET_MASK>     #   This information is used to communicate with the BeeGFS management service. Therefore, these definitions must
                                             #   be on the same subnet as beegfs_ha_mgmtd_floating_ip value in group_vars/ha_cluster.yml. When defining a

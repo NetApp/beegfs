@@ -4,6 +4,9 @@
 # This is a template for BeeGFS HA storage resource groups. You are seeing this for a resource due to specifying a storage beegfs service during the
 #   create_inventory_structure.yml playbook runtime. Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
 
+port: <UNIQUE_PORT_NUMBER>                            # BeeGFS HA resource service port. 8012 is the default BeeGFS storage service port number; Each BeeGFS HA
+                                            #   storage service resource must have a unique port number.
+
 floating_ips:                               # List of storage floating IP definitions in the form host_interface:ip_address/cidr_subnet_mask (i.e. {{ iface }}:192.168.1.10/24).
   - <IFACE>:<IP_ADDRESS>/<CIDR_MASK>                     #   This information is used to communicate with the BeeGFS management resource. Therefore, these definitions must
                                             #   be on the same subnet as beegfs_ha_mgmtd_floating_ip value in group_vars/ha_cluster.yml. Any unusable definitions

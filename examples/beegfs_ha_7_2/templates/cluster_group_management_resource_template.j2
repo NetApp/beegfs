@@ -4,6 +4,8 @@
 
 # This is a template for BeeGFS HA management resource groups. Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
 
+port: 8008                                          # BeeGFS HA resource service port. 8008 is the default BeeGFS management service port number.
+
 floating_ips:                                       # List of management floating IP definitions in the form host_interface:ip_address/cidr_subnet_mask.
   - <IFACE>:{{ beegfs_mgmt_ip }}/24                 #   Be sure to include the management IP address with all expected listening interfaces. Any unusable floating IPs
                                                     #   will be ignored which is specially useful when the definitions differ based on the host.
