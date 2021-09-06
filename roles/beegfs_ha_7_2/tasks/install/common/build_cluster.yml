@@ -136,7 +136,7 @@
 - name: Ensure pacemaker and corosync are enabled and started
   systemd:
     state: '{% if pacemaker_authkey["changed"] == True or pacemaker_config["changed"] %}restarted{% else %}started{% endif %}'
-    enabled: true
+    enabled: false
     name: "{{ item }}"
   loop: ["corosync", "pacemaker"]
   when: beegfs_ha_pacemaker_cluster_node == True

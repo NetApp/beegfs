@@ -7,24 +7,24 @@
 {%- set mgmt_volume_mount = mgmt_volume["metadata"]["mount_dir"] ~ mgmt_volume["name"] -%}
 {%- set floating_ips = management_info["floating_ips"] %}
 
-<primitive class="ocf" id="{{ resource_group }}-monitor" provider="eseries" type="beegfs-monitor">
-  <instance_attributes id="{{ resource_group }}-monitor-instance_attributes">
-    <nvpair id="{{ resource_group }}-monitor-instance_attributes-service_group" name="service_group" value="{{ resource_group }}"/>
-    <nvpair id="{{ resource_group }}-monitor-instance_attributes-service_type" name="service_type" value="management"/>
-    <nvpair id="{{ resource_group }}-monitor-instance_attributes-service_name" name="service_name" value="beegfs-mgmtd"/>
-    <nvpair id="{{ resource_group }}-monitor-instance_attributes-service_configuration_mount" name="service_configuration_mount" value="{{ mgmt_volume_mount }}/"/>
-  </instance_attributes>
-  <operations>
-    <op id="{{ resource_group }}-monitor-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_monitor_start_timeout }}"/>
-    <op id="{{ resource_group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_monitor_timeout }}" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
-    <op id="{{ resource_group }}-monitor-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_monitor_stop_timeout }}"/>
-  </operations>
-  <meta_attributes id="{{ resource_group }}-monitor-meta_attributes">
-    <nvpair id="{{ resource_group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="1"/>
-  </meta_attributes>
-</primitive>
-
 <group id="{{ resource_group }}-group">
+  <primitive class="ocf" id="{{ resource_group }}-monitor" provider="eseries" type="beegfs-monitor">
+    <instance_attributes id="{{ resource_group }}-monitor-instance_attributes">
+      <nvpair id="{{ resource_group }}-monitor-instance_attributes-service_group" name="service_group" value="{{ resource_group }}"/>
+      <nvpair id="{{ resource_group }}-monitor-instance_attributes-service_type" name="service_type" value="management"/>
+      <nvpair id="{{ resource_group }}-monitor-instance_attributes-service_name" name="service_name" value="beegfs-mgmtd"/>
+      <nvpair id="{{ resource_group }}-monitor-instance_attributes-service_configuration_mount" name="service_configuration_mount" value="{{ mgmt_volume_mount }}/"/>
+    </instance_attributes>
+    <operations>
+      <op id="{{ resource_group }}-monitor-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_monitor_start_timeout }}"/>
+      <op id="{{ resource_group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_monitor_timeout }}" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
+      <op id="{{ resource_group }}-monitor-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_monitor_stop_timeout }}"/>
+    </operations>
+    <meta_attributes id="{{ resource_group }}-monitor-meta_attributes">
+      <nvpair id="{{ resource_group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="1"/>
+    </meta_attributes>
+  </primitive>
+
   <primitive class="ocf" id="{{ resource_group }}-FS1" provider="heartbeat" type="Filesystem">
     <instance_attributes id="{{ resource_group }}-FS1-instance_attributes">
       <nvpair id="{{ resource_group }}-FS1-instance_attributes-device" name="device" value="{{ mgmt_volume_mount_device }}"/>

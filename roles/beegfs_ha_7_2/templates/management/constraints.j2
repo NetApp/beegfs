@@ -12,10 +12,8 @@
   {%- for group in (resource_group_node_preference.keys() | list) if resource_group_info[group]["beegfs_service"] == service -%}
     {%- for node in resource_group_node_preference[group] | reverse -%}
       {% set priority = loop["index0"] * (beegfs_ha_node_preference_scope_step | int) %}
-  <rsc_location id="location-{{ group }}-monitor-{{ node }}" node="{{ node }}" rsc="{{ group }}-monitor" score="{{ priority }}"/>
-  <rsc_location id="location-{{ group }}-group-{{ node }}" node="{{ node }}" rsc="{{ group }}-group" score="0"/>
+  <rsc_location id="location-{{ group }}-group-{{ node }}" node="{{ node }}" rsc="{{ group }}-group" score="{{ priority }}"/>
     {%- endfor %}
-  <rsc_colocation id="colocation-{{ group }}-group" rsc="{{ group }}-group" with-rsc="{{ group }}-monitor" score="INFINITY"/>
   {% endfor %}
 {% endfor %}
 </constraints>

@@ -409,7 +409,6 @@
     preferred_management_node: "{{ management_group_info['management'][0]['preferred_node_order'][0] }}"
   run_once: true
 
-
 # Determine inventory preferred nodes for each resource group.
 - name: Determine resource group node preferrences.
   set_fact:

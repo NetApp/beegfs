@@ -11,11 +11,11 @@
 
 # Returns whether the resource is active.
 check_resource_service() {
-  if systemctl is-active "$service"; then
+  #if systemctl is-active "$service"; then
+  if systemctl --state=active,running list-units "$service" | grep "$service"; then
     return 0
   fi
 
-  service_status=$(systemctl status "$service")
   ocf_log warn "Resource service is not active!"
   return 1
 }
@@ -23,7 +23,7 @@ check_resource_service() {
 # Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
 get_interfaces() {
   # Determine BeeGFS service network IP interfaces.
-  connInterfacesFile_path=$(grep -E "^connInterfacesFile\s*=.*$" "$conf_path" | cut -d "=" -f 2)
+  connInterfacesFile_path=$(grep "^connInterfacesFile" "$conf_path" | cut -f 2 -d "=")
   if [ -f $connInterfacesFile_path ]; then
     cat $connInterfacesFile_path | while IFS= read -r line; do echo "$line" | cut -d ':' -f 1; done
   fi
@@ -32,7 +32,7 @@ get_interfaces() {
 # Return list containing all the BeeGFS resource's usable IP addresses. *Note that these are filtered by the connNetFilterFile entries.
 get_subnet_ips() {
   # Determine all possible BeeGFS service network IP addresses.
-  connNetFilterFile_path=$(grep "^connNetFilterFile\s*=.*$" "$conf_path" | cut -d "=" -f 2)
+  connNetFilterFile_path=$(grep "^connNetFilterFile" "$conf_path" | cut -f 2 -d "=")
   filter_ips=""
   if [ -f $connNetFilterFile_path ]; then
     for filter in $(cat $connNetFilterFile_path); do
@@ -102,7 +102,7 @@ check_network_connectivity() {
 
 # Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
 check_filesystem_mounts() {
-  mounts=$(grep -E "^storeStorageDirectory\s*=.*$" "$conf_path" | cut -d "=" -f 2 | sed 's/\/data//g' | sed 's/,/ /')
+  mounts=$(grep "^storeStorageDirectory" "$conf_path" | cut -f 2 -d "=" | sed 's/\/data//g' | sed 's/,/ /')
   for mount in $mounts; do
     if ! (mount | grep "$mount" > /dev/null) || ! (ls "$mount" > /dev/null) && ! (df --sync "$mount" > /dev/null); then
       ocf_log warn "Resource mounts are not available!"
@@ -197,25 +197,14 @@ END
 
 # Wait for BeeGFS service to start.
 beegfs_monitor_start() {
-#  if beegfs_monitor_monitor; then
-#    ocf_log warn "Resource is already running."
-#    return $OCF_SUCCESS
-#  fi
-
+  # Don't block this task! If you do then the remaining group resources will not start.
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
-
-  #while ! beegfs_monitor_monitor; do
-#  while ! ls $conf_path; do
-#    ocf_log warn "Waiting for resource to start..."
-#    sleep 1
-#  done
-
-  ocf_log warn "Resource started."
   return $OCF_SUCCESS
 }
 
 # Wait for BeeGFS service to stop.
 beegfs_monitor_stop() {
+  # Don't block this task! If you do then the remaining group resources will not stop.
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
   return $OCF_SUCCESS
 }
@@ -227,24 +216,41 @@ beegfs_monitor_monitor() {
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} monitor
   ha_pseudo_resource_status=$?
   if [ $ha_pseudo_resource_status -ne $OCF_SUCCESS ]; then
+    ocf_log warn "Whoops! ha_pseudo_resource_status: $ha_pseudo_resource_status"
     return $ha_pseudo_resource_status
   fi
-  return $OCF_SUCCESS
 
-#  # Validate BeeGFS service and network connectivity.
-#  total_retries=$(( monitor_timeout / 5 + 1))
-#  attempt=0
-#  while [ $attempt -ne $total_retries ]; do
-#    if check_filesystem_mounts && check_network_connectivity && check_resource_service; then
-#      return $OCF_SUCCESS
-#    fi
-#
-#    ocf_log warn "Resource monitoring failed...Attempt $attempt."
-#    attempt=$(( attempt + 1))
-#    sleep 1
-#  done
-#
-#  return $OCF_ERR_GENERIC
+  # Validate BeeGFS service and network connectivity.
+  #total_attempt=$(( monitor_timeout / 5 + 1))
+  #attempt=0
+  #while [ $attempt -ne $total_attempt ]; do
+  #  #if check_filesystem_mounts && check_network_connectivity && check_resource_service; then
+  #  # Issues: check_resource_service
+  #  if check_filesystem_mounts; then
+  #    return $OCF_SUCCESS
+  #  fi
+  #
+  #  ocf_log warn "Resource monitoring failed...Attempt $attempt."
+  #  sleep $(( attempt * attempt + 1))
+  #  attempt=$(( attempt + 1))
+  #done
+
+  #if check_filesystem_mounts && check_network_connectivity && check_resource_service; then
+  #  return $OCF_SUCCESS
+  #elif check_resource_service; then
+  #  ocf_log warn "Resource monitoring failed but check_resource_service succeeded..."
+  #  return $OCF_SUCCESS
+  #elif check_network_connectivity; then
+  #  ocf_log warn "Resource monitoring failed but check_network_connectivity succeeded..."
+  #  return $OCF_SUCCESS
+  #elif check_filesystem_mounts; then
+  #  ocf_log warn "Resource monitoring failed but check_filesystem_mounts succeeded.."
+  #  return $OCF_SUCCESS
+  #fi
+  #ocf_log warn "Resource monitoring failed..."
+
+  return $OCF_SUCCESS
+  #return $OCF_ERR_GENERIC
 }
 
 # Validate beegfs-monitor requirements
