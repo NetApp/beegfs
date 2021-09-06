@@ -1,0 +1,79 @@
+# Update node_info
+- name: Discover mapped-volume information from associated storage systems.
+  include_role:
+    name: netapp_eseries.host.common
+    tasks_from: host_facts.yml
+  when: eseries_volumes is not defined and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+
+- name: Update node_info structure with host paths.
+  set_fact:
+    node_info: |-
+      {%- set info = node_info -%}
+      {%- for service in info["services"] -%}
+        {%- for resource in info[service] -%}
+          {%- for target_volume in resource["volumes"] -%}
+            {%- for volume in eseries_volumes if target_volume["name"] == volume["name"] -%}
+              {%- if target_volume.update({"path": volume["path"]}) -%}{%- endif -%}
+            {%- endfor -%}
+          {%- endfor -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ info }}
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+
+# Determine resource group information
+- name: Determine resource group information.
+  set_fact:
+    resource_group_info: |-
+      {%- set resource_group_info = {} -%}
+      {%- for host in ansible_play_hosts_all -%}
+        {%- if "node_info" in (hostvars[host].keys() | list) -%}
+          {%- for service in hostvars[host]["node_info"]["services"] -%}
+            {%- for resource_group in hostvars[host]["node_info"][service] -%}
+              {%- if resource_group["resource_group"] not in (resource_group_info.keys() | list) -%}
+                {%- if resource_group_info.update({resource_group["resource_group"]: resource_group}) -%}{%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endfor -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- resource_group_info -}}
+  run_once: true
+
+# Determine management information.
+- name: Determine management group information.
+  set_fact:
+    management_group_info: |-
+      {%- set mgmt_group_info = {} -%}
+
+      {%- for host in ansible_play_hosts_all -%}
+        {%- if "node_info" in (hostvars[host].keys() | list) and "management" in (hostvars[host]["node_info"].keys() | list) -%}
+          {%- if mgmt_group_info.update(hostvars[host]["node_info"]) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- mgmt_group_info -}}
+  run_once: true
+
+- name: Determine preferred management node.
+  set_fact:
+    management_info: "{{ management_group_info['management'][0] }}"
+    preferred_management_node: "{{ management_group_info['management'][0]['preferred_node_order'][0] }}"
+  run_once: true
+
+# Determine inventory preferred nodes for each resource group.
+- name: Determine resource group node preferrences.
+  set_fact:
+    resource_group_node_preference: |-
+      {%- set group_info = {} -%}
+
+      {%- for host in ansible_play_hosts_all if "node_info" in (hostvars[host].keys() | list) -%}
+        {%- for service in hostvars[host]["node_info"]["services"] -%}
+          {%- for entry in hostvars[host]["node_info"][service] -%}
+            {%- if entry["resource_group"] not in (group_info.keys() | list) -%}
+              {%- if group_info.update({entry["resource_group"]: entry["preferred_node_order"]}) -%}{%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- group_info -}}
+  run_once: true

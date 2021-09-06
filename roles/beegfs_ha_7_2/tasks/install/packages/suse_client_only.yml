@@ -1,4 +1,4 @@
-- name: Add BeeGFS ZYPPER repository (SUSE).
+- name: Add BeeGFS ZYPPER repository (SUSE - Client).
   zypper_repository:
     state: present
     name: beegfs
@@ -9,26 +9,40 @@
   when: "'.repo' in beegfs_ha_suse_repository_base_url"
   become: true
 
-- name: Create BeeGFS repo file (SUSE).
+- name: Create BeeGFS repo file (SUSE - Client).
   template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/suse_repo.j2') }}"
     dest: "/etc/zypp/repos.d/beegfs.repo"
   when: "'.repo' not in beegfs_ha_suse_repository_base_url"
   become: true
 
-- name: Ensure NTP is installed (SUSE).
-  zypper:
-    state: latest
-    name: ntp
-  when: beegfs_ha_ntp_enabled | bool == True
-  become: true
+- name: Ensure NTP is installed (SUSE - Client).
+  block:
+    - name: Ensure NTP is installed (SUSE - Client).
+      zypper:
+        state: latest
+        name: ntp
+      become: true
+    - name: Ensure Chrony is uninstalled (SUSE - Client).
+      zypper:
+        state: absent
+        name: chrony
+      become: true
+  when: beegfs_ha_ntp_enabled == True
 
-- name: Ensure Chrony is uninstalled (SUSE).
-  zypper:
-    state: absent
-    name: chrony
-  when: beegfs_ha_ntp_enabled | bool == True
-  become: true
+- name: Ensure Chrony is installed (SUSE - Client).
+  block:
+    - name: Ensure Chrony is installed (SUSE - Client).
+      zypper:
+        state: latest
+        name: chrony
+      become: true
+    - name: Ensure NTP is uninstalled (SUSE - Client).
+      zypper:
+        state: absent
+        name: ntp
+      become: true
+  when: beegfs_ha_chrony_enabled == True
 
 - name: Enable unsupported modules (SUSE - Client).
   replace:

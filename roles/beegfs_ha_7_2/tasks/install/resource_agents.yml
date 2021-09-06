@@ -1,0 +1,13 @@
+- name: Ensure eseries resource agent path exists
+  file:
+    state: directory
+    path: "{{ beegfs_ha_resource_agent_path }}eseries"
+    mode: 0755
+  become: true
+
+- name: Install E-Series BeeGFS HA resource agent for monitoring individual resources.
+  template:
+    src: common/beegfs-monitor
+    dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-monitor"
+    mode: 0755
+  become: true

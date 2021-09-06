@@ -17,7 +17,7 @@
 # --- Section 1.1: [Basic Settings] ---
 #
 
-sysMgmtdHost                  = {{ management_info['resource_group'] }}
+sysMgmtdHost                  = {{ beegfs_ha_cluster_name }}_{{ management_info['resource_group'] }}
 
 
 #
@@ -25,16 +25,16 @@ sysMgmtdHost                  = {{ management_info['resource_group'] }}
 #
 
 connAuthFile                  =
-connClientPortUDP             = {{ client_udp_port | default(beegfs_ha_client_udp_port | default(8004)) }}
-connHelperdPortTCP            = {{ helperd_tcp_port | default(beegfs_ha_helperd_tcp_port | default(8006)) }}
-connMgmtdPortTCP              = {{ management_info['tcp_port'] | default(management_info['port'] | default('8008')) }}
-connMgmtdPortUDP              = {{ management_info['udp_port'] | default(management_info['port'] | default('8008')) }}
+connClientPortUDP             = {{ client_udp_port | default(beegfs_ha_client_udp_port) }}
+connHelperdPortTCP            = {{ helperd_tcp_port | default(beegfs_ha_helperd_tcp_port) }}
+connMgmtdPortTCP              = {{ management_info['tcp_port'] | default(management_info['port'] | default(beegfs_ha_management_tcp_port)) }}
+connMgmtdPortUDP              = {{ management_info['udp_port'] | default(management_info['port'] | default(beegfs_ha_management_udp_port)) }}
 connPortShift                 = 0
 
 connCommRetrySecs             = 600
 connFallbackExpirationSecs    = 900
 connInterfacesFile            = {{ beegfs_ha_client_configuration_directory }}beegfs-client-connInterfaces.conf
-connMaxInternodeNum           = 12
+connMaxInternodeNum           = {{ beegfs_ha_client_maximum_node_connections | default(beegfs_ha_client_maximum_node_connections) }}
 connMaxConcurrentAttempts     = 0
 connNetFilterFile             =
 

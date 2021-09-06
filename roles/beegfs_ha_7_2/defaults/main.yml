@@ -4,11 +4,16 @@ beegfs_ha_ansible_client_group: ha_clients
 beegfs_ha_ansible_storage_group: eseries_storage_systems
 beegfs_ha_cluster_name: hacluster
 
+# Patterns for top-level variables collected from cluster group inventory to be added to each resource inventory.
+#   The resource inventories are generated at the beginning of the role's execution. High-availability requires
+#   resources to be available on multiple hosts these patterns help select what information is used.
+beegfs_ha_top_level_variable_exclusion_pattern: "^ansible.*"
+beegfs_ha_top_level_variable_inclusion_pattern: "^(beegfs|eseries).*"
+
 # THESE MAY ONLY BE NEEDED TO AUTHENTICATE USING THE PCS TOOL. ANSIBLE MAYBE A VIABLE REPLACEMENT FOR THIS TASK.
 beegfs_ha_cluster_username: hacluster
 beegfs_ha_cluster_password: hapassword
 beegfs_ha_cluster_password_sha512_salt: randomSalt
-beegfs_ha_ntp_enabled: true
 beegfs_ha_allow_firewall_high_availability_service: true   # Allow high-availability firewall services.
 beegfs_ha_alert_email_subject: "ClusterNotification"
 beegfs_ha_alert_email_list: []  # List of emails to alert when changes occur.
@@ -20,16 +25,61 @@ beegfs_ha_enable_alerts: true
 beegfs_ha_enable_quota: false
 beegfs_ha_enable_fence: true  # Fencing agents should be used to ensure failed nodes are definitely down.  WARNING! If beegfs_ha_enable_fence is set to false then a fencing agent will not be configured!
 beegfs_ha_enable_fence_action: "off"  # Fence agent will by default shutdown when stoned. Options: off, reboot
+beegfs_ha_pacemaker_cluster_node: true  # Whether node should be a pacemaker cluster node. When set to false the node will be a pacemaker remote node. Note that corosync 2 only supports 32 cluster nodes. (Default: true)
 beegfs_ha_filter_ip_ranges: []
 beegfs_ha_node_preference_scope_step: 200
 beegfs_ha_cluster_resource_defaults:
   resource-stickiness: 15000
+  cluster-ipc-limit: 500
 beegfs_ha_fencing_agents: {}
 beegfs_ha_backup: true
 beegfs_ha_storage_system_hostgroup_prefix: beegfs
-
 beegfs_ha_force_resource_move: true   # Forces node and resource changes to migrate services to preferred nodes.
 
+# BeeGFS pacemaker resource configuration defaults
+beegfs_ha_resource_filesystem_start_timeout:    600s #60s
+beegfs_ha_resource_filesystem_notify_timeout:   600s # 30s
+beegfs_ha_resource_filesystem_monitor_interval:  30s # 30s
+beegfs_ha_resource_filesystem_stop_timeout:     600s # 60s
+
+beegfs_ha_resource_floating_ips_start_timeout:    600s #60s
+beegfs_ha_resource_floating_ips_monitor_timeout:  600s #30s
+beegfs_ha_resource_floating_ips_monitor_interval:  30s #30s
+beegfs_ha_resource_floating_ips_stop_timeout:     600s #60s
+
+beegfs_ha_resource_alert_start_timeout:    600s #60s
+beegfs_ha_resource_alert_monitor_timeout:  600s #30s
+beegfs_ha_resource_alert_monitor_interval:  30s #30s
+beegfs_ha_resource_alert_stop_timeout:     600s #60s
+
+beegfs_ha_resource_management_start_timeout:    600s
+beegfs_ha_resource_management_monitor_interval:  30s #13s
+beegfs_ha_resource_management_stop_timeout:     600s
+
+beegfs_ha_resource_metadata_start_timeout:    600s
+beegfs_ha_resource_metadata_monitor_interval:  30s #13s
+beegfs_ha_resource_metadata_stop_timeout:     600s
+
+beegfs_ha_resource_storage_start_timeout:     600s
+beegfs_ha_resource_storage_monitor_interval:   30s #13s
+beegfs_ha_resource_storage_stop_timeout:      600s
+
+beegfs_ha_resource_monitor_monitor_interval:  60s   # BeeGFS monitoring OCF service monitor interval
+beegfs_ha_resource_monitor_monitor_timeout:   60s   # BeeGFS monitoring OCF service monitor timeout
+beegfs_ha_resource_monitor_start_timeout:    600s   # BeeGFS monitoring OCF service start timeout
+beegfs_ha_resource_monitor_stop_timeout:     600s   # BeeGFS monitoring OCF service stop timeout
+
+# BeeGFS management service defaults
+beegfs_ha_management_tcp_port: 8008
+beegfs_ha_management_udp_port: 8008
+
+# BeeGFS metadata service defaults
+beegfs_ha_metadata_tcp_port: 8005
+beegfs_ha_metadata_udp_port: 8005
+
+# BeeGFS storage service defaults
+beegfs_ha_storage_tcp_port: 8003
+beegfs_ha_storage_udp_port: 8003
 
 # BeeGFS client defaults
 beegfs_ha_client_installed: true           # Whether to install BeeGFS client on the host.
@@ -59,27 +109,78 @@ beegfs_ha_sysctl_entries:
   vm.min_free_kbytes: 262144
   vm.zone_reclaim_mode: 1
 
+# Performance tuning defaults for client settings
+beegfs_ha_client_maximum_node_connections: 128                # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the
+                                                              #   same node. Default: 128
+
+
+# Performance tuning defaults for both metadata and storage service settings
+beegfs_ha_numa: ""                                            # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This
+                                                              #   NUMA policy will be applied whenever and wherever the BeeGFS service resides. This can provide
+                                                              #   significant performance increases by avoiding the cache misses between NUMA nodes.
+
+# Performance tuning defaults for metadata service settings
+beegfs_ha_metadata_maximum_node_connections: 128              # beegfs_meta.conf connMaxInternodeNum value - maximum number of simultaneous connections to the
+                                                              #   same node. Default: 128
+beegfs_ha_metadata_worker_threads: 32                         # beegfs_meta.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows
+                                                              #   the server to handle more client requests in parallel. On dedicated metadata servers, this is
+                                                              #   typically set to a value between four and eight times the number of CPU cores. Note: 0 means use
+                                                              #   twice the number of CPU cores (but at least 4). Default: 32
+beegfs_ha_metadata_file_creation_target_algorithm: roundrobin # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file
+                                                              #   creation. Choices: [randomized, roundrobin, randomrobin, randominternode, randomintranode]
+                                                              #   Default: roundrobin
+
+
+# Performance tuning defaults for storage service settings
+beegfs_ha_storage_maximum_node_connections: 128               # beegfs_storage.conf connMaxInternodeNum value - maximum number of simultaneous connections to the
+                                                              #   same node. Default: 128
+beegfs_ha_storage_incoming_data_event_threads: 2              # The number of threads waiting for incoming data events. Connections with incoming data will be
+                                                              #   handed over to the worker threads for actual message processing. Default: 2
+beegfs_ha_storage_worker_threads: 14                          # beegfs_storage.conf tuneNumWorkers value - number of worker threads. Higher number of workers
+                                                              #   allows the server to handle more client requests in parallel. On dedicated metadata servers,
+                                                              #   this is typically set to a value between four and eight times the number of CPU cores. Note: 0
+                                                              #   means use twice the number of CPU cores (but at least 4). Default: 14
+beegfs_ha_storage_use_aggressive_stream_polling: true         # If set to true, the StreamListener component, which waits for incoming requests, will keep
+                                                              #   actively polling for events instead of sleeping until an event occurs. Active polling will
+                                                              #   reduce latency for processing of incoming requests at the cost of higher CPU usage.
+                                                              #   Default: true
+beegfs_ha_storage_maximum_write_chunk_size: 2048k             # The maximum amount of data that the server should write to the underlying local file system in a
+                                                              #   single operation. Default: 2048k
+beegfs_ha_storage_maximum_read_chunk_size: 2048k              # The maximum amount of data that the server should read to the underlying local file system in a
+                                                              #   single operation. Default: 2048k
+
 
 # NTP configuration defaults
 beegfs_ha_ntp_configuration_file: /etc/ntp.conf
+beegfs_ha_chrony_configuration_file: /etc/chrony.conf
+beegfs_ha_chrony_driftfile_file: /var/lib/chrony/drift
+beegfs_ha_chrony_keyfile_file: /etc/chrony.keys
 beegfs_ha_ntp_server_pools:
-  - "server 0.ubuntu.pool.ntp.org iburst"
-  - "server 1.ubuntu.pool.ntp.org iburst"
-  - "server 2.ubuntu.pool.ntp.org iburst"
-  - "server 3.ubuntu.pool.ntp.org iburst"
+  - "pool pool.ntp.org iburst"
 beegfs_ha_ntp_restricts:
   - 127.0.0.1
   - ::1
 
 
+
+
+# Pacemaker defaults
+beegfs_ha_pacemaker_path: /etc/pacemaker/
+beegfs_ha_pacemaker_authkey_path: /etc/pacemaker/authkey
+beegfs_ha_pacemaker_config_path: /etc/sysconfig/pacemaker
+beegfs_ha_pacemaker_ipc_buffer_bytes: 131072
+
 # Corosync defaults
-corosync_authkey_path: /etc/corosync/authkey
-corosync_conf_path: /etc/corosync/corosync.conf
-corosync_log_path: /var/log/corosync.log
+beegfs_ha_corosync_authkey_path: /etc/corosync/authkey
+beegfs_ha_corosync_conf_path: /etc/corosync/corosync.conf
+beegfs_ha_corosync_log_path: /var/log/corosync.log
 
 
 # Pcs defaults
 beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/
+
+# Resource agent defaults
+beegfs_ha_resource_agent_path: /usr/lib/ocf/resource.d/
 
 
 # Uninstall defaults
@@ -96,12 +197,13 @@ beegfs_ha_uninstall_reboot: false                                   # Whether to
 
 
 # Package version defaults
-beegfs_ha_beegfs_version: 7.2
-beegfs_ha_corosync_version: 2.4
-beegfs_ha_pacemaker_version: 1.1
-beegfs_ha_pcs_version: 0.9
-
-#beegfs_ha_fence_agents_all_version: #TODO: is there a version for this???
+beegfs_ha_beegfs_version:            # beegfs-* 7.2 (Control BeeGFS versioning with the installed repository)
+beegfs_ha_corosync_version:          # corosync 2.4
+beegfs_ha_pacemaker_version:         # pacemaker 1.1
+beegfs_ha_pcs_version:               # pcs 0.9
+beegfs_ha_pacemaker_remote_version:  # pacemaker_remote 1.1
+beegfs_ha_resource_agent_version:    #
+beegfs_ha_fence_agents_all_version:  #TODO: is there a version for this???
 beegfs_ha_force_beegfs_patch_upgrade: false  # Major and master versions must not change; however the patch versions can and this flag will ensure that its the latest version.
 
 # Volume formatting and mounting defaults
@@ -119,7 +221,7 @@ beegfs_ha_service_volume_configuration:
   storage:
     format_type: xfs
     format_options: "-d su=VOLUME_SEGMENT_SIZE_KBk,sw=VOLUME_STRIPE_COUNT -l version=2,su=VOLUME_SEGMENT_SIZE_KBk"
-    mount_options: "sync,noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k,nobarrier"
+    mount_options: "sync,noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k"  # Note that nobarrier does not work on newer versions of XFS (ie. RHEL8)
     mount_dir: /mnt/
 
 

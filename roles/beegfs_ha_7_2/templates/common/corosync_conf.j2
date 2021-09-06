@@ -1,14 +1,16 @@
 totem {
     version: 2
     cluster_name: {{ beegfs_ha_cluster_name }}
-    secauth: off
-    transport: udpu
+    transport: knet
+    crypto_cipher: aes256
+    crypto_hash: sha256
 }
 
 nodelist {
-{% for node in groups[beegfs_ha_ansible_cluster_group] %}
+{% for node in groups[beegfs_ha_ansible_cluster_group] if (hostvars[node]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == True %}
     node {
         ring0_addr: {{ node }}
+        name: {{ node }}
         nodeid: {{ loop["index"] }}
     }
 {% endfor %}
@@ -16,11 +18,11 @@ nodelist {
 
 quorum {
     provider: corosync_votequorum
-    auto_tie_breaker: 1
 }
 
 logging {
     to_logfile: yes
-    logfile: {{ corosync_log_path }}
+    logfile: /var/log/cluster/corosync.log
     to_syslog: yes
+    timestamp: on
 }

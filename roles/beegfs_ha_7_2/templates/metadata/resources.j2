@@ -2,25 +2,45 @@
   {%- for info in hostvars[host]["node_info"]["metadata"] if host in info["preferred_node_order"][0] -%}
     {%- set group = info["resource_group"] -%}
     {%- set volume = info["volumes"][0]["name"] -%}
+    {%- set path = info["volumes"][0]["path"] -%}
     {%- set mount_dir = info["volumes"][0]["metadata"]["mount_dir"] -%}
     {%- set format_type = info["volumes"][0]["metadata"]["format_type"] -%}
     {%- set mount_options = info["volumes"][0]["metadata"]["mount_options"] -%}
     {%- set floating_ips = info["floating_ips"] %}
+
 <group id="{{ group }}-group">
-  <primitive class="ocf" id="{{ group }}-FS" provider="heartbeat" type="Filesystem">
-    <instance_attributes id="{{ group }}-FS-instance_attributes">
-      <nvpair id="{{ group }}-FS-instance_attributes-device" name="device" value="/dev/mapper/{{ volume }}"/>
-      <nvpair id="{{ group }}-FS-instance_attributes-directory" name="directory" value="{{ mount_dir }}{{ volume }}"/>
-      <nvpair id="{{ group }}-FS-instance_attributes-fstype" name="fstype" value="{{ format_type }}"/>
-      <nvpair id="{{ group }}-FS-instance_attributes-options" name="options" value="{{ mount_options }}"/>
+  <primitive class="ocf" id="{{ group }}-monitor" provider="eseries" type="beegfs-monitor">
+    <instance_attributes id="{{ group }}-monitor-instance_attributes">
+      <nvpair id="{{ group }}-monitor-instance_attributes-service_group" name="service_group" value="{{ group }}"/>
+      <nvpair id="{{ group }}-monitor-instance_attributes-service_type" name="service_type" value="metadata"/>
+      <nvpair id="{{ group }}-monitor-instance_attributes-service_name" name="service_name" value="beegfs-meta@{{ volume }}"/>
+      <nvpair id="{{ group }}-monitor-instance_attributes-service_configuration_mount" name="service_configuration_mount" value="{{ mount_dir }}{{ volume }}/"/>
     </instance_attributes>
     <operations>
-      <op id="{{ group }}-FS-monitor-interval-17s" interval="17s" name="monitor"/>
-      <op id="{{ group }}-FS-notify-interval-0s" interval="0s" name="notify" timeout="60s"/>
-      <op id="{{ group }}-FS-start-interval-0s" interval="0s" name="start" timeout="60s"/>
-      <op id="{{ group }}-FS-stop-interval-0s" interval="0s" name="stop" timeout="60s"/>
+      <op id="{{ group }}-monitor-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_monitor_start_timeout }}"/>
+      <op id="{{ group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_monitor_timeout }}" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
+      <op id="{{ group }}-monitor-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_monitor_stop_timeout }}"/>
+    </operations>
+    <meta_attributes id="{{ group }}-monitor-meta_attributes">
+      <nvpair id="{{ group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="1"/>
+    </meta_attributes>
+  </primitive>
+
+  <primitive class="ocf" id="{{ group }}-FS1" provider="heartbeat" type="Filesystem">
+    <instance_attributes id="{{ group }}-FS1-instance_attributes">
+      <nvpair id="{{ group }}-FS1-instance_attributes-device" name="device" value="{{ path }}"/>
+      <nvpair id="{{ group }}-FS1-instance_attributes-directory" name="directory" value="{{ mount_dir }}{{ volume }}"/>
+      <nvpair id="{{ group }}-FS1-instance_attributes-fstype" name="fstype" value="{{ format_type }}"/>
+      <nvpair id="{{ group }}-FS1-instance_attributes-options" name="options" value="{{ mount_options }}"/>
+    </instance_attributes>
+    <operations>
+      <op id="{{ group }}-FS1-monitor" interval="{{ beegfs_ha_resource_filesystem_monitor_interval }}" name="monitor"/>
+      <op id="{{ group }}-FS1-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_filesystem_start_timeout }}"/>
+      <op id="{{ group }}-FS1-notify" interval="0s" name="notify" timeout="{{ beegfs_ha_resource_filesystem_notify_timeout }}"/>
+      <op id="{{ group }}-FS1-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_filesystem_stop_timeout }}"/>
     </operations>
   </primitive>
+
     {%- for floating_ip in floating_ips -%}
       {%- set floating_ip_info = floating_ip.split(":") -%}
       {%- set interface = floating_ip_info[0] -%}
@@ -38,38 +58,39 @@
       <nvpair id="{{ ipaddr_id }}-instance_attributes-nic" name="nic" value="{{ interface }}"/>
     </instance_attributes>
     <operations>
-      <op id="{{ ipaddr_id }}-monitor-interval-10s" interval="10s" name="monitor" timeout="20s"/>
-      <op id="{{ ipaddr_id }}-start-interval-0s" interval="0s" name="start" timeout="20s"/>
-      <op id="{{ ipaddr_id }}-stop-interval-0s" interval="0s" name="stop" timeout="20s"/>
+      <op id="{{ ipaddr_id }}-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_floating_ips_start_timeout }}"/>
+      <op id="{{ ipaddr_id }}-monitor" interval="{{ beegfs_ha_resource_floating_ips_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_floating_ips_monitor_timeout }}"/>
+      <op id="{{ ipaddr_id }}-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_floating_ips_stop_timeout }}"/>
     </operations>
   </primitive>
-    {%- endfor %}
+    {% endfor %}
+
+    {%- if beegfs_ha_enable_alerts == True -%}
+      {%- for email in beegfs_ha_alert_email_list -%}
+        {%- set alert_id = group ~ "-mailto" ~ loop["index"] %}
+   <primitive class="ocf" id="{{ alert_id }}" provider="heartbeat" type="MailTo">
+     <instance_attributes id="{{ alert_id }}-instance_attributes">
+       <nvpair id="{{ alert_id }}-instance_attributes-email" name="email" value="{{ email }}"/>
+       <nvpair id="{{ alert_id }}-instance_attributes-subject" name="subject" value="{{ beegfs_ha_alert_email_subject }}"/>
+     </instance_attributes>
+     <operations>
+       <op id="{{ alert_id }}-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_alert_start_timeout }}"/>
+       <op id="{{ alert_id }}-monitor" interval="{{ beegfs_ha_resource_alert_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_alert_monitor_timeout }}"/>
+       <op id="{{ alert_id }}-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_alert_stop_timeout }}"/>
+     </operations>
+
+   </primitive>
+      {% endfor %}
+    {% endif %}
 
   <primitive class="systemd" id="{{ group }}-service" type="beegfs-meta@{{ volume }}">
     <operations>
-      <op id="{{ group }}-service-monitor-interval-13s" interval="13s" name="monitor"/>
-      <op id="{{ group }}-service-start-interval-0s" interval="0s" name="start" timeout="100"/>
-      <op id="{{ group }}-service-stop-interval-0s" interval="0s" name="stop" timeout="100"/>
+      <op id="{{ group }}-service-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_metadata_start_timeout }}"/>
+      <op id="{{ group }}-service-monitor" interval="{{ beegfs_ha_resource_metadata_monitor_interval }}" name="monitor"/>
+      <op id="{{ group }}-service-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_metadata_stop_timeout }}"/>
     </operations>
   </primitive>
-  {%- if beegfs_ha_enable_alerts == True -%}
-    {%- for email in beegfs_ha_alert_email_list -%}
-      {%- set alert_id = group ~ "-mailto-" ~ loop["index"] %}
-
-  <primitive class="ocf" id="{{ alert_id }}" provider="heartbeat" type="MailTo">
-    <instance_attributes id="{{ alert_id }}-instance_attributes">
-      <nvpair id="{{ alert_id }}-instance_attributes-email" name="email" value="{{ email }}"/>
-      <nvpair id="{{ alert_id }}-instance_attributes-subject" name="subject" value="{{ beegfs_ha_alert_email_subject }}"/>
-    </instance_attributes>
-    <operations>
-      <op id="{{ alert_id }}-monitor-interval-10s" interval="10s" name="monitor" timeout="10s"/>
-      <op id="{{ alert_id }}-start-interval-0s" interval="0s" name="start" timeout="10s"/>
-      <op id="{{ alert_id }}-stop-interval-0s" interval="0s" name="stop" timeout="10s"/>
-    </operations>
-  </primitive>
-    {%- endfor -%}
-  {%- endif %}
-
 </group>
-{% endfor %}
+
+  {% endfor %}
 {% endfor %}

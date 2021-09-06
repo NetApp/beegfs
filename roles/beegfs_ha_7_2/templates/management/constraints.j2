@@ -7,10 +7,13 @@
     {%- endfor -%}
   {%- endfor -%}
 {%- endfor -%}
-{%- for group in (resource_group_node_preference.keys() | list) -%}
-  {%- for node in resource_group_node_preference[group] | reverse -%}
-    {%- set priority = loop["index0"] * beegfs_ha_node_preference_scope_step -%}
-  <rsc_location id="location-{{ group }}-group-{{ node }}-{{ priority }}" node="{{ node }}" rsc="{{ group }}-group" score="{{ priority }}"/>
-  {%- endfor -%}
-{%- endfor -%}
+
+{%- for service in ["management", "metadata", "storage"] -%}
+  {%- for group in (resource_group_node_preference.keys() | list) if resource_group_info[group]["beegfs_service"] == service -%}
+    {%- for node in resource_group_node_preference[group] | reverse -%}
+      {% set priority = loop["index0"] * (beegfs_ha_node_preference_scope_step | int) %}
+  <rsc_location id="location-{{ group }}-group-{{ node }}" node="{{ node }}" rsc="{{ group }}-group" score="{{ priority }}"/>
+    {%- endfor %}
+  {% endfor %}
+{% endfor %}
 </constraints>

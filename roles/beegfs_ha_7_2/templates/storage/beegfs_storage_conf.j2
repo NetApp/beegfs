@@ -28,12 +28,12 @@ storeAllowFirstRunInit       = false
 connAuthFile                 =
 connBacklogTCP               = 128
 connInterfacesFile           = {{ item["volumes"][0]["metadata"]["mount_dir"] }}{{ item["volumes"][0]["name"] }}/storage_config/connInterfacesFile.conf
-connMaxInternodeNum          = 12
+connMaxInternodeNum          = {{ item['beegfs_ha_storage_maximum_node_connections '] | default(beegfs_ha_storage_maximum_node_connections) }}
 
-connMgmtdPortTCP             = {{ management_info["tcp_port"] | default(management_info["port"] | default("8008")) }}
-connMgmtdPortUDP             = {{ management_info["udp_port"] | default(management_info["port"] | default("8008")) }}
-connStoragePortTCP           = {{ item["tcp_port"] | default(item["port"] | default("8005")) }}
-connStoragePortUDP           = {{ item["udp_port"] | default(item["port"] | default("8005")) }}
+connMgmtdPortTCP             = {{ management_info["tcp_port"] | default(management_info["port"] | default(beegfs_ha_management_tcp_port)) }}
+connMgmtdPortUDP             = {{ management_info["udp_port"] | default(management_info["port"] | default(beegfs_ha_management_udp_port)) }}
+connStoragePortTCP           = {{ item["tcp_port"] | default(item["port"] | default(beegfs_ha_storage_tcp_port)) }}
+connStoragePortUDP           = {{ item["udp_port"] | default(item["port"] | default(beegfs_ha_storage_udp_port)) }}
 connPortShift                = 0
 
 connNetFilterFile            = {% if (item["filter_ip_ranges"] | default(beegfs_ha_filter_ip_ranges)) | length > 0 %}{{ item["volumes"][0]["metadata"]["mount_dir"] }}{{ item["volumes"][0]["name"] }}/storage_config/connNetFilterFile.conf{% endif %}
@@ -54,18 +54,18 @@ runDaemonized                = true
 sysResyncSafetyThresholdMins = 10
 sysTargetOfflineTimeoutSecs  = 180
 
-tuneBindToNumaZone           = {{ item['beegfs_numa '] | default('') }}
+tuneBindToNumaZone           = {{ item['beegfs_ha_numa'] | default('') }}
 tuneFileReadAheadSize        = 0m
 tuneFileReadAheadTriggerSize = 4m
-tuneFileReadSize             = 128k
-tuneFileWriteSize            = 128k
+tuneFileReadSize             = {{ item['beegfs_ha_storage_maximum_read_chunk_size'] | default(beegfs_ha_storage_maximum_read_chunk_size) }}
+tuneFileWriteSize            = {{ item['beegfs_ha_storage_maximum_write_chunk_size'] | default(beegfs_ha_storage_maximum_write_chunk_size) }}
 tuneFileWriteSyncSize        = 0m
 
 tuneNumResyncGatherSlaves    = 6
 tuneNumResyncSlaves          = 12
-tuneNumStreamListeners       = 1
-tuneNumWorkers               = 12
-tuneUseAggressiveStreamPoll  = false
+tuneNumStreamListeners       = {{ item['beegfs_ha_storage_incoming_data_event_threads'] | default(beegfs_ha_storage_incoming_data_event_threads) }}
+tuneNumWorkers               = {{ item['beegfs_ha_storage_worker_threads'] | default(beegfs_ha_storage_worker_threads) }}
+tuneUseAggressiveStreamPoll  = {{ item['beegfs_ha_storage_use_aggressive_stream_polling'] | default(beegfs_ha_storage_use_aggressive_stream_polling) }}
 tuneUsePerTargetWorkers      = true
 tuneUsePerUserMsgQueues      = false
 tuneWorkerBufSize            = 4m

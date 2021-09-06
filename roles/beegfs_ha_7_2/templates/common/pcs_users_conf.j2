@@ -4,6 +4,7 @@
     "username": "{{ beegfs_ha_cluster_username }}",
     "token": "{{ host | to_uuid }}",
     "creation_date": "{{ template_run_date }}"
-  }
+  }{% if not loop["last"] %},{% endif %}
+
 {% endfor %}
 ]

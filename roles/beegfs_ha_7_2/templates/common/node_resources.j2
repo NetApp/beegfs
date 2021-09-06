@@ -1,5 +1,5 @@
 <nodes>
-{% for node in groups[beegfs_ha_ansible_cluster_group] %}
-<node id="{{ loop['index'] }}" uname="{{ node }}" type="normal"/>
+{% for node in groups[beegfs_ha_ansible_cluster_group] if (hostvars[node]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == True %}
+<node id="{{ loop['index'] }}" uname="{{ node }}"/>
 {% endfor %}
 </nodes>

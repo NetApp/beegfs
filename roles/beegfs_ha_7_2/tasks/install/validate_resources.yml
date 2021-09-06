@@ -18,6 +18,8 @@
     resources_not_started_retries: "{%- if resources_not_started_retries is not defined -%}1{%- else -%}{{ (resources_not_started_retries | int) + 1}}{%- endif -%}"
   run_once: true
 
+
+# TODO: Do I need to start/stop remote_nodes??? Leaning towards no
 - name: "Attempt to recover resources. [Attempt #{{ resources_not_started }}]."
   block:
     - name: Restart all resource services.
@@ -26,23 +28,25 @@
           systemd:
             state: stopped
             name: pacemaker
-          become: true
+          when: beegfs_ha_pacemaker_cluster_node == True
+
         - name: Stop Corosync.
           systemd:
             state: stopped
             name: corosync
-          become: true
+          when: beegfs_ha_pacemaker_cluster_node == True
 
         - name: Start Corosync.
           systemd:
             state: started
             name: corosync
-          become: true
+          when: beegfs_ha_pacemaker_cluster_node == True
+
         - name: Start Pacemaker.
           systemd:
             state: started
             name: pacemaker
-          become: true
+          when: beegfs_ha_pacemaker_cluster_node == True
 
         - name: Clean up all resources on all node.
           command: crm_resource --cleanup
@@ -50,15 +54,22 @@
           delay: 1
           retries: 15
           until: crm_resource_cleanup['rc'] == 0
+          delegate_to: "{{ preferred_management_node }}"
           run_once: true
-          become: true
       when: 1 < (resources_not_started_retries | int) < 3 # Second attempt
+      become: true
 
     - name: Wait and re-validate resources have started.
       block:
-        - name: Wait 30 seconds.
-          pause:
-            seconds: 30
+        - name: Wait for cluster resource to be in a stable state before continuing.
+          command:
+            cmd: "crm_resource --wait"
+          changed_when: false
+          failed_when: false
+          delegate_to: "{{ preferred_management_node }}"
+          run_once: true
+          become: true
+
         - name: Retry until resources are all started
           include_tasks: install/validate_resources.yml
       when: (resources_not_started_retries | int) < 3     # Both attempts

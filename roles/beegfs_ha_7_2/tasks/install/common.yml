@@ -3,12 +3,14 @@
 
 - name: Ensure the ntp is configured.
   include_tasks: common/ntp.yml
+  when: beegfs_ha_ntp_enabled == true or beegfs_ha_chrony_enabled == true
 
 - name: Ensure /etc/hosts file is populated with cluster nodes and floating IP addresses.
   include_tasks: common/hosts.yml
 
-- name: Ensure the cluster is built.
+- name: Ensure the cluster is built (Cluster nodes only).
   include_tasks: common/build_cluster.yml
 
-- name: "Ensure cluster configuration tool ({{ beegfs_ha_management_tool }}) is configured."
+- name: "Ensure cluster configuration tool ({{ beegfs_ha_management_tool }}) is configured (Cluster and remote nodes)."
   include_tasks: "common/{{ beegfs_ha_management_tool }}.yml"
+  when: beegfs_ha_management_tool is defined and beegfs_ha_management_tool

@@ -1,0 +1,51 @@
+- name: Ensure the required HA packages are installed (RedHat/CentOS - Remote Node).
+  yum:
+    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    allow_downgrade: true
+    name:
+      - "pacemaker-remote{% if beegfs_ha_pacemaker_remote_version is defined and beegfs_ha_pacemaker_remote_version %}-{{ beegfs_ha_pacemaker_remote_version }}*{% endif %}"
+      - "resource-agents{% if beegfs_ha_resource_agent_version is defined and beegfs_ha_resource_agent_version -%}-{{ beegfs_ha_resource_agent_version }}*{% endif %}"
+  become: true
+
+- name: Ensure the required HA packages are installed (RedHat/CentOS - Remote Node).
+  yum:
+    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    allow_downgrade: true
+    name: "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version -%}-{{ beegfs_ha_pcs_version }}*{% endif %}"
+  when: beegfs_ha_management_tool is defined and beegfs_ha_management_tool
+  become: true
+
+- name: Ensure mailx is installed for alerts (RedHat/CentOS - Remote Node).
+  yum:
+    state: present
+    name: mailx
+  when: beegfs_ha_enable_alerts == True
+  become: true
+
+- name: Ensure NTP is installed (RedHat/CentOS - Remote Node).
+  block:
+    - name: Ensure NTP is installed (RedHat/CentOS - Remote Node).
+      yum:
+        state: latest
+        name: ntp
+      become: true
+    - name: Ensure Chrony is uninstalled (RedHat/CentOS - Remote Node).
+      yum:
+        state: absent
+        name: chrony
+      become: true
+  when: beegfs_ha_ntp_enabled == True
+
+- name: Ensure Chrony is installed (RedHat/CentOS - Remote Node).
+  block:
+    - name: Ensure Chrony is installed (RedHat/CentOS - Remote Node).
+      yum:
+        state: latest
+        name: chrony
+      become: true
+    - name: Ensure NTP is uninstalled (RedHat/CentOS - Remote Node).
+      yum:
+        state: absent
+        name: ntp
+      become: true
+  when: beegfs_ha_chrony_enabled == True

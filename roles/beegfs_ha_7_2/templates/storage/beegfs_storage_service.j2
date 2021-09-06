@@ -7,8 +7,9 @@ Requires=network-online.target
 After=network-online.target beegfs-mgmtd.service openibd.service openib.service rdma.service opensmd.service opensm.service zfs.target
 
 [Service]
-ExecStart=/opt/beegfs/sbin/beegfs-storage cfgFile=/mnt/%I/storage_config/beegfs-storage.conf runDaemonized=false
+ExecStart=/bin/bash -c 'numa_num=$$(grep "^tuneBindToNumaZone" /mnt/%I/storage_config/beegfs-storage.conf | sed "s/ //g" | cut -f 2 -d "="); if [ -n $$numa_num ]; then exec /usr/bin/numactl --cpunodebind=$$numa_num --membind=$$numa_num /opt/beegfs/sbin/beegfs-storage cfgFile=/mnt/%I/storage_config/beegfs-storage.conf runDaemonized=false; else /opt/beegfs/sbin/beegfs-storage cfgFile=/mnt/%I/storage_config/beegfs-storage.conf runDaemonized=false; fi'
 Type=simple
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
+

@@ -1,3 +1,18 @@
+- name: Validate storage system and host names.
+  fail:
+    msg: "Invalid inventory host names! Hosts [{{ invalid_hosts | join(', ') }}]."
+  when: invalid_hosts | length > 0
+  run_once: true
+  vars:
+    invalid_hosts: |-
+      {%- set invalid_hosts = [] -%}
+      {%- for host in ansible_play_hosts_all -%}
+        {%- if "-" in host -%}
+          {%- if invalid_hosts.append(host) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- invalid_hosts -}}
+
 - name: Gather minimally required facts for BeeGFS HA cluster and client nodes.
   setup:
     gather_subset: min
@@ -7,6 +22,20 @@
   include_vars: "{{ ansible_os_family | lower }}.yml"
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group]
 
+# Include all distribution-version variables that are prefixed with default_
+- name: Include all distribution-version variables that are prefixed with default_
+  block:
+    - name: Include distribution-version specific variables (Always).
+      include_vars:
+        name: unmerged_distribution_inventory
+        file: "{{ ansible_distribution | lower }}_{{ ansible_distribution_major_version }}.yml"
+
+    - name: Set distribution-version specific variables at the top lay if they are not defined
+      set_fact:
+        "{{ item[8:] }}": "{{ unmerged_distribution_inventory[item] }}"
+      when: item is match("^default_") and hostvars[inventory_hostname][item[8:]] is not defined
+      loop: "{{ unmerged_distribution_inventory.keys() | list }}"
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group]
 
 # The following section builds up inventory for each resource group and appends it to each host's inventory inside a variable with the resource's name.
 # Determine and build inventory contents.
@@ -65,6 +94,7 @@
       {%- endfor -%}
       {{- resources -}}
 
+# TODO:  Add length constraint for resources (need to double check maximum length for floating ips...???)
 - name: Check for invalid resource group names
   set_fact:
     invalid_resource_group_names: |-
@@ -159,8 +189,9 @@
   set_fact:
     "{{ item['key'] }}": "{{ item['value'] }}"
   loop: "{{ (cluster_group_vars | default({}) | combine(cluster_group_raw_inventory['vars'] | default({}))) | dict2items }}"
+  when: 'item["key"] | regex_search(beegfs_ha_top_level_variable_inclusion_pattern) and not (item["key"] | regex_search(beegfs_ha_top_level_variable_exclusion_pattern))'
   run_once: true
-
+  #when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 # Determine and create resource groups to map volumes.
 - name: Create resource group information in each host inventory.
@@ -233,7 +264,7 @@
       {{- final_hostgroups -}}
   run_once: true
 
-
+# TODO: Merge groups that contain shared hosts (this would be important if groups shared volume group mappings; otherwise groups are created then hosts are removed...mappings fail)
 # These dynamic hosts groups are used to map volumes on the E-Series storage systems.
 - name: Create new inventory hostgroups.
   add_host:
@@ -264,7 +295,7 @@
         {#- Aggregate HA resource group information -#}
         {%- set resource = hostvars[inventory_hostname][group] -%}
         {%- set resource_group = group -%}
-        {%- if scratch.update({"volume_index": 0, "group_index": group.split("_")[-1]}) -%}{%- endif -%}
+        {%- if scratch.update({"volume_index": 1, "group_index": group.split("_")[-1]}) -%}{%- endif -%}
         {%- if resource.update({"resource_group": group, "preferred_node_order": resource_preferred_node_order[group]}) -%}{%- endif -%}
 
         {#- Determine volume hostgroup mapping -#}
@@ -290,13 +321,21 @@
           {%- endif -%}
 
           {%- for storage_pool in resource["beegfs_targets"][target]["eseries_storage_pool_configuration"] -%}
+            {%- if scratch.update({"volume_metadata": beegfs_ha_service_volume_configuration[resource["beegfs_service"]]}) -%}{%- endif -%}
+            {%- if "volume_metadata" in (storage_pool.keys() | list) -%}
+              {%- if scratch.update({"volume_metadata": storage_pool["volume_metadata"]}) -%}{%- endif -%}
+            {%- endif -%}
+
             {%- if "name" not in (storage_pool.keys() | list) -%}
               {%- if storage_pool.update({"name": resource_group ~ "_" ~ (loop.index | string)}) -%}{%- endif -%}
             {%- endif -%}
 
             {%- for volume in storage_pool["volumes"] -%}
+              {%- if "volume_metadata" in (volume.keys() | list) -%}
+                {%- if scratch.update({"volume_metadata": volume["volume_metadata"]}) -%}{%- endif -%}
+              {%- endif -%}
 
-              {%- set volume_metadata = beegfs_ha_service_volume_configuration[resource["beegfs_service"]] -%}
+              {%- set volume_metadata = scratch["volume_metadata"] -%}
               {%- if volume_metadata.update({"group": group,
                                              "vol_num": scratch["volume_index"],
                                              "service": resource["beegfs_service"]}) -%}{%- endif -%}
@@ -331,6 +370,25 @@
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 
+# Determine resource group information
+- name: Determine resource group information.
+  set_fact:
+    resource_group_info: |-
+      {%- set resource_group_info = {} -%}
+      {%- for host in ansible_play_hosts_all -%}
+        {%- if "node_info" in (hostvars[host].keys() | list) -%}
+          {%- for service in hostvars[host]["node_info"]["services"] -%}
+            {%- for resource_group in hostvars[host]["node_info"][service] -%}
+              {%- if resource_group["resource_group"] not in (resource_group_info.keys() | list) -%}
+                {%- if resource_group_info.update({resource_group["resource_group"]: resource_group}) -%}{%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endfor -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- resource_group_info -}}
+  run_once: true
+
 # Determine management information.
 - name: Determine management group information.
   set_fact:
@@ -350,7 +408,6 @@
     management_info: "{{ management_group_info['management'][0] }}"
     preferred_management_node: "{{ management_group_info['management'][0]['preferred_node_order'][0] }}"
   run_once: true
-
 
 # Determine inventory preferred nodes for each resource group.
 - name: Determine resource group node preferrences.

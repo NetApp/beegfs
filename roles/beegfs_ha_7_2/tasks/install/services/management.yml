@@ -5,13 +5,13 @@
     resource_group: "{{ management_info['resource_group'] }}"
     floating_ips: "{{ management_info['floating_ips'] }}"
     filter_ip_ranges: "{{ management_info['filter_ip_ranges'] | default(beegfs_ha_filter_ip_ranges) }}"
-    mgmt_tcp_port: "{{ management_info['tcp_port'] | default(management_info['port'] | default('8008')) }}"
-    mgmt_udp_port: "{{ management_info['udp_port'] | default(management_info['port'] | default('8008')) }}"
+    mgmt_tcp_port: "{{ management_info['tcp_port'] | default(management_info['port'] | default(beegfs_ha_management_tcp_port)) }}"
+    mgmt_udp_port: "{{ management_info['udp_port'] | default(management_info['port'] | default(beegfs_ha_management_udp_port)) }}"
 
 - name: Select details about the management volume.
   set_fact:
     mgmt_volume_name: "{{ mgmt_volume['name'] }}"
-    mgmt_volume_mount_device: "/dev/mapper/{{ mgmt_volume['name'] }}"
+    mgmt_volume_mount_device: "{{ mgmt_volume['path'] }}"
     mgmt_volume_format_type: "{{ mgmt_volume['metadata']['format_type'] }}"
     mgmt_volume_mount_options: "{{ mgmt_volume['metadata']['mount_options'] }}"
     mgmt_volume_mount: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}"
@@ -38,15 +38,13 @@
         warn: false
       changed_when: false
       register: current_mounted_volumes
-      become: true
 
     - name: Mount management volume.
       command:
-        cmd: "mount -t {{ mgmt_volume_format_type }} -o {{ mgmt_volume_mount_options }} /dev/mapper/{{ mgmt_volume_name }} {{ mgmt_volume_mount }}"
+        cmd: "mount -t {{ mgmt_volume_format_type }} -o {{ mgmt_volume_mount_options }} {{ mgmt_volume_mount_device }} {{ mgmt_volume_mount }}"
         warn: false
       register: management_volume_mount
-      when: volume_mounted | bool == False
-      become: true
+      when: volume_mounted == False
       vars:
         volume_mounted: |-
           {%- set scratch = {"mounted": False} -%}
@@ -55,12 +53,11 @@
           {%- endfor -%}
           {{- scratch["mounted"] -}}
 
-    - name: Create directory structure is configured on management configuration volume.
+    - name: Esure directory structure is configured on management configuration volume.
       file:
         state: directory
         path: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}/{{ item }}"
       loop: ["data", "mgmt_config"]
-      become: true
 
     - name: Generate management connInterfacesFile.conf file.
       template:
@@ -68,7 +65,6 @@
         dest: "{{ mgmt_config_path }}connInterfacesFile.conf"
       loop: "{{ node_info['management'] }}"
       register: connInterfacesFile_conf
-      become: true
 
     - name: Generate management connNetFilterFile.conf file.
       template:
@@ -76,14 +72,12 @@
         dest: "{{ mgmt_config_path }}connNetFilterFile.conf"
       loop: "{{ node_info['management'] }}"
       register: connNetFilterFile_conf
-      become: true
 
     - name: Ensure beegfs-mgmtd.conf file is configured.
       template:
         src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'management/beegfs_mgmtd_conf.j2') }}"
         dest: "{{ mgmt_config_path }}beegfs-mgmtd.conf"
       register: beegfs_mgmtd_conf
-      become: true
 
     - name: Initialize management storage directory for beegfs-mgmtd server daemon and update the beegfs-mgmtd config file.
       command:
@@ -91,13 +85,14 @@
       register: beegfs_setup_mgmtd
       failed_when: "beegfs_setup_mgmtd['rc'] != 0 and 'ERROR: Storage directory is not empty.' not in beegfs_setup_mgmtd['stdout']"
       changed_when: "'ERROR: Storage directory is not empty.' not in beegfs_setup_mgmtd['stdout']"
-      become: true
 
     - name: Unmount management volume.
       command:
         cmd: "umount {{ mgmt_volume_mount }}"
-      when: management_volume_mount['changed'] | bool == True
+      when: management_volume_mount['changed'] == True
+      ignore_errors: true
   when: inventory_hostname == preferred_management_node
+  become: true
 
 # Update beegfs-mgmtd.service to point to beegfs-mgmtd.conf.
 - name: Override the default beegfs-mgmtd.service file.
