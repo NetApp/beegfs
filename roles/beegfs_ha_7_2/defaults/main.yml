@@ -37,37 +37,37 @@ beegfs_ha_storage_system_hostgroup_prefix: beegfs
 beegfs_ha_force_resource_move: true   # Forces node and resource changes to migrate services to preferred nodes.
 
 # BeeGFS pacemaker resource configuration defaults
-beegfs_ha_resource_filesystem_start_timeout:    600s #60s
-beegfs_ha_resource_filesystem_notify_timeout:   600s # 30s
-beegfs_ha_resource_filesystem_monitor_interval:  30s # 30s
-beegfs_ha_resource_filesystem_stop_timeout:     600s # 60s
+beegfs_ha_resource_filesystem_start_timeout:    3600s #60s
+beegfs_ha_resource_filesystem_notify_timeout:   3600s # 30s
+beegfs_ha_resource_filesystem_monitor_interval:  120s # 30s
+beegfs_ha_resource_filesystem_stop_timeout:     3600s # 60s
 
-beegfs_ha_resource_floating_ips_start_timeout:    600s #60s
-beegfs_ha_resource_floating_ips_monitor_timeout:  600s #30s
-beegfs_ha_resource_floating_ips_monitor_interval:  30s #30s
-beegfs_ha_resource_floating_ips_stop_timeout:     600s #60s
+beegfs_ha_resource_floating_ips_start_timeout:    3600s #60s
+beegfs_ha_resource_floating_ips_monitor_timeout:  3600s #30s
+beegfs_ha_resource_floating_ips_monitor_interval:  120s #30s
+beegfs_ha_resource_floating_ips_stop_timeout:     3600s #60s
 
-beegfs_ha_resource_alert_start_timeout:    600s #60s
-beegfs_ha_resource_alert_monitor_timeout:  600s #30s
-beegfs_ha_resource_alert_monitor_interval:  30s #30s
-beegfs_ha_resource_alert_stop_timeout:     600s #60s
+beegfs_ha_resource_alert_start_timeout:    3600s #60s
+beegfs_ha_resource_alert_monitor_timeout:  3600s #30s
+beegfs_ha_resource_alert_monitor_interval:  300s #30s
+beegfs_ha_resource_alert_stop_timeout:     3600s #60s
 
-beegfs_ha_resource_management_start_timeout:    600s
-beegfs_ha_resource_management_monitor_interval:  30s #13s
-beegfs_ha_resource_management_stop_timeout:     600s
+beegfs_ha_resource_management_start_timeout:    3600s
+beegfs_ha_resource_management_monitor_interval:  120s #13s
+beegfs_ha_resource_management_stop_timeout:     3600s
 
-beegfs_ha_resource_metadata_start_timeout:    600s
-beegfs_ha_resource_metadata_monitor_interval:  30s #13s
-beegfs_ha_resource_metadata_stop_timeout:     600s
+beegfs_ha_resource_metadata_start_timeout:    3600s
+beegfs_ha_resource_metadata_monitor_interval:  120s #13s
+beegfs_ha_resource_metadata_stop_timeout:     3600s
 
-beegfs_ha_resource_storage_start_timeout:     600s
-beegfs_ha_resource_storage_monitor_interval:   30s #13s
-beegfs_ha_resource_storage_stop_timeout:      600s
+beegfs_ha_resource_storage_start_timeout:     3600s
+beegfs_ha_resource_storage_monitor_interval:   120s #13s
+beegfs_ha_resource_storage_stop_timeout:      3600s
 
-beegfs_ha_resource_monitor_monitor_interval:  60s   # BeeGFS monitoring OCF service monitor interval
-beegfs_ha_resource_monitor_monitor_timeout:   60s   # BeeGFS monitoring OCF service monitor timeout
-beegfs_ha_resource_monitor_start_timeout:    600s   # BeeGFS monitoring OCF service start timeout
-beegfs_ha_resource_monitor_stop_timeout:     600s   # BeeGFS monitoring OCF service stop timeout
+beegfs_ha_resource_monitor_monitor_interval:  120s   # BeeGFS monitoring OCF service monitor interval
+beegfs_ha_resource_monitor_monitor_timeout:   600s   # BeeGFS monitoring OCF service monitor timeout
+beegfs_ha_resource_monitor_start_timeout:    3600s   # BeeGFS monitoring OCF service start timeout
+beegfs_ha_resource_monitor_stop_timeout:     3600s   # BeeGFS monitoring OCF service stop timeout
 
 # BeeGFS management service defaults
 beegfs_ha_management_tcp_port: 8008

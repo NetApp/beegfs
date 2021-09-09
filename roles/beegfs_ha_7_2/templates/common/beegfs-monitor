@@ -11,8 +11,7 @@
 
 # Returns whether the resource is active.
 check_resource_service() {
-  #if systemctl is-active "$service"; then
-  if systemctl --state=active,running list-units "$service" | grep "$service"; then
+  if systemctl is-active "$service"; then
     return 0
   fi
 
@@ -66,7 +65,7 @@ check_network_connectivity() {
   ip_monitor_stdout=$(timeout $monitor_timeout ip monitor)
   for interface in $interfaces; do
     if echo $ip_monitor_stdout | grep "$interface.*REACHABLE"; then
-      return $OCF_SUCCESS
+      return 0
     fi
   done
 
@@ -90,14 +89,19 @@ check_network_connectivity() {
   for _ in $(seq 0 $ping_count); do
     if grep "0" /tmp/~beegfs-monitor-$group-ping_interface_results > /dev/null; then
       rm -f /tmp/~beegfs-monitor-$group-ping_interface_results
-      return $OCF_SUCCESS
+      return 0
     fi
     sleep $ping_timeout
   done
 
   ocf_log warn "Resource interfaces are not reachable!"
+  for interface in $interfaces; do
+    ocf_log warn "$interface Neighbors: $(ip neigh show dev $interface | grep -E "(REACHABLE|STALE)" | sort '-t ' -k 4 | cut -d ' ' -f 1 | head -n $ping_max_count)"
+  done
   rm -f /tmp/~beegfs-monitor-$group-ping_interface_results
-  return $OCF_ERR_GENERIC
+
+  return 0
+  #return 1
 }
 
 # Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
@@ -106,10 +110,12 @@ check_filesystem_mounts() {
   for mount in $mounts; do
     if ! (mount | grep "$mount" > /dev/null) || ! (ls "$mount" > /dev/null) && ! (df --sync "$mount" > /dev/null); then
       ocf_log warn "Resource mounts are not available!"
-      return $OCF_ERR_GENERIC
+
+      return 0
+      #return 1
     fi
   done
-  return $OCF_SUCCESS
+  return 0
 }
 
 ###############################################################################
@@ -130,6 +136,7 @@ Parameters:
 
 * BeeGFS resource group should be co-located with this monitoring service. Where beegfs-monitor goes so does the
   resource group; this allows the group to be fenced when monitoring fails to return successfully.
+
 END
 }
 
@@ -195,10 +202,16 @@ beegfs_monitor_meta_data() {
 END
 }
 
+
+# Attribute Definitions:
+#   1) beegfs-monitor has started and is waiting for BeeGFS HA resource to start
+#   2) BeeGFS HA resource has completely started
+
 # Wait for BeeGFS service to start.
 beegfs_monitor_start() {
   # Don't block this task! If you do then the remaining group resources will not start.
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
+  attrd_updater --name="$group-beegfs-monitor" --update="1"
   return $OCF_SUCCESS
 }
 
@@ -206,6 +219,7 @@ beegfs_monitor_start() {
 beegfs_monitor_stop() {
   # Don't block this task! If you do then the remaining group resources will not stop.
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
+  attrd_updater --name="$group-beegfs-monitor" --delete
   return $OCF_SUCCESS
 }
 
@@ -216,39 +230,34 @@ beegfs_monitor_monitor() {
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} monitor
   ha_pseudo_resource_status=$?
   if [ $ha_pseudo_resource_status -ne $OCF_SUCCESS ]; then
-    ocf_log warn "Whoops! ha_pseudo_resource_status: $ha_pseudo_resource_status"
-    return $ha_pseudo_resource_status
+    beegfs_monitor_start
   fi
 
-  # Validate BeeGFS service and network connectivity.
-  #total_attempt=$(( monitor_timeout / 5 + 1))
-  #attempt=0
-  #while [ $attempt -ne $total_attempt ]; do
-  #  #if check_filesystem_mounts && check_network_connectivity && check_resource_service; then
-  #  # Issues: check_resource_service
-  #  if check_filesystem_mounts; then
-  #    return $OCF_SUCCESS
-  #  fi
-  #
-  #  ocf_log warn "Resource monitoring failed...Attempt $attempt."
-  #  sleep $(( attempt * attempt + 1))
-  #  attempt=$(( attempt + 1))
-  #done
+  resource_attribute=$(attrd_updater --name="$group-beegfs-monitor" --query | awk '{ sub(/.*value="/, ""); sub(/"/, ""); print $0}')
+  total_attempt=$(( monitor_timeout / 5 + 1))
 
-  #if check_filesystem_mounts && check_network_connectivity && check_resource_service; then
-  #  return $OCF_SUCCESS
-  #elif check_resource_service; then
-  #  ocf_log warn "Resource monitoring failed but check_resource_service succeeded..."
-  #  return $OCF_SUCCESS
-  #elif check_network_connectivity; then
-  #  ocf_log warn "Resource monitoring failed but check_network_connectivity succeeded..."
-  #  return $OCF_SUCCESS
-  #elif check_filesystem_mounts; then
-  #  ocf_log warn "Resource monitoring failed but check_filesystem_mounts succeeded.."
-  #  return $OCF_SUCCESS
-  #fi
-  #ocf_log warn "Resource monitoring failed..."
+  attempt=0
+  while [ $attempt -ne $total_attempt ]; do
+    case $resource_attribute in
+      1) # Evaluate whether monitored resource has started systemd service (management, metadata or storage).
+        if check_resource_service; then
+          ocf_log info "$group-beegfs-monitor resource service is active."
+          attrd_updater --name="$group-beegfs-monitor" --update="2"
+        fi
+        return $OCF_SUCCESS
+        ;;
 
+      2) # Validate BeeGFS service and network connectivity.
+        if check_resource_service; then  # && check_filesystem_mounts && check_network_connectivity; then
+          return $OCF_SUCCESS
+        fi
+    esac
+
+    sleep $(( attempt * attempt + 1))
+    attempt=$(( attempt + 1))
+  done
+
+  ocf_log warn "$group-beegfs-monitor resource would have failed!"
   return $OCF_SUCCESS
   #return $OCF_ERR_GENERIC
 }
