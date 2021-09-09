@@ -56,6 +56,7 @@
       <nvpair id="{{ ipaddr_id }}-instance_attributes-iflabel" name="iflabel" value="{{ iflabel }}"/>
       <nvpair id="{{ ipaddr_id }}-instance_attributes-ip" name="ip" value="{{ address }}"/>
       <nvpair id="{{ ipaddr_id }}-instance_attributes-nic" name="nic" value="{{ interface }}"/>
+      <nvpair id="{{ ipaddr_id }}-instance_attributes-arp_sender" name="arp_sender" value="send_arp"/>
     </instance_attributes>
     <operations>
       <op id="{{ ipaddr_id }}-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_floating_ips_start_timeout }}"/>
