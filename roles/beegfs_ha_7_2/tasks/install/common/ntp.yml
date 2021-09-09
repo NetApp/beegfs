@@ -8,7 +8,7 @@
       become: true
 
     - name: Ensure NTP service is running.
-      systemd:
+      ansible.builtin.systemd:
         name: "{{ beegfs_ha_ntp_service }}"
         state: "{%- if beegfs_ha_ntp_conf['changed'] %}restarted{%- else %}started{%- endif %}"
         daemon-reload: true
@@ -25,7 +25,7 @@
       register: beegfs_ha_chrony_conf
 
     - name: Ensure Chrony service is running.
-      systemd:
+      ansible.builtin.systemd:
         name: chronyd.service
         state: "{%- if beegfs_ha_chrony_conf['changed'] %}restarted{%- else %}started{%- endif %}"
         daemon-reload: true

@@ -32,7 +32,7 @@
     cluster_resources: "{{ cluster_resources }}</resources>"
 
 - name: Query pacemaker resources.
-  command:
+  ansible.builtin.command:
     cmd: "cibadmin --query --scope resources"
   changed_when: false
   register: resources_query
@@ -54,17 +54,17 @@
       become: true
 
     - name: Remove existing constraints.
-      command:
+      ansible.builtin.command:
         cmd: "cibadmin --replace --scope constraints --xml-text '<constraints/>'"
       become: true
 
     - name: Remove existing resources.
-      command:
+      ansible.builtin.command:
         cmd: "cibadmin --replace --scope resources --xml-text '<resources/>'"
       become: true
 
     - name: Update pacemaker resources.
-      command:
+      ansible.builtin.command:
         cmd: "cibadmin --replace --scope resources --xml-file /tmp/~tmp_beegfs_ha_cluster_resources.xml"
       become: true
   when: resources_change_required

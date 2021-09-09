@@ -6,12 +6,12 @@
   become: true
 
 - name: Reload udev rules (Storage/Metadata).
-  command: udevadm control --reload
+  ansible.builtin.command: udevadm control --reload
   when: beegfs_ha_udev_rule_result['changed'] == True
   become: true
 
 - name: Trigger updated udev rules (Storage/Metadata).
-  command: udevadm trigger
+  ansible.builtin.command: udevadm trigger
   when: beegfs_ha_udev_rule_result['changed'] == True
   become: true
 

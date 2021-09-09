@@ -2,14 +2,14 @@
 # TODO:   If not installed or not running use the preferred node.
 
 - name: Create mount point directory for each metadata volume.
-  file:
+  ansible.builtin.file:
     state: directory
     path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}"
   loop: "{{ node_info['metadata'] }}"
   become: true
 
 - name: Retrieve currently mounted volumes on the preferred host.
-  command:
+  ansible.builtin.command:
     cmd: mount
     warn: false
   changed_when: false
@@ -17,7 +17,7 @@
   become: true
 
 - name: Ensure the metadata volumes are mounted on the preferred hosts.
-  command:
+  ansible.builtin.command:
     cmd: "mount -t {{ item['volumes'][0]['metadata']['format_type'] }} -o {{ item['volumes'][0]['metadata']['mount_options'] }}
                    {{ item['volumes'][0]['path'] }} {{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}"
     warn: false
@@ -37,7 +37,7 @@
       {{- volumes -}}
 
 - name: Create data directory for metadata service.
-  file:
+  ansible.builtin.file:
     state: directory
     path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/data"
   loop: "{{ node_info['metadata'] }}"
@@ -45,7 +45,7 @@
   become: true
 
 - name: Create metadata_config directory for metadata service.
-  file:
+  ansible.builtin.file:
     state: directory
     path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config"
   loop: "{{ node_info['metadata'] }}"
@@ -79,7 +79,7 @@
   become: true
 
 - name: Initialize management storage directory for beegfs-meta server daemon and update the beegfs-meta config file.
-  command:
+  ansible.builtin.command:
     cmd: "/opt/beegfs/sbin/beegfs-setup-meta -C
           -p {{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/data
           -s {{ item['node_string_id'].split('_')[-1] | int | round(0,'floor') | int | string }}
@@ -93,7 +93,7 @@
   become: true
 
 - name: Unmount metadata volume.
-  command:
+  ansible.builtin.command:
     cmd: "umount {{ item['item']['volumes'][0]['metadata']['mount_dir'] }}{{ item['item']['volumes'][0]['name'] }}"
   loop: "{{ metadata_volume_mount['results'] }}"
   ignore_errors: true
@@ -109,7 +109,7 @@
   become: true
 
 - name: Reload systemctl daemons.
-  systemd:
+  ansible.builtin.systemd:
     name: "beegfs-meta@{{ item['volumes'][0]['name'] }}"
     #state: stopped
     enabled: false

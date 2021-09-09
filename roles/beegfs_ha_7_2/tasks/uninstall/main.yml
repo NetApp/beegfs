@@ -10,21 +10,21 @@
 - name: Collect facts about systemd services.
   service_facts:
   become: true
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
 
 - name: Uninstall any configure OS-specific client packages.
   include_tasks: "services/client.yml"
-  when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
 
 - name: Stop Pacemaker service.
-  systemd:
+  ansible.builtin.systemd:
     state: stopped
     name: pacemaker
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and 'pacemaker.service' in (ansible_facts['services'].keys() | list)
   become: true
 
 - name: Stop Corosync service.
-  systemd:
+  ansible.builtin.systemd:
     state: stopped
     name: corosync
   when: "inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and 'corosync.service' in (ansible_facts['services'].keys() | list)"
@@ -60,7 +60,7 @@
   include_role:
     name: netapp_eseries.host.ipoib
     tasks_from: uninstall.yml
-  when: eseries_ipoib_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_client_group]
+  when: eseries_ipoib_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
 
 - name: Ensure host-storage communications are uninstalled.
   include_role:
@@ -76,14 +76,14 @@
     eseries_remove_all_configuration: true
 
 - name: "Delete the mount point for the management volume."
-  file:
+  ansible.builtin.file:
     state: absent
     path: "{{ management_info['volumes'][0]['metadata']['mount_dir'] }}{{ management_info['volumes'][0]['name'] }}"
   when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and "management" in node_info["services"]'
   become: true
 
 - name: Delete mount point directory for each metadata volume.
-  file:
+  ansible.builtin.file:
     state: absent
     path: "{{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
   loop: "{{ all_volumes }}"
@@ -100,7 +100,7 @@
       {{- all_volumes -}}
 
 - name: Delete mount point directory for each storage volume from each storage service.
-  file:
+  ansible.builtin.file:
     state: absent
     path: "{{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
   loop: "{{ all_volumes }}"

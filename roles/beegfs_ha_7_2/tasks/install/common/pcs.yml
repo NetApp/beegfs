@@ -21,14 +21,14 @@
   become: true
 
 - name: Ensure pcsd daemon is running and enabled.
-  systemd:
+  ansible.builtin.systemd:
     name: pcsd
     state: '{%- if pcs_cluster_password["changed"] == true or pcs_users_conf["changed"] == true or pcs_known_hosts["changed"] == true -%}restarted{%- else -%}started{% endif %}'
     enabled: true
   become: true
 
 - name: Ensure pcs cluster has been authenticated for all cluster and remote nodes.
-  command:
+  ansible.builtin.command:
     cmd: "pcs host auth {{ groups[beegfs_ha_ansible_cluster_group] | join(' ') }} -u {{ beegfs_ha_cluster_username }} -p {{ beegfs_ha_cluster_password }}"
     #cmd: "pcs cluster auth -u {{ beegfs_ha_cluster_username }} -p {{ beegfs_ha_cluster_password }}" # error pacemaker 3.0 -> Warning: Skipping nodes which do not have their name defined in corosync.conf, use the 'pcs host auth' command to authenticate them\nSending cluster config files to the nodes...\nWarning: Unable to set pcsd configs
   delegate_to: "{{ preferred_management_node }}"
@@ -84,7 +84,7 @@
 #          {%- endif -%}
 #
 #    - name: Delete temporary local pcs tokens file.
-#      file:
+#      ansible.builtin.file:
 #        state: absent
 #        path: "{{ item['dest'] }}"
 #      delegate_to: localhost
@@ -98,17 +98,17 @@
 #- name: Ensure pcs cluster has been authenticated.
 #  block:
 #    - name: Delete existing pcs tokens file.
-#      file:
+#      ansible.builtin.file:
 #        state: absent
 #        path: "{{ beegfs_ha_pcsd_pcsd_path }}tokens"
 #
 #    - name: Ensure pcs cluster has been authenticated.
-#      command:
+#      ansible.builtin.command:
 #        cmd: "pcs cluster reload corosync"
 #      when: inventory_hostname == preferred_management_node
 #
 #    - name: Ensure pcs cluster has been authenticated.
-#      command:
+#      ansible.builtin.command:
 #        cmd: "pcs cluster auth -u {{ beegfs_ha_cluster_username }} -p {{ beegfs_ha_cluster_password }}"
 #      when: inventory_hostname == preferred_management_node
 #  when: update_pcs_required == True

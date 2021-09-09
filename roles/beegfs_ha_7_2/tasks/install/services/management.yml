@@ -19,7 +19,7 @@
     mgmt_data_path: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}/data"
 
 - name: "Create {{ mgmt_volume_mount }} directory as the mount point for the management volume."
-  file:
+  ansible.builtin.file:
     state: directory
     path: "{{ mgmt_volume_mount }}"
   become: true
@@ -33,14 +33,14 @@
 
     # Ensure volumes are mounted to determine the BeeGFS HA management service configuration.
     - name: Retrieve currently mounted volumes.
-      command:
+      ansible.builtin.command:
         cmd: mount
         warn: false
       changed_when: false
       register: current_mounted_volumes
 
     - name: Mount management volume.
-      command:
+      ansible.builtin.command:
         cmd: "mount -t {{ mgmt_volume_format_type }} -o {{ mgmt_volume_mount_options }} {{ mgmt_volume_mount_device }} {{ mgmt_volume_mount }}"
         warn: false
       register: management_volume_mount
@@ -54,7 +54,7 @@
           {{- scratch["mounted"] -}}
 
     - name: Esure directory structure is configured on management configuration volume.
-      file:
+      ansible.builtin.file:
         state: directory
         path: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}/{{ item }}"
       loop: ["data", "mgmt_config"]
@@ -80,14 +80,14 @@
       register: beegfs_mgmtd_conf
 
     - name: Initialize management storage directory for beegfs-mgmtd server daemon and update the beegfs-mgmtd config file.
-      command:
+      ansible.builtin.command:
         cmd: "/opt/beegfs/sbin/beegfs-setup-mgmtd -p {{ mgmt_data_path }} -C -S {{ resource_group }}"
       register: beegfs_setup_mgmtd
       failed_when: "beegfs_setup_mgmtd['rc'] != 0 and 'ERROR: Storage directory is not empty.' not in beegfs_setup_mgmtd['stdout']"
       changed_when: "'ERROR: Storage directory is not empty.' not in beegfs_setup_mgmtd['stdout']"
 
     - name: Unmount management volume.
-      command:
+      ansible.builtin.command:
         cmd: "umount {{ mgmt_volume_mount }}"
       when: management_volume_mount['changed'] == True
       ignore_errors: true
@@ -103,7 +103,7 @@
   become: true
 
 - name: Reload systemctl daemons.
-  systemd:
+  ansible.builtin.systemd:
     name: beegfs-mgmtd.service
     enabled: false
     daemon_reload: "{% if beegfs_mgmtd_service_override['changed'] %}true{% else %}false{% endif %}"

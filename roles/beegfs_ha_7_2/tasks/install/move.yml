@@ -13,7 +13,7 @@
       {{- resource_node_list -}}
 
 - name: Clear any previous failures. This is required to allow systems to migrate back after a failure.
-  command:
+  ansible.builtin.command:
     cmd: "crm_resource --cleanup"
   become: true
   register: clean_up_all_resources
@@ -22,7 +22,7 @@
   delay: 6
 #
 #- name: Clear any previous failures. This is required to allow systems to migrate back after a failure.
-#  command:
+#  ansible.builtin.command:
 #    cmd: "crm_resource --resource {{ item['key'] }}-monitor --clear"
 #  register: clear_resources
 #  become: true
@@ -34,7 +34,7 @@
 #  delay: 6
 
 - name: Wait for cluster resource to be in a stable state before continuing.
-  command:
+  ansible.builtin.command:
     cmd: "crm_resource --wait"
   become: true
   register: clean_up_all_resources
@@ -43,7 +43,7 @@
   delay: 6
 
 - name: Attempt to return services to their preferred BeeGFS HA cluster nodes.
-  command:
+  ansible.builtin.command:
     cmd: "crm_resource --resource {{ item['key'] }}-monitor --move --node {{ item['value'] }}"
   register: restore_resources
   become: true
@@ -57,14 +57,14 @@
 - name: Wait for all moves to complete and then remove temporary contraints
   block:
     - name: Wait for cluster resource to be in a stable state before continuing.
-      command:
+      ansible.builtin.command:
         cmd: "crm_resource --wait"
       changed_when: false
       failed_when: false
       become: true
 
     - name: Remove temporary constraints to force services to their preferred nodes.
-      command:
+      ansible.builtin.command:
         cmd: "crm_resource --resource {{ item }}-monitor --un-move"
       register: resource_unmove
       changed_when: false

@@ -1,5 +1,5 @@
 - name: Ensure the required HA packages are installed (Debian/Ubuntu - Remote Nodes).
-  apt:
+  ansible.builtin.apt:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     name:
       - "pacemaker-remote{% if beegfs_ha_pacemaker_remote_version is defined and beegfs_ha_pacemaker_remote_version %}={{ beegfs_ha_pacemaker_remote_version }}*{% endif %}"
@@ -9,12 +9,12 @@
 - name: Ensure pcs management tool is installed and configured (Debian/Ubuntu - Remote nodes).
   block:
     - name: Ensure pcs management tool is installed (Debian/Ubuntu - Remote nodes).
-      apt:
+      ansible.builtin.apt:
         state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
         name: "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version -%}={{ beegfs_ha_pcs_version }}*{% endif %}"
 
     - name: Ensure pcsd daemon is running and enabled (Debian/Ubuntu - Remote Nodes)..
-      systemd:
+      ansible.builtin.systemd:
         name: pcsd
         state: started
         enabled: true
@@ -22,7 +22,7 @@
   become: true
 
 - name: Ensure mailx is installed for alerts (Debian/Ubuntu - Remote Nodes).
-  apt:
+  ansible.builtin.apt:
     state: present
     name: mailx
   when: beegfs_ha_enable_alerts == True
@@ -31,12 +31,12 @@
 - name: Ensure NTP is installed (Debian/Ubuntu - Remote Nodes).
   block:
     - name: Ensure NTP is installed (Debian/Ubuntu - Remote Nodes).
-      apt:
+      ansible.builtin.apt:
         state: latest
         name: ntp
       become: true
     - name: Ensure Chrony is uninstalled (Debian/Ubuntu - Remote Nodes).
-      apt:
+      ansible.builtin.apt:
         state: absent
         name: chrony
       become: true
@@ -45,12 +45,12 @@
 - name: Ensure Chrony is installed (Debian/Ubuntu - Remote Nodes).
   block:
     - name: Ensure Chrony is installed (Debian/Ubuntu - Remote Nodes).
-      apt:
+      ansible.builtin.apt:
         state: latest
         name: chrony
       become: true
     - name: Ensure NTP is uninstalled (Debian/Ubuntu - Remote Nodes).
-      apt:
+      ansible.builtin.apt:
         state: absent
         name: ntp
       become: true

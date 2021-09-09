@@ -1,5 +1,5 @@
 - name: Ensure beegfs-client service is stopped.
-  systemd:
+  ansible.builtin.systemd:
     name: beegfs-client.service
     state: stopped
     enabled: false
@@ -10,25 +10,25 @@
   include_tasks: "../packages/{{ ansible_os_family | lower }}_client_only.yml"
 
 - name: Ensure beegfs-client.conf is properly configured (Client).
-  file:
+  ansible.builtin.file:
     state: absent
     path: "{{ beegfs_ha_client_configuration_directory }}beegfs-client.conf"
   become: true
 
 - name: Ensure beegfs-client-connInterfaces.conf is properly configured (Client).
-  file:
+  ansible.builtin.file:
     state: absent
     path: "{{ beegfs_ha_client_configuration_directory }}beegfs-client-connInterfaces.conf"
   become: true
 
 - name: Ensure beegfs-client-autobuild.conf is properly configured (Client).
-  file:
+  ansible.builtin.file:
     state: absent
     path: "{{ beegfs_ha_client_configuration_directory }}beegfs-client-autobuild.conf"
   become: true
 
 - name: Remove /mnt/beegfs directory (Client).
-  file:
+  ansible.builtin.file:
     state: absent
     path: /mnt/beegfs
   become: true

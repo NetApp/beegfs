@@ -1,33 +1,33 @@
 - name: Ensure the BeeGFS management package is uninstalled (Debian/Ubuntu - Management).
-  apt:
+  ansible.builtin.apt:
     state: absent
     name: beegfs-mgmtd
   when: '"management" in node_info["services"]'
   become: true
 
 - name: Ensure the BeeGFS metadata package is uninstalled (Debian/Ubuntu - Metadata).
-  apt:
+  ansible.builtin.apt:
     state: absent
     name: beegfs-meta
   when: '"metadata" in node_info["services"]'
   become: true
 
 - name: Ensure the BeeGFS storage package is uninstalled (Debian/Ubuntu - Storage).
-  apt:
+  ansible.builtin.apt:
     state: absent
     name: beegfs-storage
   when: '"storage" in node_info["services"]'
   become: true
 
 - name: Ensure the BeeGFS infiniband package is uninstalled (Debian/Ubuntu - Metadata/Storage).
-  apt:
+  ansible.builtin.apt:
     state: absent
     name: libbeegfs-ib
   when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and beegfs_ha_enable_rdma'
   become: true
 
 - name: Ensure the required HA packages are uninstalled (Debian/Ubuntu - Management/Metadata/Storage).
-  apt:
+  ansible.builtin.apt:
     state: absent
     name:
       - corosync
@@ -38,11 +38,11 @@
   become: true
 
 - name: Ensure BeeGFS client package is uninstalled (Debian/Ubuntu - Client).
-  apt:
+  ansible.builtin.apt:
     state: absent
     name:
       - beegfs-client
       - beegfs-helperd
       - beegfs-utils
-  when: inventory_hostname in groups[beegfs_ha_ansible_client_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
   become: true

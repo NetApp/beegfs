@@ -1,5 +1,5 @@
 - name: Ensure eseries resource agent path exists
-  file:
+  ansible.builtin.file:
     state: directory
     path: "{{ beegfs_ha_resource_agent_path }}eseries"
     mode: 0755

@@ -25,7 +25,7 @@
   become: true
 
 - name: Stop beegfs-mgmtd service.
-  systemd:
+  ansible.builtin.systemd:
     name: beegfs-mgmtd.service
     state: stopped
     enabled: false
@@ -41,7 +41,7 @@
   become: true
 
 - name: Stop beegfs-metadata service.
-  systemd:
+  ansible.builtin.systemd:
     name: beegfs-meta.service
     state: stopped
     enabled: false
@@ -57,7 +57,7 @@
   become: true
 
 - name: Stop beegfs-storage service.
-  systemd:
+  ansible.builtin.systemd:
     name: beegfs-storage.service
     state: stopped
     enabled: false

@@ -9,13 +9,13 @@
   become: true
 
 - name: Delete /etc/sysctl.d/99-eseries-beegfs.conf file if performance tuning is enabled.
-  file:
+  ansible.builtin.file:
     path: "{{ sysctl_conf_path }}"
     state: absent
   become: true
 
 - name: Delete udev rule at /etc/udev/rules.d/99-eseries-beegfs.rules if performance tuning is enabled (Metadata/Storage).
-  file:
+  ansible.builtin.file:
     path: "/etc/udev/rules.d/99-eseries-beegfs.rules"
     state: absent
   become: true

@@ -12,12 +12,12 @@
 - name: Ensure NTP is installed (RedHat/CentOS).
   block:
     - name: Ensure NTP is installed (RedHat/CentOS).
-      yum:
+      ansible.builtin.yum:
         state: latest
         name: ntp
       become: true
     - name: Ensure Chrony is uninstalled (RedHat/CentOS - Client).
-      yum:
+      ansible.builtin.yum:
         state: absent
         name: chrony
       become: true
@@ -26,32 +26,32 @@
 - name: Ensure Chrony is installed (RedHat/CentOS - Client).
   block:
     - name: Ensure Chrony is installed (RedHat/CentOS - Client).
-      yum:
+      ansible.builtin.yum:
         state: latest
         name: chrony
       become: true
     - name: Ensure NTP is uninstalled (RedHat/CentOS - Client).
-      yum:
+      ansible.builtin.yum:
         state: absent
         name: ntp
       become: true
   when: beegfs_ha_chrony_enabled == True
 
 - name: Get kernel version (RedHat/CentOS - Client).
-  command: "uname -r"
+  ansible.builtin.command: "uname -r"
   register: kernel_version
   failed_when: "kernel_version['rc'] != 0"
   changed_when: False
   become: true
 
 - name: Ensure kernel-devel is installed (RedHat/CentOS - Client).
-  yum:
+  ansible.builtin.yum:
     state: present
     name: "kernel-devel-{{ kernel_version['stdout'] }}"
   become: true
 
 - name: Ensure the BeeGFS client package is installed (RedHat/CentOS - Client).
-  yum:
+  ansible.builtin.yum:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     allow_downgrade: true
     name:

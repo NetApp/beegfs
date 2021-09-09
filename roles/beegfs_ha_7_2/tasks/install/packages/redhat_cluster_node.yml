@@ -1,5 +1,5 @@
 - name: Ensure the required HA packages are installed (RedHat/CentOS - Cluster Node).
-  yum:
+  ansible.builtin.yum:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     allow_downgrade: true
     name:
@@ -10,7 +10,7 @@
   become: true
 
 - name: Ensure the required HA packages are installed (RedHat/CentOS - Cluster Node).
-  yum:
+  ansible.builtin.yum:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     allow_downgrade: true
     name: "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version -%}-{{ beegfs_ha_pcs_version }}*{% endif %}"
@@ -18,7 +18,7 @@
   become: true
 
 - name: Ensure mailx is installed for alerts (RedHat/CentOS - Cluster Node).
-  yum:
+  ansible.builtin.yum:
     state: present
     name: mailx
   when: beegfs_ha_enable_alerts == True
@@ -27,12 +27,12 @@
 - name: Ensure NTP is installed (RedHat/CentOS - Cluster Node).
   block:
     - name: Ensure NTP is installed (RedHat/CentOS - Cluster Node).
-      yum:
+      ansible.builtin.yum:
         state: latest
         name: ntp
       become: true
     - name: Ensure Chrony is uninstalled (RedHat/CentOS - Cluster Node).
-      yum:
+      ansible.builtin.yum:
         state: absent
         name: chrony
       become: true
@@ -41,12 +41,12 @@
 - name: Ensure Chrony is installed (RedHat/CentOS - Cluster Node).
   block:
     - name: Ensure Chrony is installed (RedHat/CentOS - Cluster Node).
-      yum:
+      ansible.builtin.yum:
         state: latest
         name: chrony
       become: true
     - name: Ensure NTP is uninstalled (RedHat/CentOS - Cluster Node).
-      yum:
+      ansible.builtin.yum:
         state: absent
         name: ntp
       become: true

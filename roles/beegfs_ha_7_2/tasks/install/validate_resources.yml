@@ -25,31 +25,31 @@
     - name: Restart all resource services.
       block:
         - name: Stop Pacemaker.
-          systemd:
+          ansible.builtin.systemd:
             state: stopped
             name: pacemaker
           when: beegfs_ha_pacemaker_cluster_node == True
 
         - name: Stop Corosync.
-          systemd:
+          ansible.builtin.systemd:
             state: stopped
             name: corosync
           when: beegfs_ha_pacemaker_cluster_node == True
 
         - name: Start Corosync.
-          systemd:
+          ansible.builtin.systemd:
             state: started
             name: corosync
           when: beegfs_ha_pacemaker_cluster_node == True
 
         - name: Start Pacemaker.
-          systemd:
+          ansible.builtin.systemd:
             state: started
             name: pacemaker
           when: beegfs_ha_pacemaker_cluster_node == True
 
         - name: Clean up all resources on all node.
-          command: crm_resource --cleanup
+          ansible.builtin.command: crm_resource --cleanup
           register: crm_resource_cleanup
           delay: 1
           retries: 15
@@ -62,7 +62,7 @@
     - name: Wait and re-validate resources have started.
       block:
         - name: Wait for cluster resource to be in a stable state before continuing.
-          command:
+          ansible.builtin.command:
             cmd: "crm_resource --wait"
           changed_when: false
           failed_when: false

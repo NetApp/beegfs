@@ -1,5 +1,5 @@
 - name: Create mount point directory for each storage volume from each storage service.
-  file:
+  ansible.builtin.file:
     state: directory
     path: "{{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
   loop: "{{ all_volumes }}"
@@ -15,7 +15,7 @@
       {{- all_volumes -}}
 
 - name: Retrieve currently mounted volumes on the preferred host.
-  command:
+  ansible.builtin.command:
     cmd: mount
     warn: false
   changed_when: false
@@ -23,7 +23,7 @@
   become: true
 
 - name: Ensure the storage volumes are mounted on the preferred hosts.
-  command:
+  ansible.builtin.command:
     cmd: "mount -t {{ item['metadata']['format_type'] }} -o {{ item['metadata']['mount_options'] }}
                 {{ item['path'] }} {{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
     warn: false
@@ -54,7 +54,7 @@
       {{- volumes -}}
 
 - name: Create data directory for storage service.
-  file:
+  ansible.builtin.file:
     state: directory
     path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/data"
   loop: "{{ node_info['storage'] }}"
@@ -62,7 +62,7 @@
   become: true
 
 - name: Create storage_config directory for metadata service.
-  file:
+  ansible.builtin.file:
     state: directory
     path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config"
   loop: "{{ node_info['storage'] }}"
@@ -96,7 +96,7 @@
   become: true
 
 - name: Initialize storage directory for beegfs-storage server daemon and update beegfs-storage config file.
-  command:
+  ansible.builtin.command:
     cmd: "{{ item }}"
   loop: "{{ commands }}"
   register: beegfs_setup_storage
@@ -126,7 +126,7 @@
       {{- commands -}}
 
 - name: Unmount storage volume.
-  command:
+  ansible.builtin.command:
     cmd: "umount {{ item['item']['metadata']['mount_dir'] }}{{ item['item']['name'] }}"
   loop: "{{ storage_volume_mount['results'] }}"
   ignore_errors: true
@@ -142,7 +142,7 @@
   become: true
 
 - name: Reload systemctl daemons.
-  systemd:
+  ansible.builtin.systemd:
     name: "beegfs-storage@{{ item['volumes'][0]['name'] }}"
     #state: stopped
     enabled: false

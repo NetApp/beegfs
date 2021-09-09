@@ -40,7 +40,7 @@
   become: true
 
 - name: Ensure helperd service is running.
-  systemd:
+  ansible.builtin.systemd:
     name: beegfs-helperd.service
     state: "{% if beegfs_ha_client_started == true %}started{% else %}stopped{% endif %}"
     daemon-reload: true
@@ -48,13 +48,13 @@
   become: true
 
 - name: Ensure the BeeGFS client kernel module is updated (Client).
-  command:
+  ansible.builtin.command:
     cmd: "/etc/init.d/beegfs-client rebuild"
   become: true
   when: client_autobuild_conf['changed']
 
 - name: Ensure client service is running.
-  systemd:
+  ansible.builtin.systemd:
     name: beegfs-client.service
     state: |-
       {%- if beegfs_ha_client_started == false -%}
@@ -69,7 +69,7 @@
   become: true
 
 - name: Determine whether locate's updatedb.conf file exists.
-  command:
+  ansible.builtin.command:
     cmd: "grep -o PRUNEFS.* {{ beegfs_ha_client_updatedb_conf_path }}"
   register: updatedb_prunefs
   changed_when: false
@@ -77,7 +77,7 @@
   become: true
 
 - name: Ensure locate system scan will not scan beegfs.
-  lineinfile:
+  ansible.builtin.lineinfile:
     state: present
     path: "{{ beegfs_ha_client_updatedb_conf_path }}"
     backup: true
@@ -90,7 +90,7 @@
       {{- updatedb_prunefs["stdout"] | default("") | regex_replace('PRUNEFS\s*=\s*|"', "", ignorecase=True) -}}
 
 - name: Wait for BeeGFS to be ready.
-  command:
+  ansible.builtin.command:
     cmd: "beegfs-check-servers -e"
   register: beegfs_check_servers
   changed_when: false

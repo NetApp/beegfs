@@ -16,11 +16,11 @@
 - name: Gather minimally required facts for BeeGFS HA cluster and client nodes.
   setup:
     gather_subset: min
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
 
 - name: Include operating specific variables (Always).
   include_vars: "{{ ansible_os_family | lower }}.yml"
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
 
 # Include all distribution-version variables that are prefixed with default_
 - name: Include all distribution-version variables that are prefixed with default_
@@ -35,7 +35,7 @@
         "{{ item[8:] }}": "{{ unmerged_distribution_inventory[item] }}"
       when: item is match("^default_") and hostvars[inventory_hostname][item[8:]] is not defined
       loop: "{{ unmerged_distribution_inventory.keys() | list }}"
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
 
 # The following section builds up inventory for each resource group and appends it to each host's inventory inside a variable with the resource's name.
 # Determine and build inventory contents.
