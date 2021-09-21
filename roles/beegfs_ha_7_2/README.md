@@ -526,6 +526,148 @@ The following are an explicit list of implied actions.
     - `beegfs_ha_uninstall_unmap_volumes: true`
     - `eseries_unmount_delete: true`
 
+
+
+Maintenance
+-----------
+#### Failover:
+There may be a need to manaully failover a specific node, this could be due to server maintenance. Here are a list of commands and examples of how to failover a particular service using pcs.
+  - `pcs resource move <resource_group> < destination_node>`
+  ##### Example:
+  - `pcs resource move meta2-group nodeMM1`
+
+Run `pcs status` to verify the resource group failed over to the desired node.
+
+#### Failback:
+
+Provided customers followed our deployment recommendations when setting up the cluster, they should have set the default `resource-stickiness` to a high value ensuring resources do not automatically failback when an offline node is booted. This ensures we can boot the failed node and verify it's health before failing back resources to their original node.
+
+  - Before booting the offline node run te following commands and confirm the `resource-stickiness` is higher than the resource scores.
+    ```
+    [root@nodeMM1 ~]# pcs resource defaults
+    resource-stickiness: 15000
+  
+    [root@nodeMM1 ~]# pcs constraint
+    Location Constraints:
+    Resource: meta1-group
+      Enabled on: nodeMM1 (score:200)
+      Enabled on: nodeMM2 (score:0)
+    Resource: meta2-group
+      Enabled on: nodeMM1 (score:0)
+      Enabled on: nodeMM2 (score:200)
+    ```
+    - If needed the default resource stickiness can be configured with `pcs resource defaults resource-stickiness=15000`
+  - Boot the offline node and veirfy it is healthy before continuing.
+  - Once the node is healthy run one of the following commands to relocate services:
+    - Relocate all resources with `pcs resource relocate run`.
+    - Relocate a specific resource with `pcs resource relocate <resource-group>`
+  - Run `pcs status` and verify all resources have been relocated to the appropriate nodes
+
+#### Following a Planned Outage:
+  - If you used `pcs resource move` a temporary location constraint with a score of INFINITY would have been added to force the resource group to move to the desired node, this can be verified with `pcs constraint`:
+  ```
+  [root@nodeMM1 ~]# pcs constraint
+  Location Constraints:
+  Resource: meta1-group
+    Enabled on: nodeMM1 (score:200)
+    Enabled on: nodeMM2 (score:0)
+  Resource: meta2-group
+    Enabled on: nodeMM1 (score:0)
+    Enabled on: nodeMM2 (score:200)
+    Enabled on: nodeMM1 (score:INFINITY) (role: Started)
+  ```
+  - The temporary constraint can be cleared by running `pcs resource clear <resource-group>`
+  ```
+  pcs resource clear meta2-group
+  [root@nodeMM1 ~]# pcs constraint
+  Location Constraints:
+  Resource: meta1-group
+    Enabled on: nodeMM1 (score:200)
+    Enabled on: nodeMM2 (score:0)
+  Resource: meta2-group
+    Enabled on: nodeMM1 (score:0)
+    Enabled on: nodeMM2 (score:200)
+  ```
+  - Provided default resource-stickiness was configured per our deployment recommendations, the resource group(s) will not automatically be relocated back to the preferred nodes. This can be done with one of the following commands (see the unplanned section for examples):
+    - Relocate all resource groupes with `pcs resource relocate run`
+    - Relocate a specific resource group with `pcs resource relocate run <resource-group>`
+
+#### Replacing a Node in the Cluster
+  
+  - These are steps that are universal no matter which service the old node was utilizing.
+  ##### On the New Node
+    - Install the Pacemaker tools
+      `yum -y install corosync pacemaker pcs fence-agents-all`
+
+    - Setup the password for hacluster
+      `passwd hacluster`
+
+    - Start the pscd daemon
+      `systemctl start pcsd; systemctl enable pcsd`
+    
+    - Copy the host file from the Building Block Partner
+      ```
+        cat /etc/hosts
+        
+        127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+        ::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+        10.113.72.109 ictm1619h7 nodeSS1
+        10.113.73.44 ictm1618h16 nodeSS2
+        10.113.73.42 ictm1618h14 Old-Node
+        10.113.72.186 ictm1619h12 New-Node
+        
+        # FLOATING IP FOR MANAGEMENT SERVICE
+        192.168.2.99 management
+      ```
+    - Setup communication between this new machine with the user 'hacluster' using the command `pcs cluster auth <NEW_NODE_NAME>`
+    - Add the new node to this cluster using `pcs cluster node add <NEW NODE>`.
+    - Remove the Old Node from the cluster with `pcs cluster node remove <NODE_NAME>`
+    - In NetApp E-Series System Manager create a new host object in Storage→ Hosts → Create → Host and filling out the appropriate information. For RHEL, the HOST TYPE should be set  to 'Linux DM-MP (Kernel 3.10 or later)'.
+    - Add Host to the host cluster by editing the host cluster the old node was utilizing.
+    - Copy the multipath configuration file from the Building Block Partner. 
+    - Ensure that the hosts in the host group can see all of the appropriate volume LUNs. For example, hosts NodeMM1 and NodeMM2 can see the management and metadata volume LUNs. You can do this with the multipath -ll command.
+      - If you cannot find the devices.
+        - Run `iscsiadm -m session --rescan`
+        - Run `rescan-scsi-bus.sh`
+
+##### If the Old Node hosted the Metadata service
+  - Install the metadata package
+    `yum install -y beegfs-meta libbeegfs-ib`
+  - Create directories for the mount points of the first and second metadata services. We will need a mount point and directory per each metadata service.
+    `mkdir /mnt/<metdata_01_mnt_point>; mkdir /mnt/<metadata_02_mnt_point>`
+  - Create directories for the metadata service's data and configuration file on the shared mount location.  This step is done because the data directory must be an empty directory and will be placed in the data folder. The Configuration file be stored on the mount in the other metadata_config directory.
+    ```
+    mkdir <metadata_01_data_location>
+    mkdir <metadata_01_config_location>
+    ```
+  - Override the default systemd unit file for starting the metadata service in multimode. We need it to load the configuration file found in the shared mount location.
+
+    Pacemaker will start the metadata service by using the command  `"systemctl start beegfs-meta@metadata_01_tgt_001.service"`. That will then load this unit file and the configuration file stated in the file will be used. The "%I" is the argument passed in from the systemd command, `<service_name>@<argument>.service`. This allows us to use multiple instances of the metadata service with one systemd template file.
+  - Reload the daemon.
+    `systemctl daemon-reload`
+  - Make sure the service starts without errors.
+  - Stop and disable the beegfs-metadata service.
+    `systemctl stop beegfs-meta@metadata_01_tgt_001 && systemctl disable beegfs-meta@metadata_01_tgt_001`
+  - Unmount the filesystem, so pacemaker can take over using the command `umount <metadata_01_mnt_location>`.
+
+##### If the Old Node also hosted the Management Service
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Command Reference
+-----------------
+
 Dependencies
 ------------
 - netapp_eseries.santricity
