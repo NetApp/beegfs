@@ -1,7 +1,7 @@
 - name: Ensure NTP client is configured and the service started.
   block:
     - name: Ensure NTP is configured
-      template:
+      ansible.builtin.template:
         src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/ntp_conf.j2') }}"
         dest: "{{ beegfs_ha_ntp_configuration_file }}"
       register: beegfs_ha_ntp_conf
@@ -19,7 +19,7 @@
 - name: Ensure Chrony client is configured and the service is running.
   block:
     - name: Ensure Chrony is configured
-      template:
+      ansible.builtin.template:
         src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/chrony_conf.j2') }}"
         dest: "{{ beegfs_ha_chrony_configuration_file }}"
       register: beegfs_ha_chrony_conf

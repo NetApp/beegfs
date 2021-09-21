@@ -70,7 +70,7 @@
   become: true
 
 - name: Generate storage connInterfacesFile.conf file.
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/connInterfacesFile_conf.j2') }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config/connInterfacesFile.conf"
   loop: "{{ node_info['storage'] }}"
@@ -79,7 +79,7 @@
   become: true
 
 - name: Generate storage connNetFilterFile.conf file.
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/connNetFilterFile_conf.j2') }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config/connNetFilterFile.conf"
   loop: "{{ node_info['storage'] }}"
@@ -88,7 +88,7 @@
   become: true
 
 - name: Ensure beegfs-storage.conf file is configured.
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'storage/beegfs_storage_conf.j2') }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config/beegfs-storage.conf"
   loop: "{{ node_info['storage'] }}"
@@ -135,7 +135,7 @@
 
 # Update beegfs-storage.service to point to beegfs-storage.conf.
 - name: Override the default beegfs-beegfs-storage.service file.
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'storage/beegfs_storage_service.j2') }}"
     dest: /etc/systemd/system/beegfs-storage@.service
   register: beegfs_storage_service_override

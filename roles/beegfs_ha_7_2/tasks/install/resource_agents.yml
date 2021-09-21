@@ -6,7 +6,7 @@
   become: true
 
 - name: Install E-Series BeeGFS HA resource agent for monitoring individual resources.
-  template:
+  ansible.builtin.template:
     src: common/beegfs-monitor
     dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-monitor"
     mode: 0755

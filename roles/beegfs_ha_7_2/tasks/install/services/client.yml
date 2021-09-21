@@ -16,14 +16,14 @@
   become: true
 
 - name: Ensure beegfs-client.conf is properly configured (Client).
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'client/beegfs_client_conf.j2') }}"
     dest: "{{ beegfs_ha_client_configuration_directory }}beegfs-client.conf"
   register: client_conf
   become: true
 
 - name: Ensure beegfs-client-connInterfaces.conf is properly configured (Client).
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'client/beegfs_client_connInterfacesFile_conf.j2') }}"
     dest: "{{ beegfs_ha_client_configuration_directory }}beegfs-client-connInterfaces.conf"
     owner: root
@@ -33,7 +33,7 @@
   become: true
 
 - name: Ensure beegfs-client-autobuild.conf is properly configured (Client).
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'client/beegfs_client_autobuild_conf.j2') }}"
     dest: "{{ beegfs_ha_client_configuration_directory }}beegfs-client-autobuild.conf"
   register: client_autobuild_conf
