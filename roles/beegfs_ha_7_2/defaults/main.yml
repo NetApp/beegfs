@@ -25,7 +25,9 @@ beegfs_ha_enable_alerts: true
 beegfs_ha_enable_quota: false
 beegfs_ha_enable_fence: true  # Fencing agents should be used to ensure failed nodes are definitely down.  WARNING! If beegfs_ha_enable_fence is set to false then a fencing agent will not be configured!
 beegfs_ha_enable_fence_action: "off"  # Fence agent will by default shutdown when stoned. Options: off, reboot
+beegfs_ha_pacemaker_cluster_node_join_state: "default"  # This is the state cluster nodes will join the cluster (Choices: default, online, standby).
 beegfs_ha_pacemaker_cluster_node: true  # Whether node should be a pacemaker cluster node. When set to false the node will be a pacemaker remote node. Note that corosync 2 only supports 32 cluster nodes. (Default: true)
+beegfs_ha_pacemaker_enabled: false  # Whether pacemaker and corosync should be started by systemd during the boot process
 beegfs_ha_filter_ip_ranges: []
 beegfs_ha_node_preference_scope_step: 200
 beegfs_ha_cluster_resource_defaults:
@@ -37,37 +39,14 @@ beegfs_ha_storage_system_hostgroup_prefix: beegfs
 beegfs_ha_force_resource_move: true   # Forces node and resource changes to migrate services to preferred nodes.
 
 # BeeGFS pacemaker resource configuration defaults
-beegfs_ha_resource_filesystem_start_timeout:    3600s #60s
-beegfs_ha_resource_filesystem_notify_timeout:   3600s # 30s
-beegfs_ha_resource_filesystem_monitor_interval:  120s # 30s
-beegfs_ha_resource_filesystem_stop_timeout:     3600s # 60s
+beegfs_ha_resource_monitor_monitor_interval: 17s         # BeeGFS monitoring service monitor interval - TODO: clarify
+beegfs_ha_resource_monitor_monitor_timeout: 15s  # BeeGFS monitoring service monitor timeout
+beegfs_ha_resource_monitor_migration_threshold: 2  # BeeGFS monitoring service failures before migrating away from failed node.
 
-beegfs_ha_resource_floating_ips_start_timeout:    3600s #60s
-beegfs_ha_resource_floating_ips_monitor_timeout:  3600s #30s
-beegfs_ha_resource_floating_ips_monitor_interval:  120s #30s
-beegfs_ha_resource_floating_ips_stop_timeout:     3600s #60s
-
-beegfs_ha_resource_alert_start_timeout:    3600s #60s
-beegfs_ha_resource_alert_monitor_timeout:  3600s #30s
-beegfs_ha_resource_alert_monitor_interval:  300s #30s
-beegfs_ha_resource_alert_stop_timeout:     3600s #60s
-
-beegfs_ha_resource_management_start_timeout:    3600s
-beegfs_ha_resource_management_monitor_interval:  120s #13s
-beegfs_ha_resource_management_stop_timeout:     3600s
-
-beegfs_ha_resource_metadata_start_timeout:    3600s
-beegfs_ha_resource_metadata_monitor_interval:  120s #13s
-beegfs_ha_resource_metadata_stop_timeout:     3600s
-
-beegfs_ha_resource_storage_start_timeout:     3600s
-beegfs_ha_resource_storage_monitor_interval:   120s #13s
-beegfs_ha_resource_storage_stop_timeout:      3600s
-
-beegfs_ha_resource_monitor_monitor_interval:  120s   # BeeGFS monitoring OCF service monitor interval
-beegfs_ha_resource_monitor_monitor_timeout:   600s   # BeeGFS monitoring OCF service monitor timeout
-beegfs_ha_resource_monitor_start_timeout:    3600s   # BeeGFS monitoring OCF service start timeout
-beegfs_ha_resource_monitor_stop_timeout:     3600s   # BeeGFS monitoring OCF service stop timeout
+beegfs_ha_resource_filesystem_monitor_interval: 17s  # ocf:heartbeat:Filesystem resource monitor operation interval
+beegfs_ha_resource_ipaddr_monitor_interval: 17s      # ocf:heartbeat:IPaddr2 resource monitor operation interval
+beegfs_ha_resource_mailto_monitor_interval: 60s      # ocf:heartbeat:mailTo resource monitor operation interval
+beegfs_ha_resource_systemd_monitor_interval: 13s     # ocf:heartbeat:systemd resource monitor operation interval
 
 # BeeGFS management service defaults
 beegfs_ha_management_tcp_port: 8008

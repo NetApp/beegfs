@@ -17,9 +17,9 @@
       <nvpair id="{{ group }}-monitor-instance_attributes-service_configuration_mount" name="service_configuration_mount" value="{{ mount_dir }}{{ volume }}/"/>
     </instance_attributes>
     <operations>
-      <op id="{{ group }}-monitor-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_monitor_start_timeout }}"/>
-      <op id="{{ group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_monitor_timeout }}" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
-      <op id="{{ group }}-monitor-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_monitor_stop_timeout }}"/>
+      <op id="{{ group }}-monitor-start" interval="0s" name="start"/>
+      <op id="{{ group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
+      <op id="{{ group }}-monitor-stop" interval="0s" name="stop"/>
     </operations>
     <meta_attributes id="{{ group }}-monitor-meta_attributes">
       <nvpair id="{{ group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="1"/>
@@ -34,10 +34,9 @@
       <nvpair id="{{ group }}-FS1-instance_attributes-options" name="options" value="{{ mount_options }}"/>
     </instance_attributes>
     <operations>
-      <op id="{{ group }}-FS1-monitor" interval="{{ beegfs_ha_resource_filesystem_monitor_interval }}" name="monitor"/>
-      <op id="{{ group }}-FS1-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_filesystem_start_timeout }}"/>
-      <op id="{{ group }}-FS1-notify" interval="0s" name="notify" timeout="{{ beegfs_ha_resource_filesystem_notify_timeout }}"/>
-      <op id="{{ group }}-FS1-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_filesystem_stop_timeout }}"/>
+      <op id="{{ group }}-FS1-start" interval="0s" name="start"/>
+      <op id="{{ group }}-FS1-monitor" interval="{{ beegfs_ha_resource_filesystem_monitor_interval }}" name="monitor" on-fail="restart"/>
+      <op id="{{ group }}-FS1-stop" interval="0s" name="stop"/>
     </operations>
   </primitive>
 
@@ -59,9 +58,9 @@
       <nvpair id="{{ ipaddr_id }}-instance_attributes-arp_sender" name="arp_sender" value="send_arp"/>
     </instance_attributes>
     <operations>
-      <op id="{{ ipaddr_id }}-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_floating_ips_start_timeout }}"/>
-      <op id="{{ ipaddr_id }}-monitor" interval="{{ beegfs_ha_resource_floating_ips_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_floating_ips_monitor_timeout }}"/>
-      <op id="{{ ipaddr_id }}-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_floating_ips_stop_timeout }}"/>
+      <op id="{{ ipaddr_id }}-start" interval="0s" name="start"/>
+      <op id="{{ ipaddr_id }}-monitor" interval="{{ beegfs_ha_resource_ipaddr_monitor_interval }}" name="monitor" on-fail="restart"/>
+      <op id="{{ ipaddr_id }}-stop" interval="0s" name="stop"/>
     </operations>
   </primitive>
     {% endfor %}
@@ -75,9 +74,9 @@
        <nvpair id="{{ alert_id }}-instance_attributes-subject" name="subject" value="{{ beegfs_ha_alert_email_subject }}"/>
      </instance_attributes>
      <operations>
-       <op id="{{ alert_id }}-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_alert_start_timeout }}"/>
-       <op id="{{ alert_id }}-monitor" interval="{{ beegfs_ha_resource_alert_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_alert_monitor_timeout }}"/>
-       <op id="{{ alert_id }}-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_alert_stop_timeout }}"/>
+       <op id="{{ alert_id }}-start" interval="0s" name="start"/>
+       <op id="{{ alert_id }}-monitor" interval="{{ beegfs_ha_resource_mailto_monitor_interval }}" name="monitor" on-fail="restart"/>
+       <op id="{{ alert_id }}-stop" interval="0s" name="stop"/>
      </operations>
 
    </primitive>
@@ -86,9 +85,9 @@
 
   <primitive class="systemd" id="{{ group }}-service" type="beegfs-meta@{{ volume }}">
     <operations>
-      <op id="{{ group }}-service-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_metadata_start_timeout }}"/>
-      <op id="{{ group }}-service-monitor" interval="{{ beegfs_ha_resource_metadata_monitor_interval }}" name="monitor"/>
-      <op id="{{ group }}-service-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_metadata_stop_timeout }}"/>
+      <op id="{{ group }}-service-start" interval="0s" name="start"/>
+      <op id="{{ group }}-service-monitor" interval="{{ beegfs_ha_resource_systemd_monitor_interval }}" name="monitor" on-fail="restart"/>
+      <op id="{{ group }}-service-stop" interval="0s" name="stop"/>
     </operations>
   </primitive>
 </group>

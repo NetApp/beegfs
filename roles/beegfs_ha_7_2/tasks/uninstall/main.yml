@@ -19,6 +19,7 @@
 - name: Stop Pacemaker service.
   ansible.builtin.systemd:
     state: stopped
+    enabled: false
     name: pacemaker
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and 'pacemaker.service' in (ansible_facts['services'].keys() | list)
   become: true
@@ -26,6 +27,7 @@
 - name: Stop Corosync service.
   ansible.builtin.systemd:
     state: stopped
+    enabled: false
     name: corosync
   when: "inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and 'corosync.service' in (ansible_facts['services'].keys() | list)"
   become: true
