@@ -65,7 +65,11 @@
 # set to "standby" or "online", it will force this node to join in the
 # specified state when starting.
 # (only supported for cluster nodes, not Pacemaker Remote nodes)
+{% if beegfs_ha_pacemaker_cluster_node_join_state in ["online", "standby"] %}
+PCMK_node_start_state={{ beegfs_ha_pacemaker_cluster_node_join_state }}
+{% else %}
 # PCMK_node_start_state=default
+{% endif %}
 
 # Specify an alternate location for RNG schemas and XSL transforms.
 # (This is of use only to developers.)

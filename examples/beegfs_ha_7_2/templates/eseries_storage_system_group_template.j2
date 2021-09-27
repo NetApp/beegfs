@@ -6,3 +6,6 @@ ansible_connection: local    # DO NOT CHANGE. E-Series storage system modules an
                              #   API. The REST API commands are issued from the localhost.
 
 eseries_volume_size_unit: pct             # Volume size unit which is a percentage of storage pool size.
+
+# The following option allows drive selection order. The common delineated list can either be specified in <TRAY>:<SLOT> or <TRAY>:<DRAWER>:<SLOT> form.
+#eseries_storage_pool_usable_drives: "99:0,99:23,99:1,99:22,99:2,99:21,99:3,99:20,99:4,99:19,99:5,99:18,99:6,99:17,99:7,99:16,99:8,99:15,99:9,99:14,99:10,99:13,99:11,99:12"

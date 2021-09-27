@@ -103,16 +103,10 @@
 
     - name: Ensure BeeGFS HA cluster is in maintenance mode.
       block:
-        - name: Determine if cluster is in maintenance mode.
-          ansible.builtin.command:
-            cmd: "crm_attribute --name maintenance-mode --query --quiet"
-          register: maintenance_mode_query
-          failed_when: false
-          changed_when: false
         - name: Ensure BeeGFS HA cluster is in maintenance mode.
           ansible.builtin.command:
             cmd: "crm_attribute --name maintenance-mode --update true"
-          when: '"stdout" in (maintenance_mode_query.keys() | list) and maintenance_mode_query["stdout"] == "true"'
+          changed_when: false
       when: inventory_hostname == preferred_management_node
       become: true
       tags:
@@ -164,16 +158,10 @@
 
     - name: Ensure BeeGFS HA cluster is out of maintenance mode.
       block:
-        - name: Determine if cluster is in maintenance mode.
-          ansible.builtin.command:
-            cmd: "crm_attribute --name maintenance-mode --query --quiet"
-          register: maintenance_mode_query
-          failed_when: false
-          changed_when: false
         - name: Move cluster out of maintenance mode.
           ansible.builtin.command:
             cmd: "crm_attribute --name maintenance-mode --delete"
-          when: '"rc" in (maintenance_mode_query.keys() | list) and maintenance_mode_query["rc"] == 0'
+          changed_when: false
         - name: Wait for cluster changes to stabilize.
           ansible.builtin.command:
             cmd: "crm_resource --wait"
