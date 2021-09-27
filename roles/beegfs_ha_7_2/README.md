@@ -646,12 +646,88 @@ Provided customers followed our deployment recommendations when setting up the c
   - Reload the daemon.
     `systemctl daemon-reload`
   - Make sure the service starts without errors.
+    `systemctl start beegfs-meta@metadata_01_tgt_001.service`
+    `systemctl status beegfs-meta-@metadata_01_tgt_001.service`
   - Stop and disable the beegfs-metadata service.
     `systemctl stop beegfs-meta@metadata_01_tgt_001 && systemctl disable beegfs-meta@metadata_01_tgt_001`
   - Unmount the filesystem, so pacemaker can take over using the command `umount <metadata_01_mnt_location>`.
 
 ##### If the Old Node also hosted the Management Service
+  - Install the BeeGFS management package
+    `yum intall -y beegfs-mgmtd`
+  - Create the mount point
+    `mkdir <mgmt_mount_point>`
+  - Create directories to hold the mgmt data and configuration file on the shared mount location.
+    `mkdir <mgmt_data_location>; mkdir <mgmt_config_location>`
+  - Override the systemd unit file for starting the beegfs-mgmtd service. We need it to load the configuration file found in the shared mount location.
+  - Reload the daemon
+    `systemctl daemon-reload`
+  - Start the beegfs-mgmtd service to make sure it starts without errors.
+    `systemctl start beegfs-mgmtd.service`
+    `systemctl status beegfs-mgmtd.service`
+  - Stop and disable the beegfs-mgmtd service
+    `systemctl stop beegfs-mgmtd && systemctl disable beegfs-mgmtd`
+  - Unmount the filesystem
+    `umount <mgmt_mount_point>`
 
+##### If the Old Node hosted the Storage Service
+  - Install the storage package
+    `yum install -y beegfs-storage libbeegfs-ib`
+  - Create directories for the mount points of the first and second storage services.  We will need a mount point and directory per each storage service target
+    ```
+      mkdir <storage_target_mount_point>
+  
+      #Example
+      mkdir /mnt/storage_01_tgt_001
+      mkdir /mnt/storage_01_tgt_002
+      mkdir /mnt/storage_01_tgt_003
+      mkdir /mnt/storage_01_tgt_004
+      
+      mkdir /mnt/storage_02_tgt_005
+      mkdir /mnt/storage_02_tgt_006
+      mkdir /mnt/storage_02_tgt_007
+      mkdir /mnt/storage_02_tgt_008
+    ```
+  - Create directories for the storage service's data and configuration file on the shared mount location. This step is done because the data directory must be an empty directory and   will be placed in the data folder. The Configuration file be stored on the mount in the other storage_config directory.
+    `mkdir <storage_01_data_location>`
+    `mkdir <storage_01_config_location>`
+  - Override the default systemd unit file for starting the storage service in multimode. We need it to load the configuration file found in the shared mount location.
+    Pacemaker will start the storage service by using the command  `systemctl start beegfs-start@storage_01_tgt_001.service`. That will then load this unit file and the configuration file stated in the file will be used. The `%I` is the argument passed in from the systemd command, `<service_name>@<argument>.service`. This allows us to use multiple instances of the storage service with one systemd template file.
+  
+  - Reload the daemon
+    `systemctl daemon-reload`
+  - Make sure the service starts without errors
+    `systemctl start beegfs-storage@storage_01_tgt_001.service`
+    `systemctl status beegfs-storage@storage_01_tgt_001.service`
+  - Stop and disable the beegfs-storage service
+    `systemctl stop beegfs-storage@storage_01_tgt_001 && systemctl disable beegfs-storage@storage_01_tgt_001`
+  - Unmount the filesystem, so pacemaker can take over
+    `umount <storage_target_mount_point>`
+
+##### Universal Final Steps
+  - Add location constraints, note by default our BeeGFS High Availability RedHat Enterprise Linux 7.7 Setup Location Constraints procedure recommends using an opt-in cluster:
+    ```
+      #Commands for an OPT IN cluster:
+      
+      #Allow mgmt-group to be ran on nodeMM1 and nodeMM2, but prefer to run on nodeMM1
+      pcs constraint location mgmt-group prefers nodeMM1=200 nodeMM2=0
+      
+      #Allow meta-01-group to be ran on nodeMM1 and nodeMM2, but prefer to run on nodeMM1
+      pcs constraint location meta-01-group prefers nodeMM1=200 nodeMM2=0
+      
+      
+      #Commands for an OPT OUT cluster:
+      
+      #Do not allow the meta groups to be used on the storage service servers
+      pcs constraint location meta-01-group avoids nodeSS1=INFINITY nodeSS2=INFINITY
+      pcs constraint location meta-02-group avoids nodeSS1=INFINITY nodeSS2=INFINITY
+      
+      #Setup node preferences
+      pcs constraint location meta-01-group prefers nodeMM1=200
+      pcs constraint location meta-02-group prefers nodeMM2=200
+    ```
+  - Tell Pacemaker to relocate to preferred location
+    `pcs resource relocate run <RESOURCE_NAME>`
 
 
 
