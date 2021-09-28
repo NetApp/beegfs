@@ -1,81 +1,50 @@
-- name: Determine preferred service-nodes.
+- name: Determine current location of all cluster resources.
+  ansible.builtin.command:
+    cmd: crm_mon -r1
+  register: resource_locations
+  changed_when: false
+  become: true
+
+- name: Determine whether cluster resources are located on their preferred nodes.
   set_fact:
-    preferred_resource_node_list: |-
-      {%- set resource_node_list = {} -%}
+    resources_on_non_preferred_nodes_or_failed: |-
+      {%- set resources = [] -%}
       {%- for host in groups[beegfs_ha_ansible_cluster_group] if "node_info" in (hostvars[host].keys() | list) -%}
         {%- set node_info = hostvars[host]["node_info"] -%}
         {%- for service in node_info["services"] -%}
           {%- for resource_group_info in node_info[service] if host == resource_group_info["preferred_node_order"][0] -%}
-            {%- if resource_node_list.update({resource_group_info["resource_group"]: host}) -%}{%- endif -%}
+            {%- for line in resource_locations["stdout_lines"] if not line | regex_search(resource_group_info["resource_group"] ~ "-service.*" ~ host) -%}
+              {%- if resources.append(resource_group_info["resource_group"]) -%}{%- endif -%}
+            {%- endfor -%}
           {%- endfor -%}
         {%- endfor -%}
       {%- endfor -%}
-      {{- resource_node_list -}}
+      {{- resources | unique -}}
 
-- name: Clear any previous failures. This is required to allow systems to migrate back after a failure.
-  ansible.builtin.command:
-    cmd: "crm_resource --cleanup"
-  become: true
-  register: clean_up_all_resources
-  until: '"rc" in (clean_up_all_resources.keys() | list) and clean_up_all_resources["rc"] == 0'
-  retries: 10
-  delay: 6
-#
-#- name: Clear any previous failures. This is required to allow systems to migrate back after a failure.
-#  ansible.builtin.command:
-#    cmd: "crm_resource --resource {{ item['key'] }}-monitor --clear"
-#  register: clear_resources
-#  become: true
-#  changed_when: clear_resources['rc'] == 0
-#  failed_when: false
-#  loop: "{{ preferred_resource_node_list | dict2items }}"
-#  until: '"rc" in (clear_resources.keys() | list) and clear_resources["rc"] == 0'
-#  retries: 10
-#  delay: 6
-
-- name: Wait for cluster resource to be in a stable state before continuing.
-  ansible.builtin.command:
-    cmd: "crm_resource --wait"
-  become: true
-  register: clean_up_all_resources
-  until: '"rc" in (clean_up_all_resources.keys() | list) and clean_up_all_resources["rc"] == 0'
-  retries: 10
-  delay: 6
-
-- name: Attempt to return services to their preferred BeeGFS HA cluster nodes.
-  ansible.builtin.command:
-    cmd: "crm_resource --resource {{ item['key'] }}-monitor --move --node {{ item['value'] }}"
-  register: restore_resources
-  become: true
-  changed_when: restore_resources['rc'] == 0
-  failed_when: false
-  loop: "{{ preferred_resource_node_list | dict2items }}"
-  until: '"rc" in (restore_resources.keys() | list) and restore_resources["rc"] in [0, 108]'
-  retries: 10
-  delay: 6
-
-- name: Wait for all moves to complete and then remove temporary contraints
+- name: Ensure all cluster resources are located on their preferred nodes.
   block:
+    - name: Clear any previous failures. This is required to allow systems to migrate back after a failure.
+      ansible.builtin.command:
+        cmd: "crm_resource --cleanup"
+      register: clean_up_all_resources
+      until: '"rc" in (clean_up_all_resources.keys() | list) and clean_up_all_resources["rc"] == 0'
+      retries: 10
+      delay: 6
+
+    - name: Move all cluster resources to their preferred nodes.
+      ansible.builtin.command:
+        cmd: "crm_attribute --type rsc_defaults --name resource-stickiness --update=0"
+
     - name: Wait for cluster resource to be in a stable state before continuing.
       ansible.builtin.command:
         cmd: "crm_resource --wait"
-      changed_when: false
-      failed_when: false
-      become: true
+      register: stabilize_resources
+      until: '"rc" in (stabilize_resources.keys() | list) and stabilize_resources["rc"] == 0'
+      retries: 10
+      delay: 6
 
-    - name: Remove temporary constraints to force services to their preferred nodes.
+    - name: Move all cluster resources to their preferred nodes.
       ansible.builtin.command:
-        cmd: "crm_resource --resource {{ item }}-monitor --un-move"
-      register: resource_unmove
-      changed_when: false
-      failed_when: false
-      loop: "{{ migrated_resources }}"
-      vars:
-        migrated_resources: |-
-          {%- set resources = [] -%}
-          {%- for resource in restore_resources["results"] if "changed" in (resource.keys() | list) and resource["changed"] == true -%}
-            {%- if resources.append(resource["item"]["key"]) -%}{%- endif -%}
-          {%- endfor -%}
-          {{- resources -}}
-  when: restore_resources["changed"] == true
+        cmd: "crm_attribute --type rsc_defaults --name resource-stickiness --update={{ beegfs_ha_cluster_resource_defaults['resource-stickiness'] | default(15000) }}"
+  when: resources_on_non_preferred_nodes_or_failed | length > 0
   become: true

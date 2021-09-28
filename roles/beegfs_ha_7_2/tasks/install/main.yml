@@ -177,7 +177,7 @@
           include_tasks: move.yml
           when: beegfs_ha_force_resource_move == True and inventory_hostname == preferred_management_node
       tags:
-        - beegfs_ha_move_resource_to_preferred_host
+        - beegfs_ha_move_resource_to_preferred_node
         - beegfs_ha_configure_resource
         - beegfs_ha_configure
         - beegfs_ha
