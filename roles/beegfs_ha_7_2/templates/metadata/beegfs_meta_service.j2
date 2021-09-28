@@ -2,12 +2,10 @@
 Description=BeeGFS Metadata Server (multimode)
 Documentation=http://www.beegfs.com/content/documentation/
 Requires=network-online.target
-# We disable the wants service, because it spams the log files
-#Wants=beegfs-mgmtd.service beegfs-storage.service openibd.service openib.service rdma.service opensmd.service opensm.service
 After=network-online.target beegfs-mgmtd.service beegfs-storage.service openibd.service openib.service rdma.service opensmd.service opensm.service zfs.target
 
 [Service]
-ExecStart=/bin/bash -c 'numa_num=$$(grep "^tuneBindToNumaZone" /mnt/%I/metadata_config/beegfs-meta.conf | sed "s/ //g" | cut -f 2 -d "="); if [ -n $$numa_num ]; then exec /usr/bin/numactl --cpunodebind=$$numa_num --membind=$$numa_num /opt/beegfs/sbin/beegfs-meta cfgFile=/mnt/%I/metadata_config/beegfs-meta.conf runDaemonized=false; else /opt/beegfs/sbin/beegfs-meta cfgFile=/mnt/%I/metadata_config/beegfs-meta.conf runDaemonized=false; fi'
+ExecStart=/etc/beegfs/beegfs_ha_service_daemon.sh /opt/beegfs/sbin/beegfs-meta /mnt/%I/metadata_config/beegfs-meta.conf
 Type=simple
 
 [Install]
