@@ -213,19 +213,19 @@ beegfs_ha_backup_path: /tmp/
 
 
 # Debian / Ubuntu repository defaults
-beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.2
-beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2/gpg/DEB-GPG-KEY-beegfs
+beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.4
+beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.4/gpg/DEB-GPG-KEY-beegfs
 
 
 # RedHat / CentOS repository defaults
-beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7.2/dists/rhel7
-beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2/gpg/RPM-GPG-KEY-beegfs
+beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.4/dists/rhel7
+beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.4/gpg/RPM-GPG-KEY-beegfs
 
 
 # SUSE repository defaults
 beegfs_ha_suse_allow_unsupported_module: true
-beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7.2/dists/sles15
-beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2/gpg/RPM-GPG-KEY-beegfs
+beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.4/dists/sles15
+beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.4/gpg/RPM-GPG-KEY-beegfs
 
 # netapp_eseries.host collection defaults.
 eseries_common_force_skip_uninstall: True
