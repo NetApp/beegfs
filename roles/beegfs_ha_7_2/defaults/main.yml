@@ -69,18 +69,48 @@ beegfs_ha_helperd_tcp_port: 8006
 beegfs_ha_client_configuration_directory: "/etc/beegfs/"
 beegfs_ha_client_updatedb_conf_path: "/etc/updatedb.conf"
 
-
 # RDMA defaults
 beegfs_ha_enable_rdma: true
 #beegfs_ha_ofed_include_path:
 
 
-# Performance tuning defaults
-beegfs_ha_enable_performance_tuning: False
-beegfs_ha_eseries_scheduler: noop
-beegfs_ha_eseries_nr_requests: 64
-beegfs_ha_eseries_read_ahead_kb: 4096
-beegfs_ha_eseries_max_sectors_kb: 1024
+  # Performance tuning defaults
+beegfs_ha_enable_performance_tuning: false
+beegfs_ha_eseries_nvme_attributes:
+  queue/scheduler: none
+  queue/read_ahead_kb: 4096
+  queue/max_sectors_kb: 1024
+  queue/nomerges: 2
+  queue/rq_affinity: 1
+beegfs_ha_eseries_ssd_attributes:
+  queue/scheduler: noop
+  queue/nr_requests: 64
+  queue/read_ahead_kb: 4096
+  queue/max_sectors_kb: 1024
+  queue/nomerges: 2
+  queue/rq_affinity: 1
+beegfs_ha_eseries_hdd_attributes:
+  queue/scheduler: deadline
+  queue/nr_requests: 1024
+  queue/read_ahead_kb: 4096
+  queue/max_sectors_kb: 1024
+  queue/nomerges: 2
+  queue/rq_affinity: 1
+beegfs_ha_eseries_hdd_queue_attributes:
+  scheduler: mq-deadline
+  nr_requests: 64
+  read_ahead_kb: 4096
+  max_sectors_kb: 1024
+  nomerges: 2
+  rq_affinity: 1
+
+
+#beegfs_ha_eseries_scheduler: none  # NVMe: none, hdd: deadline, other: noop
+#beegfs_ha_eseries_nr_requests: 64
+#beegfs_ha_eseries_read_ahead_kb: 4096
+#beegfs_ha_eseries_max_sectors_kb: 1024
+#beegfs_ha_eseries_nomerges: 2
+#beegfs_ha_eseries_rq_affinity: 1
 beegfs_ha_sysctl_entries:
   vm.dirty_background_ratio: 5
   vm.dirty_ratio: 20

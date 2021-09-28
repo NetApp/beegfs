@@ -1,16 +1,61 @@
-ACTION=="add|change",\
-KERNEL=="dm-*",\
-RUN+="/bin/bash -c 'export DEV=`/bin/basename $env{DEVNAME} || /usr/bin/basename $env{DEVNAME}`; export MPATH=`cat /sys/block/$DEV/slaves/sd*/device/model`; \
-if [[ $MPATH == *INF-01-00* ]] && [[ -f /sys$env{DEVPATH}/queue/scheduler ]]; then \
-echo {{ beegfs_ha_eseries_scheduler }} > /sys$env{DEVPATH}/queue/scheduler; \
-echo {{ beegfs_ha_eseries_nr_requests }} > /sys$env{DEVPATH}/queue/nr_requests; \
-echo {{ beegfs_ha_eseries_read_ahead_kb }} > /sys$env{DEVPATH}/queue/read_ahead_kb; \
-echo {{ beegfs_ha_eseries_max_sectors_kb }} > /sys$env{DEVPATH}/queue/max_sectors_kb; fi'"
+# NetApp E-Series (Ansible)
+# NVMe Devices
+ACTION=="add|change", \
+  ATTRS{model}=="NetApp E-Series*", \
+  ENV{DEVTYPE}=="disk", \
+  SUBSYSTEM=="block", \
+  KERNEL=="nvme*", \
+{% for attribute, value in (beegfs_ha_eseries_nvme_attributes.items() | list) %}
+  ATTR{ {{- attribute -}} }="{{ value }}"{% if not loop["last"] %}, \{% endif %}
+
+{% endfor %}
+
+# SSD Devices
+ACTION=="add|change", \
+  KERNEL=="sd[a-z]*", \
+  ENV{DEVTYPE}=="disk", \
+  SUBSYSTEM=="block", \
+  ATTRS{model}=="INF-01-00*", \
+  ATTR{queue/rotational}=="0", \
+{% for attribute, value in (beegfs_ha_eseries_ssd_attributes.items() | list) %}
+  ATTR{ {{- attribute -}} }="{{ value }}"{% if not loop["last"] %}, \{% endif %}
+
+{% endfor %}
 
 ACTION=="add|change", \
-KERNEL=="sd[a-z]", \
-ATTRS{model}=="INF-01-00       ", \
-ATTR{queue/scheduler}="{{ beegfs_ha_eseries_scheduler }}" , \
-ATTR{queue/nr_requests}="{{ beegfs_ha_eseries_nr_requests }}", \
-ATTR{queue/read_ahead_kb}="{{ beegfs_ha_eseries_read_ahead_kb }}", \
-ATTR{queue/max_sectors_kb}="{{ beegfs_ha_eseries_max_sectors_kb }}"
+  KERNEL=="dm-*", \
+  ENV{DEVTYPE}=="disk", \
+  SUBSYSTEM=="block", \
+  ATTR{queue/rotational}=="0", \
+  RUN+="/bin/bash -c ' \
+    export DEV=`/bin/basename $env{DEVNAME} || /usr/bin/basename $env{DEVNAME}`; \
+    if grep INF-01-00 /sys/block/$DEV/slaves/sd*/device/model && [[ -f /sys$env{DEVPATH}/queue/scheduler ]]; then \
+{% for attribute, value in (beegfs_ha_eseries_ssd_attributes.items() | list) %}
+      echo {{ value }} > /sys$env{DEVPATH}/{{ attribute }} \
+{% endfor %}
+    fi'"
+
+# HDD Devices
+ACTION=="add|change", \
+  KERNEL=="sd[a-z]*", \
+  ENV{DEVTYPE}=="disk", \
+  SUBSYSTEM=="block", \
+  ATTRS{model}=="INF-01-00*", \
+  ATTR{queue/rotational}=="1", \
+{% for attribute, value in (beegfs_ha_eseries_hdd_attributes.items() | list) %}
+  ATTR{ {{- attribute -}} }="{{ value }}"
+
+{% endfor %}
+
+ACTION=="add|change", \
+  KERNEL=="dm-*", \
+  ENV{DEVTYPE}=="disk", \
+  SUBSYSTEM=="block", \
+  ATTR{queue/rotational}=="0", \
+  RUN+="/bin/bash -c ' \
+    export DEV=`/bin/basename $env{DEVNAME} || /usr/bin/basename $env{DEVNAME}`; \
+    if grep INF-01-00 /sys/block/$DEV/slaves/sd*/device/model && [[ -f /sys$env{DEVPATH}/queue/scheduler ]]; then \
+{% for attribute, value in (beegfs_ha_eseries_hdd_attributes.items() | list) %}
+      echo {{ value }} > /sys$env{DEVPATH}/{{ attribute }} \
+{% endfor %}
+    fi'"
