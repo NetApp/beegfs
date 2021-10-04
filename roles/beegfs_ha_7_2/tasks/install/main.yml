@@ -169,7 +169,11 @@
       when: inventory_hostname == preferred_management_node
       become: true
       tags:
-        - always
+        - beegfs_ha_move_resource_to_preferred_node
+        - beegfs_ha_configure_resource
+        - beegfs_ha_configure
+        - beegfs_ha
+
 
     - name: Attempt to return services to their preferred BeeGFS HA cluster nodes.
       block:
