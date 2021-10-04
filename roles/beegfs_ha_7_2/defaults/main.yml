@@ -109,8 +109,8 @@ beegfs_ha_sysfs_devpath_device_attributes:  # Set any path attributes relative t
     defrag: always
 
 beegfs_ha_sysctl_entries:
-  vm.dirty_background_ratio: 5
-  vm.dirty_ratio: 20
+  vm.dirty_background_ratio: 1
+  vm.dirty_ratio: 75
   vm.vfs_cache_pressure: 50
   vm.min_free_kbytes: 262144
   vm.zone_reclaim_mode: 1
