@@ -118,9 +118,10 @@ beegfs_ha_sysctl_entries:
 
 
 # Performance tuning defaults for client settings
-beegfs_ha_client_maximum_node_connections: 128                # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the
-                                                              #   same node. Default: 128
-
+beegfs_ha_client_maximum_node_connections: 128                # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 128
+beegfs_ha_client_rdma_buffer_count: 36                        # beegfs_client.conf connRDMABufNum value - Allocates the number of buffers for transferring IO. Default: 36
+beegfs_ha_client_rdma_buffer_size: 65536                      # beegfs_client.conf connRDMABufSize value - Size of each allocated RDMA buffer. Default: 65536
+                                                              #   Note the total allocated buffer (beegfs_ha_client_rdma_buffer_num x beegfs_ha_client_rdma_buffer_size) must be larger than the BeeGFS chunk size.
 
 # Performance tuning defaults for both metadata and storage service settings
 beegfs_ha_numa: ""                                            # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This
