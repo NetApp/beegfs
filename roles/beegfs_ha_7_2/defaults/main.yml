@@ -114,8 +114,7 @@ beegfs_ha_sysctl_entries:
   vm.vfs_cache_pressure: 50
   vm.min_free_kbytes: 262144
   vm.zone_reclaim_mode: 1
-  vm.vm.watermark_scale_factor: 1000
-
+  vm.watermark_scale_factor: 1000
 
 # Performance tuning defaults for client settings
 beegfs_ha_client_maximum_node_connections: 128                # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 128
@@ -124,39 +123,24 @@ beegfs_ha_client_rdma_buffer_size: 65536                      # beegfs_client.co
                                                               #   Note the total allocated buffer (beegfs_ha_client_rdma_buffer_num x beegfs_ha_client_rdma_buffer_size) must be larger than the BeeGFS chunk size.
 
 # Performance tuning defaults for both metadata and storage service settings
-beegfs_ha_numa: ""                                            # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This
-                                                              #   NUMA policy will be applied whenever and wherever the BeeGFS service resides. This can provide
-                                                              #   significant performance increases by avoiding the cache misses between NUMA nodes.
+beegfs_ha_numa: ""                                            # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be applied whenever and
+                                                              #   wherever the BeeGFS service resides. This can provide significant performance increases by avoiding the cache misses between NUMA nodes.
 
 # Performance tuning defaults for metadata service settings
-beegfs_ha_metadata_maximum_node_connections: 128              # beegfs_meta.conf connMaxInternodeNum value - maximum number of simultaneous connections to the
-                                                              #   same node. Default: 128
-beegfs_ha_metadata_worker_threads: 32                         # beegfs_meta.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows
-                                                              #   the server to handle more client requests in parallel. On dedicated metadata servers, this is
-                                                              #   typically set to a value between four and eight times the number of CPU cores. Note: 0 means use
-                                                              #   twice the number of CPU cores (but at least 4). Default: 32
-beegfs_ha_metadata_file_creation_target_algorithm: roundrobin # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file
-                                                              #   creation. Choices: [randomized, roundrobin, randomrobin, randominternode, randomintranode]
-                                                              #   Default: roundrobin
-
+beegfs_ha_metadata_maximum_node_connections: 128              # beegfs_meta.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 128
+beegfs_ha_metadata_worker_threads: 32                         # beegfs_meta.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel. On dedicated metadata servers,
+                                                              #    this is typically set to a value between four and eight times the number of CPU cores. Note: 0 means use twice the number of CPU cores (but at least 4). Default: 32
+beegfs_ha_metadata_file_creation_target_algorithm: roundrobin # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file creation. Choices: [randomized, roundrobin, randomrobin, randominternode, randomintranode] Default: roundrobin
 
 # Performance tuning defaults for storage service settings
-beegfs_ha_storage_maximum_node_connections: 128               # beegfs_storage.conf connMaxInternodeNum value - maximum number of simultaneous connections to the
-                                                              #   same node. Default: 128
-beegfs_ha_storage_incoming_data_event_threads: 2              # The number of threads waiting for incoming data events. Connections with incoming data will be
-                                                              #   handed over to the worker threads for actual message processing. Default: 2
-beegfs_ha_storage_worker_threads: 14                          # beegfs_storage.conf tuneNumWorkers value - number of worker threads. Higher number of workers
-                                                              #   allows the server to handle more client requests in parallel. On dedicated metadata servers,
-                                                              #   this is typically set to a value between four and eight times the number of CPU cores. Note: 0
-                                                              #   means use twice the number of CPU cores (but at least 4). Default: 14
-beegfs_ha_storage_use_aggressive_stream_polling: true         # If set to true, the StreamListener component, which waits for incoming requests, will keep
-                                                              #   actively polling for events instead of sleeping until an event occurs. Active polling will
-                                                              #   reduce latency for processing of incoming requests at the cost of higher CPU usage.
-                                                              #   Default: true
-beegfs_ha_storage_maximum_write_chunk_size: 2048k             # The maximum amount of data that the server should write to the underlying local file system in a
-                                                              #   single operation. Default: 2048k
-beegfs_ha_storage_maximum_read_chunk_size: 2048k              # The maximum amount of data that the server should read to the underlying local file system in a
-                                                              #   single operation. Default: 2048k
+beegfs_ha_storage_maximum_node_connections: 128               # beegfs_storage.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 128
+beegfs_ha_storage_incoming_data_event_threads: 2              # The number of threads waiting for incoming data events. Connections with incoming data will be handed over to the worker threads for actual message processing. Default: 2
+beegfs_ha_storage_worker_threads: 14                          # beegfs_storage.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel. On dedicated metadata servers,
+                                                              #   this is typically set to a value between four and eight times the number of CPU cores. Note: 0 means use twice the number of CPU cores (but at least 4). Default: 14
+beegfs_ha_storage_use_aggressive_stream_polling: true         # If set to true, the StreamListener component, which waits for incoming requests, will keep actively polling for events instead of sleeping until an event occurs. Active polling will
+                                                              #   reduce latency for processing of incoming requests at the cost of higher CPU usage. Default: true
+beegfs_ha_storage_maximum_write_chunk_size: 2048k             # The maximum amount of data that the server should write to the underlying local file system in a single operation. Default: 2048k
+beegfs_ha_storage_maximum_read_chunk_size: 2048k              # The maximum amount of data that the server should read to the underlying local file system in a single operation. Default: 2048k
 
 
 # NTP configuration defaults
