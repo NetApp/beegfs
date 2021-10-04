@@ -59,3 +59,15 @@ ACTION=="add|change", \
       echo {{ value }} > /sys$env{DEVPATH}/{{ attribute }} \
 {% endfor %}
     fi'"
+
+{% if beegfs_ha_sysfs_devpath_device_attributes is defined %}
+# Set devpath device attributes
+{% for path in beegfs_ha_sysfs_devpath_device_attributes if beegfs_ha_sysfs_devpath_device_attributes[path] is mapping and beegfs_ha_sysfs_devpath_device_attributes[path] | length > 0 %}
+ACTION=="add|change", \
+  ENV{DEVPATH}=="{{ path }}", \
+{% for attribute, value in (beegfs_ha_sysfs_devpath_device_attributes[path].items() | list) %}
+  ATTR{attribute}="{{ value }}"{% if not loop["last"] %}, \{% endif %}
+
+{% endfor %}
+{% endfor %}
+{% endif %}

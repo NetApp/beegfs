@@ -74,7 +74,7 @@ beegfs_ha_enable_rdma: true
 #beegfs_ha_ofed_include_path:
 
 
-  # Performance tuning defaults
+# Performance tuning defaults
 beegfs_ha_enable_performance_tuning: false
 beegfs_ha_eseries_nvme_attributes:
   queue/scheduler: none
@@ -104,19 +104,18 @@ beegfs_ha_eseries_hdd_queue_attributes:
   nomerges: 2
   rq_affinity: 1
 
+beegfs_ha_sysfs_devpath_device_attributes:  # Set any path attributes relative to sysfs /sys directory.
+  kernel/mm/transparent_hugepage:
+    defrag: always
 
-#beegfs_ha_eseries_scheduler: none  # NVMe: none, hdd: deadline, other: noop
-#beegfs_ha_eseries_nr_requests: 64
-#beegfs_ha_eseries_read_ahead_kb: 4096
-#beegfs_ha_eseries_max_sectors_kb: 1024
-#beegfs_ha_eseries_nomerges: 2
-#beegfs_ha_eseries_rq_affinity: 1
 beegfs_ha_sysctl_entries:
   vm.dirty_background_ratio: 5
   vm.dirty_ratio: 20
   vm.vfs_cache_pressure: 50
   vm.min_free_kbytes: 262144
   vm.zone_reclaim_mode: 1
+  vm.vm.watermark_scale_factor: 1000
+
 
 # Performance tuning defaults for client settings
 beegfs_ha_client_maximum_node_connections: 128                # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the
