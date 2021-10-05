@@ -45,7 +45,7 @@
     {%- set address = floating_ip_info[1].split("/")[0] -%}
     {%- set cidr_netmask = floating_ip_info[1].split("/")[1] -%}
     {%- set ipaddr_id = resource_group ~ "-IP" ~ loop["index"] %}
-  <primitive class="ocf" id="{{ ipaddr_id }}" provider="heartbeat" type="IPaddr2">
+  <primitive class="ocf" id="{{ ipaddr_id }}" provider="eseries" type="beegfs-ipaddr2">
     <instance_attributes id="{{ ipaddr_id }}-instance_attributes">
       <nvpair id="{{ ipaddr_id }}-instance_attributes-cidr_netmask" name="cidr_netmask" value="{{ cidr_netmask }}"/>
       <nvpair id="{{ ipaddr_id }}-instance_attributes-flush_routes" name="flush_routes" value="1"/>
