@@ -108,13 +108,15 @@ beegfs_ha_sysfs_devpath_device_attributes:  # Set any path attributes relative t
   kernel/mm/transparent_hugepage:
     defrag: always
 
-beegfs_ha_sysctl_entries:
+beegfs_ha_performance_sysctl_entries:
   vm.dirty_background_ratio: 1
   vm.dirty_ratio: 75
   vm.vfs_cache_pressure: 50
   vm.min_free_kbytes: 262144
   vm.zone_reclaim_mode: 1
   vm.watermark_scale_factor: 1000
+
+beegfs_ha_required_sysctl_entries:
   net.ipv4.conf.all.rp_filter: 1
   net.ipv4.conf.all.arp_filter: 1
   net.ipv4.conf.all.arp_announce: 2

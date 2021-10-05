@@ -5,8 +5,8 @@
   include_tasks: common/ntp.yml
   when: beegfs_ha_ntp_enabled == true or beegfs_ha_chrony_enabled == true
 
-- name: Ensure /etc/hosts file is populated with cluster nodes and floating IP addresses.
-  include_tasks: common/hosts.yml
+- name: Configure common cluster nodes configures
+  include_tasks: common/nodes.yml
 
 - name: Ensure the cluster is built (Cluster nodes only).
   include_tasks: common/build_cluster.yml
