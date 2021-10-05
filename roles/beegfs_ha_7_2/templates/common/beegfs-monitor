@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # OCF Resource Agent compliant beegfs-monitor script.
 #
 # License: BSD-3-Clause
