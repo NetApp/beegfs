@@ -502,7 +502,7 @@ delete_routing_table() {
         subnet_cidr=$(address_cidr_to_subnet $ipaddr/$netmask)
         $IP2UTIL rule del to $ipaddr table $rt_table
         $IP2UTIL rule del from $ipaddr table $rt_table
-        $IP2UTIL route del default $ipaddr dev $iface table $rt_table
+        $IP2UTIL route del default via $ipaddr dev $iface table $rt_table
         $IP2UTIL route del $subnet_cidr dev $iface src $ipaddr table $rt_table
         delete_rt_table_entry "$rt_table"
 }
@@ -513,12 +513,12 @@ add_routing_table() {
         netmask="$2"
         iface="$3"
 
-          # Handle adding strict multi-homing
+        # Handle adding strict multi-homing
         rt_table="$OCF_RESKEY_rt_tables_prefix$iface-$ipaddr"
         subnet_cidr=$(address_cidr_to_subnet $ipaddr/$netmask)
         add_rt_table_entry $rt_table
         $IP2UTIL route add $subnet_cidr dev $iface src $ipaddr table $rt_table
-        $IP2UTIL route add default $ipaddr dev $iface table $rt_table
+        $IP2UTIL route add default via $ipaddr dev $iface table $rt_table
         $IP2UTIL rule add from $ipaddr table $rt_table
         $IP2UTIL rule add to $ipaddr table $rt_table
 }
@@ -716,7 +716,7 @@ delete_interface () {
         iface="$2"
         netmask="$3"
 
-        delete_routing_table $ipaddr $netmask $iface &
+        delete_routing_table $ipaddr $netmask $iface
 
         CMD="$IP2UTIL -f $FAMILY addr delete $ipaddr/$netmask dev $iface"
         ocf_run $CMD || return $OCF_ERR_GENERIC
@@ -787,7 +787,7 @@ add_interface () {
         ocf_log info "$msg"
         ocf_run $cmd || return $OCF_ERR_GENERIC
 
-        add_routing_table $ipaddr $netmask $iface &
+        add_routing_table $ipaddr $netmask $iface
 
         return $OCF_SUCCESS
 }
