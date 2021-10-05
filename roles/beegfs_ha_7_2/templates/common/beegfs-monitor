@@ -15,31 +15,39 @@ check_resource_service() {
     return 0
   fi
 
-  ocf_log warn "Resource service is not active!"
   return 1
 }
 
 # Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
 get_interfaces() {
   # Determine BeeGFS service network IP interfaces.
-  connInterfacesFile_path=$(grep "^connInterfacesFile" "$conf_path" | cut -f 2 -d "=")
-  if [ -f $connInterfacesFile_path ]; then
-    cat $connInterfacesFile_path | while IFS= read -r line; do echo "$line" | cut -d ':' -f 1; done
+  connInterfacesFile_path=$(grep "^connInterfacesFile" "$conf_path" | tr -d " " | cut -f 2 -d "=")
+
+  interfaces=""
+  if [ -n "$connInterfacesFile_path" ] && [ -e $connInterfacesFile_path ]; then
+    while read -r entry; do
+      interface=$(echo "$entry" | cut -d ":" -f 1)
+      interfaces="$interfaces $interface"
+    done < $connInterfacesFile_path
   fi
+
+  echo "$interfaces"
 }
 
 # Return list containing all the BeeGFS resource's usable IP addresses. *Note that these are filtered by the connNetFilterFile entries.
 get_subnet_ips() {
   # Determine all possible BeeGFS service network IP addresses.
-  connNetFilterFile_path=$(grep "^connNetFilterFile" "$conf_path" | cut -f 2 -d "=")
+  connNetFilterFile_path=$(grep "^connNetFilterFile" "$conf_path" | tr -d " " | cut -f 2 -d "=")
+
   filter_ips=""
-  if [ -f $connNetFilterFile_path ]; then
-    for filter in $(cat $connNetFilterFile_path); do
+  if [ -n "$connNetFilterFile_path" ] && [ -e $connNetFilterFile_path ]; then
+    while read -r filter; do
       filter_ips_cmd="from ipaddress import ip_network; ips=[str(ip) for ip in ip_network(u'${filter}')]; print(' '.join(ips))"
       filter_ips="$filter_ips $(echo "$filter_ips_cmd" | python)"
-    done
-    echo "$filter_ips"
+    done < $connNetFilterFile_path
   fi
+
+  echo "$filter_ips"
 }
 
 # Ping specified IP address from select interface until successful or retries are exhausted.
@@ -47,13 +55,15 @@ ping_interface() {
   test_interface=$1
   test_address=$2
 
-  for _ in $(seq 1 $ping_count); do
-    if ping -I $test_interface -W $ping_timeout -c 1 $test_address; then
+  for _ in $(seq 1 "$ping_count"); do
+    if ping -I "$test_interface" -W "$ping_timeout" -c 1 "$test_address" > /dev/null 2>&1 ; then
       echo 0
     fi
   done
 }
 
+
+# TODO: THIS IS
 # Returns whether at least one of the BeeGFS resource group's communication interface(s) are able to communicate on the network.
 check_network_connectivity() {
 
@@ -61,47 +71,32 @@ check_network_connectivity() {
   interfaces=$(get_interfaces)
   filter_ips=$(get_subnet_ips)
 
-  # Monitor for interface activity
-  ip_monitor_stdout=$(timeout $monitor_timeout ip monitor)
-  for interface in $interfaces; do
-    if echo $ip_monitor_stdout | grep "$interface.*REACHABLE"; then
-      return 0
-    fi
-  done
-
   # Ping each interface using ip neighbors in the background
   true > /tmp/~beegfs-monitor-$group-ping_interface_results
   for interface in $interfaces; do
-    for neighbor_entry in $(ip neigh show dev $interface | grep -E "(REACHABLE|STALE)" | sort '-t ' -k 4 | cut -d ' ' -f 1 | head -n $ping_max_count); do
+    for neighbor_entry in $(ip neigh show dev $interface | grep -E "(REACHABLE|STALE)" | sort '-t ' -k 4 | cut -d ' ' -f 1 | head -n "$ping_max_count"); do
+      echo "$neighbor_entry"
       if [ -n "$filter_ips" ]; then
         for filter_ip in $filter_ips; do
-          if [ $neighbor_entry = $filter_ip ]; then
-            ping_interface $interface $neighbor_entry >> /tmp/~beegfs-monitor-$group-ping_interface_results &
+          if [ "$neighbor_entry" = $filter_ip ]; then
+            ping_interface "$interface" "$neighbor_entry" >> "/tmp/~beegfs-monitor-$group-ping_interface_results" &
           fi
         done
       else
-        ping_interface $interface $neighbor_entry >> /tmp/~beegfs-monitor-$group-ping_interface_results &
+        ping_interface "$interface" "$neighbor_entry" >> "/tmp/~beegfs-monitor-$group-ping_interface_results" &
       fi
     done
   done
 
   # Evaluate ping results
-  for _ in $(seq 0 $ping_count); do
-    if grep "0" /tmp/~beegfs-monitor-$group-ping_interface_results > /dev/null; then
-      rm -f /tmp/~beegfs-monitor-$group-ping_interface_results
+  for _ in $(seq 0 "$ping_count"); do
+    if grep "0" "/tmp/~beegfs-monitor-$group-ping_interface_results" > /dev/null; then
       return 0
     fi
-    sleep $ping_timeout
+    sleep "$ping_timeout"
   done
 
-  ocf_log warn "Resource interfaces are not reachable!"
-  for interface in $interfaces; do
-    ocf_log warn "$interface Neighbors: $(ip neigh show dev $interface | grep -E "(REACHABLE|STALE)" | sort '-t ' -k 4 | cut -d ' ' -f 1 | head -n $ping_max_count)"
-  done
-  rm -f /tmp/~beegfs-monitor-$group-ping_interface_results
-
-  return 0
-  #return 1
+  return 1
 }
 
 # Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
@@ -109,10 +104,7 @@ check_filesystem_mounts() {
   mounts=$(grep "^storeStorageDirectory" "$conf_path" | cut -f 2 -d "=" | sed 's/\/data//g' | sed 's/,/ /')
   for mount in $mounts; do
     if ! (mount | grep "$mount" > /dev/null) || ! (ls "$mount" > /dev/null) && ! (df --sync "$mount" > /dev/null); then
-      ocf_log warn "Resource mounts are not available!"
-
-      return 0
-      #return 1
+      return 1
     fi
   done
   return 0
@@ -125,17 +117,13 @@ beegfs_monitor_usage() {
   cat <<END
 Usage: $0 (start|stop|monitor|meta-data|validate-all)
 
-Requires: ping, ip
+Requires: ping, ip, python (ipaddress)
 Parameters:
   service_type                  (Required) Beegfs service (Choices: management, metadata, storage)
   service_name                  (Required) BeeGFS service name
   service_configuration_mount   (Required) BeeGFS service configuration mount path
-  monitor_timeout_sec           Timeout measured in seconds for the monitoring interface connections (Default 120)
   ping_count                    Number of times attempt to ping IP address (Default 3)
   ping_timeout_sec              Individual ping timeout measured in seconds (Default 2)
-
-* BeeGFS resource group should be co-located with this monitoring service. Where beegfs-monitor goes so does the
-  resource group; this allows the group to be fenced when monitoring fails to return successfully.
 
 END
 }
@@ -170,11 +158,6 @@ beegfs_monitor_meta_data() {
       <shortdesc lang="en">BeeGFS service configuration file</shortdesc>
       <content type="string"/>
     </parameter>
-    <parameter name="monitor_timeout_sec" unique="1" required="1">
-      <longdesc lang="en">Timeout measured in seconds for the monitoring interface connections.</longdesc>
-      <shortdesc lang="en">Timeout for interface monitoring.</shortdesc>
-      <content type="integer" default="120"/>
-    </parameter>
     <parameter name="ping_count" unique="1" required="1">
       <longdesc lang="en">Number of ping attempts before considering the IP address unreachable from the interface.</longdesc>
       <shortdesc lang="en">Ping count</shortdesc>
@@ -192,34 +175,30 @@ beegfs_monitor_meta_data() {
     </parameter>
   </parameters>
   <actions>
-    <action name="start"          timeout="60" />
-    <action name="stop"           timeout="10" />
-    <action name="monitor"        timeout="60" interval="60" depth="0" />
-    <action name="meta-data"      timeout="5" />
-    <action name="validate-all"   timeout="10" />
+    <action name="start"/>
+    <action name="stop"/>
+    <action name="monitor"        timeout="15" interval="17" />
+    <action name="meta-data"/>
+    <action name="validate-all"/>
   </actions>
 </resource-agent>
 END
 }
 
-
-# Attribute Definitions:
-#   1) beegfs-monitor has started and is waiting for BeeGFS HA resource to start
-#   2) BeeGFS HA resource has completely started
-
-# Wait for BeeGFS service to start.
 beegfs_monitor_start() {
   # Don't block this task! If you do then the remaining group resources will not start.
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
-  attrd_updater --name="$group-beegfs-monitor" --update="1"
+  attrd_updater --name="$group-beegfs-monitor" --update="0"
+
   return $OCF_SUCCESS
 }
 
-# Wait for BeeGFS service to stop.
 beegfs_monitor_stop() {
   # Don't block this task! If you do then the remaining group resources will not stop.
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
   attrd_updater --name="$group-beegfs-monitor" --delete
+  rm -f "/tmp/~beegfs-monitor-$group-ping_interface_results"
+
   return $OCF_SUCCESS
 }
 
@@ -230,36 +209,34 @@ beegfs_monitor_monitor() {
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} monitor
   ha_pseudo_resource_status=$?
   if [ $ha_pseudo_resource_status -ne $OCF_SUCCESS ]; then
-    beegfs_monitor_start
+    return $ha_pseudo_resource_status
   fi
 
+  # Evaluate whether monitored resource has started systemd service (management, metadata or storage).
   resource_attribute=$(attrd_updater --name="$group-beegfs-monitor" --query | awk '{ sub(/.*value="/, ""); sub(/"/, ""); print $0}')
-  total_attempt=$(( monitor_timeout / 5 + 1))
+  if [ $resource_attribute != 1 ]; then
+      if check_resource_service; then
+        ocf_log info "$group-beegfs-monitor resource service is active."
+        attrd_updater --name="$group-beegfs-monitor" --update="1"
+      fi
 
-  attempt=0
-  while [ $attempt -ne $total_attempt ]; do
-    case $resource_attribute in
-      1) # Evaluate whether monitored resource has started systemd service (management, metadata or storage).
-        if check_resource_service; then
-          ocf_log info "$group-beegfs-monitor resource service is active."
-          attrd_updater --name="$group-beegfs-monitor" --update="2"
-        fi
-        return $OCF_SUCCESS
-        ;;
+  # TODO: Test ocf_exit_reason
+  # Evaluate service resources
+  elif ! check_filesystem_mounts; then
+    ocf_log error "Filesystem mount(s) were not active!"
+    #ocf_exit_reason "Filesystem mount(s) were not active!"
+    return $OCF_SUCCESS # $OCF_ERR_GENERIC
+  elif ! check_network_connectivity; then
+    ocf_log error "Network was not reachable!"
+    #ocf_exit_reason "Network was not reachable!"
+    return $OCF_SUCCESS #  $OCF_ERR_GENERIC
+  elif ! check_resource_service; then
+    ocf_log error "Service was not active!"
+    #ocf_exit_reason "Service was not active!"
+    return $OCF_SUCCESS #  $OCF_ERR_GENERIC
+  fi
 
-      2) # Validate BeeGFS service and network connectivity.
-        if check_resource_service; then  # && check_filesystem_mounts && check_network_connectivity; then
-          return $OCF_SUCCESS
-        fi
-    esac
-
-    sleep $(( attempt * attempt + 1))
-    attempt=$(( attempt + 1))
-  done
-
-  ocf_log warn "$group-beegfs-monitor resource would have failed!"
   return $OCF_SUCCESS
-  #return $OCF_ERR_GENERIC
 }
 
 # Validate beegfs-monitor requirements
@@ -283,7 +260,6 @@ esac
 
 
 # Set argument variables
-monitor_timeout=${OCF_RESKEY_monitor_timeout_sec:-120}
 ping_count=${OCF_RESKEY_ping_count:-3}
 ping_timeout=${OCF_RESKEY_ping_timeout_sec:-2}
 ping_max_count=${OCF_RESKEY_ping_max_count:-3}
