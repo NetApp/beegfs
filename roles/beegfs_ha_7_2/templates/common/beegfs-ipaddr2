@@ -117,10 +117,13 @@ meta_data() {
         cat <<END
 <?xml version="1.0"?>
 <!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
-<resource-agent name="IPaddr2">
+<resource-agent name="beegfs-ipaddr2">
 <version>1.0</version>
 
 <longdesc lang="en">
+This is an modified version of ocf:heartbeat:IPaddr2 that allows
+multihoming for NetApp E-Series BeeGFS HA floating IPs.
+
 This Linux-specific resource manages IP alias IP addresses.
 It can add an IP alias, or remove one.
 In addition, it can implement Cluster Alias IP functionality
@@ -143,7 +146,7 @@ This would not be possible if there is already an instance
 on those nodes, and clone-node-max=1 (which is the default).
 </longdesc>
 
-<shortdesc lang="en">Manages virtual IPv4 and IPv6 addresses (Linux specific version)</shortdesc>
+<shortdesc lang="en">Manages virtual IPv4 and IPv6 addresses for NetApp E-Series BeeGFS HA (Linux specific version)</shortdesc>
 
 <parameters>
 <parameter name="ip" unique="1" required="1">
