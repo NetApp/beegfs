@@ -115,6 +115,10 @@ beegfs_ha_sysctl_entries:
   vm.min_free_kbytes: 262144
   vm.zone_reclaim_mode: 1
   vm.watermark_scale_factor: 1000
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.conf.all.arp_filter: 1
+  net.ipv4.conf.all.arp_announce: 2
+  net.ipv4.conf.all.arp_ignore: 2
 
 # Performance tuning defaults for client settings
 beegfs_ha_client_maximum_node_connections: 128                # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 128
