@@ -13,7 +13,7 @@
   become: true
 
 - name: Install E-Series BeeGFS HA resource agent for monitoring individual resources.
-  ansible.builtin.template:
+  ansible.builtin.copy:
     src: common/beegfs-ipaddr2
     dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-ipaddr2"
     mode: 0755
