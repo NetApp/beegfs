@@ -187,16 +187,16 @@ END
 
 beegfs_monitor_start() {
   # Don't block this task! If you do then the remaining group resources will not start.
-  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
   attrd_updater --name="$group-beegfs-monitor" --update="0"
+  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
 
   return $OCF_SUCCESS
 }
 
 beegfs_monitor_stop() {
   # Don't block this task! If you do then the remaining group resources will not stop.
-  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
   attrd_updater --name="$group-beegfs-monitor" --delete
+  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
   rm -f "/tmp/~beegfs-monitor-$group-ping_interface_results"
 
   return $OCF_SUCCESS

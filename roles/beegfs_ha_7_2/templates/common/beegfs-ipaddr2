@@ -472,7 +472,7 @@ address_cidr_to_subnet() {
 add_rt_table_entry() {
   table=$1
 
-  table_numbers=$(grep "^[0-9]" /etc/iproute2/rt_tables | tr "\t" " " | cut -f 1 -d " ")
+  table_numbers=$(grep "^[0-9]" $OCF_RESKEY_rt_tables_path | tr "\t" " " | cut -f 1 -d " ")
   if ! grep "$table" $OCF_RESKEY_rt_tables_path > /dev/null 2>&1; then
     for proposed_number in $(seq 0 255); do
       if ! echo "$table_numbers" | grep -w "$proposed_number" > /dev/null 2>&1; then
