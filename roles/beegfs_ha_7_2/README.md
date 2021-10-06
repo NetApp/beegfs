@@ -12,6 +12,7 @@ Requirements
     - ipaddr
     - netaddr
 - Passwordless SSH setup from the Ansible control node to all BeeGFS HA nodes and clients.
+- Enabled package manager repository containing pacemaker, corosync and pcs packages 
 
 Support Matrix
 --------------
@@ -235,6 +236,13 @@ This section gives a quick summary of the available variables to configure the B
     # RDMA defaults 
     beegfs_ha_enable_rdma: false                                # Whether to enable RDMA.
     beegfs_ha_ofed_include_path:                                # OFED library include path.
+    
+    # Required sysctl configuration defaults  
+    beegfs_ha_required_sysctl_entries:
+      net.ipv4.conf.all.rp_filter: 1
+      net.ipv4.conf.all.arp_filter: 1
+      net.ipv4.conf.all.arp_announce: 2
+      net.ipv4.conf.all.arp_ignore: 2
 
     # Performance tuning defaults (See `Performance Tuning` section below more information)
     beegfs_ha_enable_performance_tuning: False                  # Whether to enable performance tuning.
@@ -242,12 +250,13 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_eseries_nr_requests: 64                           # Raw volume device (dm-X) nr_requests value.
     beegfs_ha_eseries_read_ahead_kb: 4096                       # Raw volume device (dm-X) read_ahead_kb value.
     beegfs_ha_eseries_max_sectors_kb: 1024                      # Raw volume device (dm-X) max_sectors_kb value.
-    beegfs_ha_sysctl_entries:                                   # Kernel parameter settings
-      vm.dirty_background_ratio: 5
-      vm.dirty_ratio: 20
+    beegfs_ha_performance_sysctl_entries:
+      vm.dirty_background_ratio: 1
+      vm.dirty_ratio: 75
       vm.vfs_cache_pressure: 50
       vm.min_free_kbytes: 262144
       vm.zone_reclaim_mode: 1
+      vm.watermark_scale_factor: 1000
 
     # Performance tuning defaults for client settings
     beegfs_client_maximum_node_connections: 128                 # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 12
@@ -464,7 +473,7 @@ To only run tasks related to BeeGFS performance tuning, use the tag "beegfs_ha_p
 
 BeeGFS recommends setting various kernel parameters under /proc/sys to help optimize the performance of BeeGFS storage/metadata nodes. One option to ensure these changes are persistent are setting them using sysctl. By default this role will will override the following parameters on BeeGFS storage and metadata nodes in /etc/sysctl.conf on RedHat or /etc/sysctl.d/99-eseries-beegfs.conf on SUSE:
 
-    beegfs_ha_sysctl_entries:
+    beegfs_ha_performance_sysctl_entries:
       vm.dirty_background_ratio: 5
       vm.dirty_ratio: 20
       vm.vfs_cache_pressure: 50
@@ -472,7 +481,7 @@ BeeGFS recommends setting various kernel parameters under /proc/sys to help opti
       vm.zone_reclaim_mode: 1
 
 Important:
-- If you define your own `beegfs_ha_sysctl_entries` you will need to explicitly list all sysctl key/value pairs you wish to be set.
+- If you define your own `beegfs_ha_performance_sysctl_entries` you will need to explicitly list all sysctl key/value pairs you wish to be set.
 - The documentation for some Linux distributions indicates you need to rebuild the initramfs after modifying the values of kernel variables using sysctl (reference: https://documentation.suse.com/sles/12-SP4/html/SLES-all/cha-boot.html#var-initrd-regenerate-kernelvars). Based on testing these values do persist through a reboot for the operating systems listed on the support matrix, and thus is not done automatically by the role. It is recommended users verify these settings persist in their environment, and rebuild the initramfs if needed.
 
 #### Tuning parameters on E-Series block devices/paths using udev:
