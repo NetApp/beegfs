@@ -475,15 +475,20 @@ address_cidr_to_subnet() {
 add_rt_table_entry() {
   table=$1
 
+  exec 100>/var/tmp/~rt_tables.lock || return $OCF_ERR_GENERIC
+  flock 100 || return $OCF_ERR_GENERIC
   table_numbers=$(grep "^[0-9]" $OCF_RESKEY_rt_tables_path | tr "\t" " " | cut -f 1 -d " ")
   if ! grep "$table" $OCF_RESKEY_rt_tables_path > /dev/null 2>&1; then
-    for proposed_number in $(seq 0 255); do
+    for proposed_number in $(seq 1 252); do
       if ! echo "$table_numbers" | grep -w "$proposed_number" > /dev/null 2>&1; then
         echo "$proposed_number $table" >> $OCF_RESKEY_rt_tables_path
         break
       fi
     done
   fi
+  flock -u 100
+
+  return $OCF_SUCCESS
 }
 
 delete_rt_table_entry() {
@@ -688,23 +693,10 @@ delete_interface () {
         # Handle deleting strict multi-homing
         rt_table="$OCF_RESKEY_rt_tables_prefix$iface-$ipaddr"
         subnet_cidr=$(address_cidr_to_subnet $ipaddr/$netmask)
-
-        cmd="$IP2UTIL rule del to $ipaddr table $rt_table"
-        ocf_log info "delete_route_table: $rt_table - $cmd"
-        ocf_run $cmd || return $OCF_ERR_GENERIC
-
-        cmd="$IP2UTIL rule del from $ipaddr table $rt_table"
-        ocf_log info "delete_route_table: $rt_table - $cmd"
-        ocf_run $cmd || return $OCF_ERR_GENERIC
-
-        cmd="$IP2UTIL route del default via $ipaddr dev $iface table $rt_table"
-        ocf_log info "delete_route_table: $rt_table - $cmd"
-        ocf_run $cmd || return $OCF_ERR_GENERIC
-
-        cmd="$IP2UTIL route del $subnet_cidr dev $iface src $ipaddr table $rt_table"
-        ocf_log info "delete_route_table: $rt_table - $cmd"
-        ocf_run $cmd || return $OCF_ERR_GENERIC
-
+        $IP2UTIL rule del to $ipaddr table $rt_tabled
+        $IP2UTIL rule del from $ipaddr table $rt_table
+        $IP2UTIL route del default via $ipaddr dev $iface table $rt_table
+        $IP2UTIL route del $subnet_cidr dev $iface src $ipaddr table $rt_table
         delete_rt_table_entry "$rt_table"
 
         CMD="$IP2UTIL -f $FAMILY addr delete $ipaddr/$netmask dev $iface"
@@ -781,23 +773,10 @@ add_interface () {
         rt_table="$OCF_RESKEY_rt_tables_prefix$iface-$ipaddr"
         subnet_cidr=$(address_cidr_to_subnet $ipaddr/$netmask)
         add_rt_table_entry $rt_table
-
         $IP2UTIL route add $subnet_cidr dev $iface src $ipaddr table $rt_table
-        ocf_log info "add_routing_table: $rt_table - $cmd"
-        ocf_run $cmd || return $OCF_ERR_GENERIC
-
         $IP2UTIL route add default via $ipaddr dev $iface table $rt_table
-        ocf_log info "add_routing_table: $rt_table - $cmd"
-        ocf_run $cmd || return $OCF_ERR_GENERIC
-
         $IP2UTIL rule add from $ipaddr table $rt_table
-        ocf_log info "add_routing_table: $rt_table - $cmd"
-        ocf_run $cmd || return $OCF_ERR_GENERIC
-
-        cmd="$IP2UTIL rule add to $ipaddr table $rt_table"
-        ocf_log info "add_routing_table: $rt_table - $cmd"
-        ocf_run $cmd || return $OCF_ERR_GENERIC
-
+        $IP2UTIL rule add to $ipaddr table $rt_table
 
         return $OCF_SUCCESS
 }
