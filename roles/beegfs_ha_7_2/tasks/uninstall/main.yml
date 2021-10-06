@@ -126,7 +126,7 @@
   include_tasks: "performance_tuning.yml"
   when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("metadata" in node_info["services"] or "storage" in node_info["services"])'
 
-- name: Remove BeeGFS required sysctl.conf entries if performance tuning is enabled.
+- name: Remove BeeGFS required sysctl.conf entries.
   sysctl:
     name: "{{ item['key'] }}"
     value: "{{ item['value'] }}"
@@ -134,6 +134,7 @@
     reload: true
     sysctl_file: "{{ sysctl_conf_path }}"
   loop: "{{ lookup('dict', beegfs_ha_required_sysctl_entries) }}"
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   become: true
 
 - name: Ensure any cluster and BeeGFS configuration files are removed.
