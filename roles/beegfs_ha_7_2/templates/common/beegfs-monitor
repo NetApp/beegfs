@@ -9,6 +9,46 @@
 
 ###############################################################################
 
+convert_ipv4_address_to_int() {
+  echo "$1" | awk '''
+  {
+    split($0, parts, "/")
+    cidr=parts[2]
+    split(parts[1], octets, ".")
+    address_int=octets[1]*16777216 + octets[2]*65536 + octets[3]*256 + octets[4]
+    printf address_int
+  }
+  '''
+}
+convert_int_to_ipv4_address() {
+  echo "$1" | awk '''
+  {
+    address_int=$0
+    v1=lshift(rshift(address_int, 24), 24)
+    v2=lshift(rshift(address_int - v1, 16), 16)
+    v3=lshift(rshift(address_int - v1 - v2, 8), 8)
+    v4= address_int - v1 - v2 - v3
+    octet1 = v1 / 16777216
+    octet2 = v2 / 65536
+    octet3 = v3 / 256
+    octet4 = v4
+    printf octet1"."octet2"."octet3"."octet4" "
+  }
+  '''
+}
+
+get_ipv4_subnet_addresses() {
+  cidr_subnet=$1
+  base_address=$(echo $cidr_subnet | cut -f 1 -d '/' )
+  subnet=$(echo $cidr_subnet | cut -f 2 -d '/' )
+
+  start_address_int=$(convert_ipv4_address_to_int $base_address)
+  end_address_int=$(( $start_address_int + 2 ** (32 - $subnet) - 1 ))
+  for address_int in $(seq $start_address_int $end_address_int); do
+    convert_int_to_ipv4_address $address_int
+  done
+}
+
 # Returns whether the resource is active.
 check_resource_service() {
   if systemctl is-active "$service"; then
@@ -19,9 +59,16 @@ check_resource_service() {
 }
 
 # Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
+get_mgmt_ip() {
+  if [ "$type" != "management" ]; then
+    grep "^sysMgmtdHost" "$conf_path" | tr -d "[:space:]" | cut -f 2 -d "="
+  fi
+}
+
+# Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
 get_interfaces() {
   # Determine BeeGFS service network IP interfaces.
-  connInterfacesFile_path=$(grep "^connInterfacesFile" "$conf_path" | tr -d " " | cut -f 2 -d "=")
+  connInterfacesFile_path=$(grep "^connInterfacesFile" "$conf_path" | tr -d "[:space:]" | cut -f 2 -d "=")
 
   interfaces=""
   if [ -n "$connInterfacesFile_path" ] && [ -e $connInterfacesFile_path ]; then
@@ -37,13 +84,12 @@ get_interfaces() {
 # Return list containing all the BeeGFS resource's usable IP addresses. *Note that these are filtered by the connNetFilterFile entries.
 get_subnet_ips() {
   # Determine all possible BeeGFS service network IP addresses.
-  connNetFilterFile_path=$(grep "^connNetFilterFile" "$conf_path" | tr -d " " | cut -f 2 -d "=")
+  connNetFilterFile_path=$(grep "^connNetFilterFile" "$conf_path" | tr -d "[:space:]" | cut -f 2 -d "=")
 
   filter_ips=""
   if [ -n "$connNetFilterFile_path" ] && [ -e $connNetFilterFile_path ]; then
     while read -r filter; do
-      filter_ips_cmd="from ipaddress import ip_network; ips=[str(ip) for ip in ip_network(u'${filter}')]; print(' '.join(ips))"
-      filter_ips="$filter_ips $(echo "$filter_ips_cmd" | python)"
+      filter_ips="$filter_ips $(get_ipv4_subnet_addresses $filter)"
     done < $connNetFilterFile_path
   fi
 
@@ -62,8 +108,6 @@ ping_interface() {
   done
 }
 
-
-# TODO: THIS IS
 # Returns whether at least one of the BeeGFS resource group's communication interface(s) are able to communicate on the network.
 check_network_connectivity() {
 
@@ -74,11 +118,11 @@ check_network_connectivity() {
   # Ping each interface using ip neighbors in the background
   true > /tmp/~beegfs-monitor-$group-ping_interface_results
   for interface in $interfaces; do
-    for neighbor_entry in $(ip neigh show dev $interface | grep -E "(REACHABLE|STALE)" | sort '-t ' -k 4 | cut -d ' ' -f 1 | head -n "$ping_max_count"); do
+    for neighbor_entry in $(get_mgmt_ip) $(ip neigh show dev $interface | grep -E "(REACHABLE|STALE)" | sort '-t ' -k 4 | cut -d ' ' -f 1 | head -n "$ping_max_count"); do
       echo "$neighbor_entry"
       if [ -n "$filter_ips" ]; then
         for filter_ip in $filter_ips; do
-          if [ "$neighbor_entry" = $filter_ip ]; then
+          if [ "$neighbor_entry" = "$filter_ip" ]; then
             ping_interface "$interface" "$neighbor_entry" >> "/tmp/~beegfs-monitor-$group-ping_interface_results" &
           fi
         done
@@ -88,23 +132,42 @@ check_network_connectivity() {
     done
   done
 
-  # Evaluate ping results
-  for _ in $(seq 0 "$ping_count"); do
-    if grep "0" "/tmp/~beegfs-monitor-$group-ping_interface_results" > /dev/null; then
-      return 0
-    fi
-    sleep "$ping_timeout"
-  done
+  # Evaluate ping results once pings are complete
+  wait
+  if grep "0" "/tmp/~beegfs-monitor-$group-ping_interface_results" > /dev/null 2>&1; then
+    return 0
+  fi
 
   return 1
 }
 
 # Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
 check_filesystem_mounts() {
-  mounts=$(grep "^storeStorageDirectory" "$conf_path" | cut -f 2 -d "=" | sed 's/\/data//g' | sed 's/,/ /')
+  mounts=
+  case $type in
+    management) mounts=$(grep "^storeMgmtdDirectory" "$conf_path" | cut -f 2 -d "=" | sed 's/\/data//g' | sed 's/,/ /') ;;
+    metadata) mounts=$(grep "^storeMetaDirectory" "$conf_path" | cut -f 2 -d "=" | sed 's/\/data//g' | sed 's/,/ /') ;;
+    storage) mounts=$(grep "^storeStorageDirectory" "$conf_path" | cut -f 2 -d "=" | sed 's/\/data//g' | sed 's/,/ /') ;;
+  esac
+
+  # Check mount information
+  if [ -z "$mounts" ]; then
+    ocf_log error "Storage mount information is not available!"
+    return 1
+  fi
+
+  # Test mount information
   for mount in $mounts; do
-    if ! (mount | grep "$mount" > /dev/null) || ! (ls "$mount" > /dev/null) && ! (df --sync "$mount" > /dev/null); then
-      return 1
+
+    # Check whether device is mounted.
+    if ! mount_device_path=$(mount | grep "$mount" | cut -f 1 -d ' '); then
+      ocf_log error "Storage is not mounted!"
+      return 2
+
+    # Check whether device is readable.
+    elif ! (dd if="$mount_device_path" iflag=direct bs=4k count=1 > /dev/null 2>&1); then
+      ocf_log error "Storage is not accessible!"
+      return 3
     fi
   done
   return 0
@@ -117,7 +180,7 @@ beegfs_monitor_usage() {
   cat <<END
 Usage: $0 (start|stop|monitor|meta-data|validate-all)
 
-Requires: ping, ip, python (ipaddress)
+Requires: ping, ip
 Parameters:
   service_type                  (Required) Beegfs service (Choices: management, metadata, storage)
   service_name                  (Required) BeeGFS service name
@@ -143,12 +206,12 @@ beegfs_monitor_meta_data() {
       <shortdesc lang="en">BeeGFS service group name</shortdesc>
       <content type="string"/>
     </parameter>
-    <parameter name="service_type" unique="1" required="0">
+    <parameter name="service_type" unique="0" required="0">
       <longdesc lang="en">Type of BeeGFS service which can be one of the following: management, metadata, storage.</longdesc>
       <shortdesc lang="en">BeeGFS service type</shortdesc>
       <content type="string"/>
     </parameter>
-    <parameter name="service_name" unique="1" required="0">
+    <parameter name="service_name" unique="0" required="0">
       <longdesc lang="en">Name of the BeeGFS systemd service to monitor.</longdesc>
       <shortdesc lang="en">BeeGFS service name</shortdesc>
       <content type="string"/>
@@ -158,17 +221,17 @@ beegfs_monitor_meta_data() {
       <shortdesc lang="en">BeeGFS service configuration file</shortdesc>
       <content type="string"/>
     </parameter>
-    <parameter name="ping_count" unique="1" required="1">
+    <parameter name="ping_count" unique="0" required="1">
       <longdesc lang="en">Number of ping attempts before considering the IP address unreachable from the interface.</longdesc>
       <shortdesc lang="en">Ping count</shortdesc>
       <content type="integer" default="3"/>
     </parameter>
-    <parameter name="ping_timeout_sec" unique="1" required="1">
+    <parameter name="ping_timeout_sec" unique="0" required="1">
       <longdesc lang="en">Timeout for individual ping requests.</longdesc>
       <shortdesc lang="en">Ping timeout</shortdesc>
       <content type="integer" default="2"/>
     </parameter>
-    <parameter name="ping_max_count" unique="1" required="1">
+    <parameter name="ping_max_count" unique="0" required="1">
       <longdesc lang="en">Maximum number of addresses to test. These tests will continue until either a ping is successful or the maximum ping count is reached.</longdesc>
       <shortdesc lang="en">Maximum ping tests.</shortdesc>
       <content type="integer" default="3"/>
@@ -215,25 +278,24 @@ beegfs_monitor_monitor() {
   # Evaluate whether monitored resource has started systemd service (management, metadata or storage).
   resource_attribute=$(attrd_updater --name="$group-beegfs-monitor" --query | awk '{ sub(/.*value="/, ""); sub(/"/, ""); print $0}')
   if [ $resource_attribute != 1 ]; then
-      if check_resource_service; then
+      if check_filesystem_mounts && check_network_connectivity && check_resource_service; then
         ocf_log info "$group-beegfs-monitor resource service is active."
         attrd_updater --name="$group-beegfs-monitor" --update="1"
       fi
 
-  # TODO: Test ocf_exit_reason
   # Evaluate service resources
   elif ! check_filesystem_mounts; then
-    ocf_log error "Filesystem mount(s) were not active!"
-    #ocf_exit_reason "Filesystem mount(s) were not active!"
-    return $OCF_SUCCESS # $OCF_ERR_GENERIC
+    ocf_log error "Filesystem mount(s) are not active!"
+    ocf_exit_reason "Filesystem mount(s) are not active!"
+    return $OCF_ERR_GENERIC
   elif ! check_network_connectivity; then
-    ocf_log error "Network was not reachable!"
-    #ocf_exit_reason "Network was not reachable!"
-    return $OCF_SUCCESS #  $OCF_ERR_GENERIC
+    ocf_log error "Network are not reachable!"
+    ocf_exit_reason "Network are not reachable!"
+    return $OCF_ERR_GENERIC
   elif ! check_resource_service; then
-    ocf_log error "Service was not active!"
-    #ocf_exit_reason "Service was not active!"
-    return $OCF_SUCCESS #  $OCF_ERR_GENERIC
+    ocf_log error "Service is not active!"
+    ocf_exit_reason "Service is not active!"
+    return $OCF_ERR_GENERIC
   fi
 
   return $OCF_SUCCESS

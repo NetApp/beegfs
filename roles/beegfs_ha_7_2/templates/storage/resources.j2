@@ -18,7 +18,7 @@
       <op id="{{ group }}-monitor-stop" interval="0s" name="stop"/>
     </operations>
     <meta_attributes id="{{ group }}-monitor-meta_attributes">
-      <nvpair id="{{ group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="1"/>
+      <nvpair id="{{ group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="{{ beegfs_ha_resource_monitor_migration_threshold }}"/>
     </meta_attributes>
   </primitive>
 
