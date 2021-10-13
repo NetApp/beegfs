@@ -266,8 +266,14 @@ beegfs_monitor_start() {
 }
 
 beegfs_monitor_stop() {
-  # Don't block this task! If you do then the remaining group resources will not stop.
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
+
+  # Wait for group resources to stop
+  while check_resource_service || check_network_connectivity || check_filesystem_mounts; do
+    sleep 1
+  done
+
+  # Resource cleanup
   attrd_updater --name="$group-beegfs-monitor-status" --delete
   rm -f "/tmp/~beegfs-monitor-$group-ping_interface_results"
 
