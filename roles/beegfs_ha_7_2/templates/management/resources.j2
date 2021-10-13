@@ -18,7 +18,7 @@
     <operations>
       <op id="{{ resource_group }}-monitor-start" interval="0s" name="start""/>
       <op id="{{ resource_group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_monitor_timeout }}" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
-      <op id="{{ resource_group }}-monitor-stop" interval="0s" name="stop"/>
+      <op id="{{ resource_group }}-monitor-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_monitor_stop_timeout }}"/>
     </operations>
     <meta_attributes id="{{ resource_group }}-monitor-meta_attributes">
       <nvpair id="{{ resource_group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="{{ beegfs_ha_resource_monitor_migration_threshold }}"/>
