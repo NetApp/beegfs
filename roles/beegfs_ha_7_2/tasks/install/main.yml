@@ -156,17 +156,24 @@
         - beegfs_ha_configure
         - beegfs_ha
 
-    - name: Ensure BeeGFS HA cluster is out of maintenance mode.
+    - name: Ensure BeeGFS HA cluster is out of maintenance and standby modes.
       block:
-        - name: Move cluster out of maintenance mode.
+        - name: Move cluster nodes out of standby mode.
           ansible.builtin.command:
-            cmd: "crm_attribute --name maintenance-mode --delete"
+            cmd: "crm_standby --node={{ inventory_hostname }} --delete"
           changed_when: false
-        - name: Wait for cluster changes to stabilize.
-          ansible.builtin.command:
-            cmd: "crm_resource --wait"
-          changed_when: false
-      when: inventory_hostname == preferred_management_node
+        - name: Ensure BeeGFS HA cluster is out of maintenance and standby modes.
+          block:
+            - name: Move cluster out of maintenance mode.
+              ansible.builtin.command:
+                cmd: "crm_attribute --name maintenance-mode --delete"
+              changed_when: false
+            - name: Wait for cluster changes to stabilize.
+              ansible.builtin.command:
+                cmd: "crm_resource --wait"
+              changed_when: false
+          when: inventory_hostname == preferred_management_node
+      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       become: true
       tags:
         - beegfs_ha_move_resource_to_preferred_node
