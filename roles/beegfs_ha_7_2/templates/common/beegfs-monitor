@@ -8,6 +8,13 @@
 . ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
 
 ###############################################################################
+get_monitor_status() {
+  if [ -z "$resource_status" ]; then
+    resource_status=0
+  fi
+
+  return $resource_status
+}
 
 convert_ipv4_address_to_int() {
   echo "$1" | awk '''
@@ -20,6 +27,7 @@ convert_ipv4_address_to_int() {
   }
   '''
 }
+
 convert_int_to_ipv4_address() {
   echo "$1" | awk '''
   {
@@ -52,10 +60,10 @@ get_ipv4_subnet_addresses() {
 # Returns whether the resource is active.
 check_resource_service() {
   if systemctl is-active "$service"; then
-    return 0
+    return $OCF_SUCCESS
   fi
 
-  return 1
+  return $OCF_ERR_GENERIC
 }
 
 # Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
@@ -135,10 +143,10 @@ check_network_connectivity() {
   # Evaluate ping results once pings are complete
   wait
   if grep "0" "/tmp/~beegfs-monitor-$group-ping_interface_results" > /dev/null 2>&1; then
-    return 0
+    return $OCF_SUCCESS
   fi
 
-  return 1
+  return $OCF_ERR_GENERIC
 }
 
 # Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
@@ -152,8 +160,8 @@ check_filesystem_mounts() {
 
   # Check mount information
   if [ -z "$mounts" ]; then
-    ocf_log error "Storage mount information is not available!"
-    return 1
+    get_monitor_status || ocf_log error "Storage mount information is not available!"
+    return $OCF_ERR_GENERIC
   fi
 
   # Test mount information
@@ -161,16 +169,17 @@ check_filesystem_mounts() {
 
     # Check whether device is mounted.
     if ! mount_device_path=$(mount | grep "$mount" | cut -f 1 -d ' '); then
-      ocf_log error "Storage is not mounted!"
-      return 2
+      get_monitor_status || ocf_log error "Storage is not mounted!"
+      return $OCF_ERR_GENERIC
 
     # Check whether device is readable.
-    elif ! (dd if="$mount_device_path" iflag=direct bs=4k count=1 > /dev/null 2>&1); then
-      ocf_log error "Storage is not accessible!"
-      return 3
+    elif ! (dd if="$mount_device_path" iflag=direct bs=4k count=1); then
+      get_monitor_status || ocf_log error "Storage is not accessible!"
+      return $OCF_ERR_GENERIC
     fi
+    ocf_log info "$mount is accessible"
   done
-  return 0
+  return $OCF_SUCCESS
 }
 
 ###############################################################################
@@ -251,7 +260,7 @@ END
 beegfs_monitor_start() {
   # Don't block this task! If you do then the remaining group resources will not start.
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
-  attrd_updater --name="$group-beegfs-monitor" --update="0"
+  attrd_updater --name="$group-beegfs-monitor-status" --update="0"
 
   return $OCF_SUCCESS
 }
@@ -259,7 +268,7 @@ beegfs_monitor_start() {
 beegfs_monitor_stop() {
   # Don't block this task! If you do then the remaining group resources will not stop.
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
-  attrd_updater --name="$group-beegfs-monitor" --delete
+  attrd_updater --name="$group-beegfs-monitor-status" --delete
   rm -f "/tmp/~beegfs-monitor-$group-ping_interface_results"
 
   return $OCF_SUCCESS
@@ -276,24 +285,20 @@ beegfs_monitor_monitor() {
   fi
 
   # Evaluate whether monitored resource has started systemd service (management, metadata or storage).
-  resource_attribute=$(attrd_updater --name="$group-beegfs-monitor" --query | awk '{ sub(/.*value="/, ""); sub(/"/, ""); print $0}')
-  if [ $resource_attribute != 1 ]; then
+  if [ "$resource_status" != "1" ]; then
       if check_filesystem_mounts && check_network_connectivity && check_resource_service; then
-        ocf_log info "$group-beegfs-monitor resource service is active."
-        attrd_updater --name="$group-beegfs-monitor" --update="1"
+        ocf_log info "$group-beegfs-monitor-status resource service is active."
+        attrd_updater --name="$group-beegfs-monitor-status" --update="1"
       fi
 
   # Evaluate service resources
   elif ! check_filesystem_mounts; then
-    ocf_log error "Filesystem mount(s) are not active!"
     ocf_exit_reason "Filesystem mount(s) are not active!"
     return $OCF_ERR_GENERIC
   elif ! check_network_connectivity; then
-    ocf_log error "Network are not reachable!"
     ocf_exit_reason "Network are not reachable!"
     return $OCF_ERR_GENERIC
   elif ! check_resource_service; then
-    ocf_log error "Service is not active!"
     ocf_exit_reason "Service is not active!"
     return $OCF_ERR_GENERIC
   fi
@@ -347,6 +352,7 @@ case $type in
     ;;
 esac
 
+resource_status=$(attrd_updater --name="$group-beegfs-monitor-status" --query | awk '{ sub(/.*value="/, ""); sub(/"/, ""); print $0}')
 
 # Perform action requests
 case $__OCF_ACTION in
