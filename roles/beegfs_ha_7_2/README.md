@@ -2,7 +2,24 @@ netappeseries.beegfs.beegfs_ha_7_2 Role
 =======================================
 This role is a complete end-to-end deployment of the [NetApp E-Series BeeGFS HA (High-Availability) solution](https://blog.netapp.com/high-availability-beegfs). This role utilizes the NetApp E-Series SANtricity, Host, and BeeGFS collections which allows users to not only configure the BeeGFS file system with HA but also provision, map storage and ensure the cluster storage is ready for use.
 
-Requirements
+
+## Table of Contents
+
+1. [Requirements](#requirements)
+2. [Support Matrix](#support-matrix)
+3. [Getting Started](#getting-started)
+4. [Example Playbook, Inventory, Group/Host Variables](#example-playbook,-inventory,-group/host-variables)
+5. [Role Variables](#role-variables)
+6. [Role Tags](#role-tags)
+7. [General Notes](#general-notes)
+8. [Override Default Templates](#override-default-templates)
+9. [NTP](#ntp)
+10. [Performance Tuning](#performance-tuning)
+11. [Uninstall](#uninstall)
+12. [Maintenance](#maintenance)
+
+
+## Requirements
 ------------
 - Ansible control node with Ansible 2.9 or later and the following dependencies installed:
   - NetApp E-Series Ansible Collections:
@@ -13,7 +30,7 @@ Requirements
     - netaddr
 - Passwordless SSH setup from the Ansible control node to all BeeGFS HA nodes and clients.
 
-Support Matrix
+## Support Matrix
 --------------
 The BeeGFS role has been tested with the following BeeGFS versions, operating systems, and backend/frontend protocols:
 
@@ -39,13 +56,13 @@ Notes:
 - While not explicitly included in testing, other firmware versions and storage systems including the E2800, EF570, and EF600 (iSER only).
 - Other SAN protocols including InfiniBand SRP, Fibre Channel, NVMe over IB, NVMe over FC, and NVMe over RoCE are expected to work when [netappeseries.host collection](https://galaxy.ansible.com/netapp_eseries/host) implements them. At the time of writing only iSCSI and InfiniBand iSER have been implemented.
 
-Getting Started
+## Getting Started
 ----------------
 To build an inventory and playbook based your BeeGFS cluster requirements, checkout the [beegfs_ha_7_2 example project readme](https://github.com/netappeseries/beegfs/tree/release-2.1.0/examples/beegfs_ha_7_2/README.md).
 
 This is the recommended way to get started with the BeeGFS HA role. Alternatively users can jump into the examples and detailed descriptions of the various variables found in the sections below.
 
-Example Playbook, Inventory, Group/Host Variables 
+## Example Playbook, Inventory, Group/Host Variables 
 -------------------------------------------------
 For users that want to jump right in this section provides examples of how to layout your playbook and inventory files.
 
@@ -204,7 +221,7 @@ This file would typically be created as `host_vars/<hostname>.yml`:
     eseries_validate_certs: false
     eseries_initiator_protocol: iscsi
 
-Role Variables
+## Role Variables
 --------------
 This section gives a quick summary of the available variables to configure the BeeGFS HA role. For additional details on select variables please see the follow on sections.
     
@@ -391,7 +408,7 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7_2/dists/sles12
     beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_2/gpg/RPM-GPG-KEY-beegfs
 
-Role Tags
+## Role Tags
 ---------
 Use the following tags when executing you BeeGFS HA playbook to only execute select tasks:
 
@@ -409,7 +426,7 @@ Use the following tags when executing you BeeGFS HA playbook to only execute sel
     - beegfs_ha_backup                # Backup Pacemaker and Corosync configuration files.
     - beegfs_ha_client                # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
 
-General Notes
+## General Notes
 -------------
 - All BeeGFS cluster nodes need to be available.
 - Fencing agents should be used to ensure failed nodes are definitely down.  
@@ -418,7 +435,7 @@ General Notes
 - BeeGFS is added to the PRUNEFS list in /etc/updatedb.conf to prevent daily indexing scans on clients which causes performance degradations.
 - Please refer to the documentation for your Linux distribution/version for guidance on the maximum cluster size. For example the limitations for RedHat can be found [here](https://access.redhat.com/articles/3069031).
 
-Override Default Templates
+## Override Default Templates
 --------------------------
 All templates found in beegfs_ha_7_2/templates/ can be overridden by create a template in <PLAYBOOK_DIRECTORY>/templates/beegfs_ha_7_2/<RELATIVE_TEMPLATE_PATH>/<TEMPLATE_NAME>. Start by copying the default template and make your modifications to it. Do not modify the existing Jinja2 statements.
 
@@ -434,7 +451,7 @@ All templates found in beegfs_ha_7_2/templates/ can be overridden by create a te
 
 You may wish to override some configuration parameters found in these templates on a per-resource group basis. While common parameters (for example NUMA zones) already have a variable that can be set in each resource group's "group_vars" file, you can easily modify the templates to be able to specify your own variables by replacing the default configuration value with a Jinja2 expression. For consistency and to ensure a default is provided if the variable is unset, we recommend the following Jinja2 expression: {{ beegfs_ha_X | default(<DEFAULT_VALUE>) }}. For example you could replace the line tuneNumStreamListeners = 1 with tuneNumStreamListeners = {{ beegfs_ha_tuneNumeStreamListeners | default('1') }}. Then simply set beegfs_ha_tuneNumeStreamListeners under any of the group_vars/<resource_group>.yml you want to override.
 
-NTP (`beegfs_ha_ntp_enabled: true`)
+## NTP (`beegfs_ha_ntp_enabled: true`)
 -----------------------------------
 Time synchronization is required for BeeGFS to function properly. As a convenience to users the BeeGFS role provides functionality that can configure the ntpd service on all BeeGFS nodes by setting `beegfs_ha_ntp_enabled: True`. By default this variable is set to `False` to avoid conflicts with any existing NTP configuration that might be in place. If this variable is set to `True` please note any existing Chrony installations will be removed as they would conflict with ntpd.
 
@@ -446,7 +463,7 @@ The template used to generate the /etc/ntp.conf file can be found at `roles/beeg
     ```
     As a result the NTP related Ansible tasks will be marked as changed whenever the role is reapplied. If you're wanting to manage the NTP configuration outside Ansible simply set `beegfs_ha_ntp_enabled: False` to prevent the role from configuring NTP.
 
-Performance Tuning (`beegfs_ha_enable_performance_tuning: False`)
+## Performance Tuning (`beegfs_ha_enable_performance_tuning: False`)
 -----------------------------------------------------------------
 Performance tuning is disabled by default, but can be enabled by setting `beegfs_ha_enable_performance_tuning: True`. The default is to avoid a scenario where users are unaware these are being set, and they result in poor performance or stability issues that are difficult to troubleshoot. There is also the added consideration the default values will likely need to be adjusted to achieve optimal performance for a given hardware configuration.
 
@@ -495,7 +512,7 @@ Note these will be applied to both the device mapper entry (e.g. dm-X) and under
   - The `hw_max_sectors_kb` value can vary depending on the device (example: InfiniBand HCA) used to attach the host to external storage (either direct or through a fabric). Some device drivers may support changing parameters that allow the hw_max_sectors value to increase, but this is outside the scope of this documentation and Ansible role.
   - The hardware versus configured value can be verified by substituting your devices in the following commands `cat /sys/block/[sdX|dm-X]/queue/max_hw_sectors_kb` and `cat /sys/block/[sdX|dm-X]/queue/max_sectors_kb`.    
 
-Uninstall (`beegfs_ha_uninstall: False`)
+## Uninstall (`beegfs_ha_uninstall: False`)
 ----------------------------------------
 Uninstall your BeeGFS HA instance by setting `beegfs_ha_uninstall: True`. At minimum, BeeGFS and HA applications, configuration, performance tunings, and mount points will be removed. The uninstallation process requires the original inventory files so just modify the `beegfs_ha_uninstall_x` variables at the group level.
 
@@ -528,9 +545,9 @@ The following are an explicit list of implied actions.
 
 
 
-Maintenance
------------
-#### Failover:
+## Maintenance
+
+### Failover:
 There may be a need to manaully failover a specific node, this could be due to server maintenance. Here are a list of commands and examples of how to failover a particular service using pcs.
   - `pcs resource move <resource_group> < destination_node>`
   ##### Example:
@@ -538,7 +555,7 @@ There may be a need to manaully failover a specific node, this could be due to s
 
 Run `pcs status` to verify the resource group failed over to the desired node.
 
-#### Failback:
+### Failback:
 
 Provided customers followed our deployment recommendations when setting up the cluster, they should have set the default `resource-stickiness` to a high value ensuring resources do not automatically failback when an offline node is booted. This ensures we can boot the failed node and verify it's health before failing back resources to their original node.
 
@@ -563,7 +580,7 @@ Provided customers followed our deployment recommendations when setting up the c
     - Relocate a specific resource with `pcs resource relocate <resource-group>`
   - Run `pcs status` and verify all resources have been relocated to the appropriate nodes
 
-#### Following a Planned Outage:
+### Following a Planned Outage:
   - If you used `pcs resource move` a temporary location constraint with a score of INFINITY would have been added to force the resource group to move to the desired node, this can be verified with `pcs constraint`:
   ```
   [root@nodeMM1 ~]# pcs constraint
@@ -592,159 +609,159 @@ Provided customers followed our deployment recommendations when setting up the c
     - Relocate all resource groupes with `pcs resource relocate run`
     - Relocate a specific resource group with `pcs resource relocate run <resource-group>`
 
-#### Replacing a Node in the Cluster
+### Replacing a Node in the Cluster
+  - Start by createing a new Host inventory File for the new node being added.
+  ##### Example
+  This file would typically be created as `host_vars/<hostname>.yml`:
+
+      ansible_host: 192.168.1.10
+      ansible_ssh_user: admin
+      ansible_become_password: adminpass
+
+      eseries_iscsi_iqn: iqn.1994-05.com.redhat:node_mm1
+      eseries_iscsi_interfaces:
+        - name: eth1
+          address: 192.168.2.226/24
+        - name: eth2
+          address: 192.168.3.226/24
   
-  - These are steps that are universal no matter which service the old node was utilizing.
-  ##### On the New Node
-    - Install the Pacemaker tools
-      `yum -y install corosync pacemaker pcs fence-agents-all`
+  - In the ansible inventory replace the old node with the new node name.
+  - Finally Rerun the ansible playbook with the updated ansible inventory.
 
-    - Setup the password for hacluster
-      `passwd hacluster`
+### Adding a Building Block to the Cluster
+  - Start by Creating a new Host Inventory File for each new node in the building block
+  ##### Example
+  This file would typically be created as `host_vars/<hostname>.yml`:
 
-    - Start the pscd daemon
-      `systemctl start pcsd; systemctl enable pcsd`
-    
-    - Copy the host file from the Building Block Partner
-      ```
-        cat /etc/hosts
-        
-        127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
-        ::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
-        10.113.72.109 ictm1619h7 nodeSS1
-        10.113.73.44 ictm1618h16 nodeSS2
-        10.113.73.42 ictm1618h14 Old-Node
-        10.113.72.186 ictm1619h12 New-Node
-        
-        # FLOATING IP FOR MANAGEMENT SERVICE
-        192.168.2.99 management
-      ```
-    - Setup communication between this new machine with the user 'hacluster' using the command `pcs cluster auth <NEW_NODE_NAME>`
-    - Add the new node to this cluster using `pcs cluster node add <NEW NODE>`.
-    - Remove the Old Node from the cluster with `pcs cluster node remove <NODE_NAME>`
-    - In NetApp E-Series System Manager create a new host object in Storage→ Hosts → Create → Host and filling out the appropriate information. For RHEL, the HOST TYPE should be set  to 'Linux DM-MP (Kernel 3.10 or later)'.
-    - Add Host to the host cluster by editing the host cluster the old node was utilizing.
-    - Copy the multipath configuration file from the Building Block Partner. 
-    - Ensure that the hosts in the host group can see all of the appropriate volume LUNs. For example, hosts NodeMM1 and NodeMM2 can see the management and metadata volume LUNs. You can do this with the multipath -ll command.
-      - If you cannot find the devices.
-        - Run `iscsiadm -m session --rescan`
-        - Run `rescan-scsi-bus.sh`
+      ansible_host: 192.168.1.10
+      ansible_ssh_user: admin
+      ansible_become_password: adminpass
 
-##### If the Old Node hosted the Metadata service
-  - Install the metadata package
-    `yum install -y beegfs-meta libbeegfs-ib`
-  - Create directories for the mount points of the first and second metadata services. We will need a mount point and directory per each metadata service.
-    `mkdir /mnt/<metdata_01_mnt_point>; mkdir /mnt/<metadata_02_mnt_point>`
-  - Create directories for the metadata service's data and configuration file on the shared mount location.  This step is done because the data directory must be an empty directory and will be placed in the data folder. The Configuration file be stored on the mount in the other metadata_config directory.
-    ```
-    mkdir <metadata_01_data_location>
-    mkdir <metadata_01_config_location>
-    ```
-  - Override the default systemd unit file for starting the metadata service in multimode. We need it to load the configuration file found in the shared mount location.
+      eseries_iscsi_iqn: iqn.1994-05.com.redhat:node_mm1
+      eseries_iscsi_interfaces:
+        - name: eth1
+          address: 192.168.2.226/24
+        - name: eth2
+          address: 192.168.3.226/24
 
-    Pacemaker will start the metadata service by using the command  `"systemctl start beegfs-meta@metadata_01_tgt_001.service"`. That will then load this unit file and the configuration file stated in the file will be used. The "%I" is the argument passed in from the systemd command, `<service_name>@<argument>.service`. This allows us to use multiple instances of the metadata service with one systemd template file.
-  - Reload the daemon.
-    `systemctl daemon-reload`
-  - Make sure the service starts without errors.
-    `systemctl start beegfs-meta@metadata_01_tgt_001.service`
-    `systemctl status beegfs-meta-@metadata_01_tgt_001.service`
-  - Stop and disable the beegfs-metadata service.
-    `systemctl stop beegfs-meta@metadata_01_tgt_001 && systemctl disable beegfs-meta@metadata_01_tgt_001`
-  - Unmount the filesystem, so pacemaker can take over using the command `umount <metadata_01_mnt_location>`.
+  - Add the resource groups that will be running on the new Building block like show below to the Inventory file. NOTE: The vars can go in a seperate group vars file, typically this would be under `group_vars/<resource_name>.yml`.
+    stor_0x:    # Storage resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
+              hosts:
+                node_ss1:
+                node_ss2:
+              vars:
+                port: 8012
+                floating_ips:
+                  - "eth1:192.168.2.236/24"
+                  - "eth2:192.168.3.237/24"
+                beegfs_service: storage
+                beegfs_targets:
+                  eseries_storage_system_01:
+                    eseries_storage_pool_configuration:
+                      - raid_level: raid6
+                        criteria_drive_count: 10
+                        volumes:
+                          - size: 2048
+                          - size: 2048
+                          - size: 2048
+                          - size: 2048
+                      - raid_level: raid6
+                        criteria_drive_count: 10
+                        volumes:
+                          - size: 2048
+                          - size: 2048
+                          - size: 2048
+                          - size: 2048
 
-##### If the Old Node also hosted the Management Service
-  - Install the BeeGFS management package
-    `yum intall -y beegfs-mgmtd`
-  - Create the mount point
-    `mkdir <mgmt_mount_point>`
-  - Create directories to hold the mgmt data and configuration file on the shared mount location.
-    `mkdir <mgmt_data_location>; mkdir <mgmt_config_location>`
-  - Override the systemd unit file for starting the beegfs-mgmtd service. We need it to load the configuration file found in the shared mount location.
-  - Reload the daemon
-    `systemctl daemon-reload`
-  - Start the beegfs-mgmtd service to make sure it starts without errors.
-    `systemctl start beegfs-mgmtd.service`
-    `systemctl status beegfs-mgmtd.service`
-  - Stop and disable the beegfs-mgmtd service
-    `systemctl stop beegfs-mgmtd && systemctl disable beegfs-mgmtd`
-  - Unmount the filesystem
-    `umount <mgmt_mount_point>`
+  - Once you have the bulding block added the only thing left to do is rerun the ansible playbook with your updated inventory.
 
-##### If the Old Node hosted the Storage Service
-  - Install the storage package
-    `yum install -y beegfs-storage libbeegfs-ib`
-  - Create directories for the mount points of the first and second storage services.  We will need a mount point and directory per each storage service target
-    ```
-      mkdir <storage_target_mount_point>
-  
-      #Example
-      mkdir /mnt/storage_01_tgt_001
-      mkdir /mnt/storage_01_tgt_002
-      mkdir /mnt/storage_01_tgt_003
-      mkdir /mnt/storage_01_tgt_004
-      
-      mkdir /mnt/storage_02_tgt_005
-      mkdir /mnt/storage_02_tgt_006
-      mkdir /mnt/storage_02_tgt_007
-      mkdir /mnt/storage_02_tgt_008
-    ```
-  - Create directories for the storage service's data and configuration file on the shared mount location. This step is done because the data directory must be an empty directory and   will be placed in the data folder. The Configuration file be stored on the mount in the other storage_config directory.
-    `mkdir <storage_01_data_location>`
-    `mkdir <storage_01_config_location>`
-  - Override the default systemd unit file for starting the storage service in multimode. We need it to load the configuration file found in the shared mount location.
-    Pacemaker will start the storage service by using the command  `systemctl start beegfs-start@storage_01_tgt_001.service`. That will then load this unit file and the configuration file stated in the file will be used. The `%I` is the argument passed in from the systemd command, `<service_name>@<argument>.service`. This allows us to use multiple instances of the storage service with one systemd template file.
-  
-  - Reload the daemon
-    `systemctl daemon-reload`
-  - Make sure the service starts without errors
-    `systemctl start beegfs-storage@storage_01_tgt_001.service`
-    `systemctl status beegfs-storage@storage_01_tgt_001.service`
-  - Stop and disable the beegfs-storage service
-    `systemctl stop beegfs-storage@storage_01_tgt_001 && systemctl disable beegfs-storage@storage_01_tgt_001`
-  - Unmount the filesystem, so pacemaker can take over
-    `umount <storage_target_mount_point>`
+## Retiring a Building Block from the Cluster
+  - Removing a building block is similar to adding one, just in reverse.
+  - In your inventory file, remove the storage resources associated with the building block that is getting removed.
+  - Rerun your playbook with the 
 
-##### Universal Final Steps
-  - Add location constraints, note by default our BeeGFS High Availability RedHat Enterprise Linux 7.7 Setup Location Constraints procedure recommends using an opt-in cluster:
-    ```
-      #Commands for an OPT IN cluster:
-      
-      #Allow mgmt-group to be ran on nodeMM1 and nodeMM2, but prefer to run on nodeMM1
-      pcs constraint location mgmt-group prefers nodeMM1=200 nodeMM2=0
-      
-      #Allow meta-01-group to be ran on nodeMM1 and nodeMM2, but prefer to run on nodeMM1
-      pcs constraint location meta-01-group prefers nodeMM1=200 nodeMM2=0
-      
-      
-      #Commands for an OPT OUT cluster:
-      
-      #Do not allow the meta groups to be used on the storage service servers
-      pcs constraint location meta-01-group avoids nodeSS1=INFINITY nodeSS2=INFINITY
-      pcs constraint location meta-02-group avoids nodeSS1=INFINITY nodeSS2=INFINITY
-      
-      #Setup node preferences
-      pcs constraint location meta-01-group prefers nodeMM1=200
-      pcs constraint location meta-02-group prefers nodeMM2=200
-    ```
-  - Tell Pacemaker to relocate to preferred location
-    `pcs resource relocate run <RESOURCE_NAME>`
-
-
-
-
-
-
-
-
-
-
-
-
-
-Command Reference
+## Command Reference
 -----------------
+pcs status                                          # Get a simple view of the pacemaker setup
 
-Dependencies
+pcs config                                          # Get full view of the pacemaker setup
+
+pcs constraint                                      # View pacemaker constraints
+
+pcs resource [enable/disable] <RESOURCE_NAME>       # Enable/Disable a particular resource from running on any node in the cluster
+
+pcs resource ban <RESOURCE_NAME> <NODE_NAME>        # Ban a resource from running on a node (Temporary constraint)
+
+pcs resource clear <RESOURCE_NAME> <NODE_NAME>      # Delete pacemaker resource constraints
+
+pcs resource delete <RESOURCE_NAME>                 # Delete pacemaker resource
+
+pcs resource show <resource-id>                     # Show the details of the configured resource
+
+pcs resource update <RESOURCE_NAME> <OPTION_NAME=NEW_OPTION_VALUE> # Update the details of the configured resource
+
+pcs resource describe <RESOURCE_NAME>               # Show the details of any resource
+
+pcs constraint list --full                          # List resource constraints with IDs
+
+pcs resource move <RESOURCE_NAME> <node>            # Move a resource manually (Temporary constraint)
+
+pcs resource clear <RESOURCE_ID> <node>             # Clear a pcs ban/move temporary constraint on a node
+
+pcs resource cleanup <RESOURCE_NAME> --node nodeMM1 # Clear pacemaker failures
+
+pcs resource create storage-service sysemd:beegfs-storage op monitor interval=13s meta-01-service resource-stickiness=1500    # Add stickiness to individaul resources
+
+pcs resource update <RESOURCE_NAME> resource-stickiness=1500 # Update resource to have stickiness
+
+pcs stonith                                         # List STONITH agents that are configured
+
+pcs stonith delete <STONITH_NAME>                   # Delete STONITH agent
+
+pcs stonith stonith_admin --cleanup --history=nodeMM1 # Clean fencing historical failures
+
+pcs config                                          # List out the current configuration
+
+pcs property set <PROPERTY_NAME>=<PROPERTY_NEW_VALUE> # Set pcs configuration peroperty
+
+pcs -f <FILE_NAME> property set <PROPERTY_NAME>=<PROPERTY_NEW_VALUE> # Set the property for a particular configuration file
+
+pcs cluster cib-push stonith_cfg                    # Push the configuration file to the main
+
+pcs cluster cib <filename>                          # save CIB configuration file
+
+pcs config checkpoint                               # List (all) available configuration checkpoints.
+
+pcs config checkpoint view <CHECKPOINT_NUMBER>      # Show specified configuration checkpoint
+
+pcs config checkpoint diff <CHECKPOINT_NUMBER> <CHECKPOINT_NUMBER2>   # Show the difference between two checkpoints
+
+pcs config checkpoint restore <CHECKPOINT_NUMBER>   # Restore cluster configuration to specified checkpoint.
+
+pcs cluster sync                                    # Sync cluster settings to all successfully authenticated nodes in the cluster
+
+##### Beegfs commands
+
+beegfs-net                                          # Displays connections the client is using
+
+beegfs-check-servers                                # Displays connectivity of all the services
+
+beegfs-df                                           # Displays free space
+
+beegfs-ctl --listnodes --nodetype=meta --nicdetails # Displays networking of the metadata service
+
+beegfs-ctl --listnodes --nodetype=storage --nicdetails # Displays networking of the storage service
+
+beegfs-ctl --listnodes --nodetype=client –nicdetails  # Displays networking of the client service
+
+##### Corosync commands
+
+crm verify -L                                       # Verify the current configuration
+
+crm verify -f <file>                                # Verify the conifguration file
+
+
+### Dependencies
 ------------
 - netapp_eseries.santricity
 - netapp_eseries.host
