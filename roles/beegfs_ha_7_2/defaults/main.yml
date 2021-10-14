@@ -41,11 +41,11 @@ beegfs_ha_force_resource_move: true   # Forces node and resource changes to migr
 # BeeGFS pacemaker resource configuration defaults
 beegfs_ha_resource_monitor_monitor_interval: 17s     # BeeGFS monitoring service monitor interval - Time interval from end of monitor action call to the start of another monitor action call.
 beegfs_ha_resource_monitor_monitor_timeout: 13s      # BeeGFS monitoring service monitor timeout - Maximum time allowed for the monitor action call before failing.
-beegfs_ha_resource_monitor_stop_timeout: 30s      # BeeGFS monitoring service stop timeout - Maximum time allowed for the monitor action call before failing.
+beegfs_ha_resource_monitor_stop_timeout: 30s         # BeeGFS monitoring service stop timeout - Maximum time allowed for the monitor action call before failing.
 beegfs_ha_resource_monitor_migration_threshold: 2    # BeeGFS monitoring service failures before migrating away from failed node.
 
 beegfs_ha_resource_filesystem_monitor_interval: 17s  # ocf:heartbeat:Filesystem resource monitor operation interval
-beegfs_ha_resource_ipaddr_monitor_interval: 17s      # ocf:heartbeat:IPaddr2 resource monitor operation interval
+beegfs_ha_resource_ipaddr_monitor_interval: 17s      # ocf:eseries:beegfs-ipaddr2 resource monitor operation interval
 beegfs_ha_resource_mailto_monitor_interval: 60s      # ocf:heartbeat:mailTo resource monitor operation interval
 beegfs_ha_resource_systemd_monitor_interval: 13s     # ocf:heartbeat:systemd resource monitor operation interval
 
