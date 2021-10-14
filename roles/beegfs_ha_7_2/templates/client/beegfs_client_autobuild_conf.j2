@@ -55,7 +55,7 @@
 # Default:
 #  buildArgs=-j8
 
-buildArgs=-j8 {% if beegfs_ha_enable_rdma == True %}BEEGFS_OPENTK_IBVERBS=1{% endif %} {% if beegfs_ha_ofed_include_path is defined %}OFED_INCLUDE_PATH={{ beegfs_ha_ofed_include_path }}{% endif %}
+buildArgs=-j8 {% if beegfs_ha_ofed_include_path is defined %}OFED_INCLUDE_PATH={{ beegfs_ha_ofed_include_path }}{% endif %}
 
 
 # Turn Autobuild on/off

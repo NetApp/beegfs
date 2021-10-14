@@ -19,10 +19,10 @@
     <operations>
       <op id="{{ group }}-monitor-start" interval="0s" name="start"/>
       <op id="{{ group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
-      <op id="{{ group }}-monitor-stop" interval="0s" name="stop"/>
+      <op id="{{ group }}-monitor-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_monitor_stop_timeout }}"/>
     </operations>
     <meta_attributes id="{{ group }}-monitor-meta_attributes">
-      <nvpair id="{{ group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="1"/>
+      <nvpair id="{{ group }}-monitor-meta_attributes-migration-threshold" name="migration-threshold" value="{{ beegfs_ha_resource_monitor_migration_threshold }}"/>
     </meta_attributes>
   </primitive>
 
@@ -48,7 +48,7 @@
       {%- set iflabel = group[:12] ~ "_" ~ loop["index"] -%}
       {%- set ipaddr_id = group ~ "-IP" ~ loop["index"] %}
 
-  <primitive class="ocf" id="{{ ipaddr_id }}" provider="heartbeat" type="IPaddr2">
+  <primitive class="ocf" id="{{ ipaddr_id }}" provider="eseries" type="beegfs-ipaddr2">
     <instance_attributes id="{{ ipaddr_id }}-instance_attributes">
       <nvpair id="{{ ipaddr_id }}-instance_attributes-cidr_netmask" name="cidr_netmask" value="{{ cidr_netmask }}"/>
       <nvpair id="{{ ipaddr_id }}-instance_attributes-flush_routes" name="flush_routes" value="1"/>
