@@ -137,7 +137,7 @@ beegfs_ha_numa: ""                                            # NUMA node bindin
 beegfs_ha_metadata_maximum_node_connections: 128              # beegfs_meta.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 128
 beegfs_ha_metadata_worker_threads: 32                         # beegfs_meta.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel. On dedicated metadata servers,
                                                               #    this is typically set to a value between four and eight times the number of CPU cores. Note: 0 means use twice the number of CPU cores (but at least 4). Default: 32
-beegfs_ha_metadata_file_creation_target_algorithm: roundrobin # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file creation. Choices: [randomized, roundrobin, randomrobin, randominternode, randomintranode] Default: roundrobin
+beegfs_ha_metadata_file_creation_target_algorithm: randomized # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file creation. Choices: [randomized, roundrobin, randomrobin, randominternode, randomintranode] Default: roundrobin
 
 # Performance tuning defaults for storage service settings
 beegfs_ha_storage_maximum_node_connections: 128               # beegfs_storage.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 128
