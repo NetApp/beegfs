@@ -266,7 +266,7 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_metadata_worker_threads: 32                          # beegfs_meta.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel.
                                                                 #   On dedicated metadata servers, this is typically set to a value between four and eight times the number of CPU cores. Note: 0 means use twice the number
                                                                 #   of CPU cores (but at least 4). Default: 0
-    beegfs_metadata_file_creation_target_algorithm: roundrobin  # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file creation.
+    beegfs_metadata_file_creation_target_algorithm: randomized  # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file creation.
                                                                 #   Choices: [randomized, roundrobin, randomrobin, randominternode, randomintranode] Default: randomized
         
     # Performance tuning defaults for storage service settings
@@ -363,7 +363,7 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_uninstall_reboot: false                                   # Whether to reboot after uninstallation.
 
 
-    # Volume formatting and mounting defaults
+    # Volume formatting and mounting defaults. Note: sync must always be included in mount_options otherwise data loss may occur (sync disables caching)
     beegfs_ha_service_volume_configuration:
       management:                                                           # BeeGFS management service volume definition.
         format_type: ext4                                                   # Volume format type
