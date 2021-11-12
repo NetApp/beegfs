@@ -142,6 +142,11 @@
   when: beegfs_ha_pacemaker_cluster_node == True
   become: true
 
+- name: Ensure BeeGFS HA cluster is in maintenance mode.
+  ansible.builtin.command:
+    cmd: "crm_attribute --name maintenance-mode --update true"
+  changed_when: false
+
 # Ensure pacemaker cib.xml has all theBeeGFS HA cluster nodes.
 - name: Ensure pacemaker cib.xml has all theBeeGFS HA cluster nodes.
   block:

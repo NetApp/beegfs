@@ -32,6 +32,14 @@ beegfs_ha_pacemaker_cluster_node: true  # Whether node should be a pacemaker clu
 beegfs_ha_pacemaker_enabled: false  # Whether pacemaker and corosync should be started by systemd during the boot process
 beegfs_ha_filter_ip_ranges: []
 beegfs_ha_node_preference_scope_step: 200
+
+beegfs_ha_cluster_crm_config_defaults: # WARNING! These defaults are required for high-avaiability.
+  symmetric-cluster: false # opt-in architecture
+  fence-reaction: true  # This allows a fence to fence itself
+  concurrent-fencing: true # multiple nodes can be fenced at the concurrently
+  start-failure-is-fatal: false  # Allows migration-threshold to effect the number of failures that can occur during startup (This should be AVOIDED since we shouldn't be reporting errors unless one really occured)
+  batch-limit: -1  #-1 default is unlimited except for dynamic load determinations.
+
 beegfs_ha_cluster_resource_defaults:
   resource-stickiness: 15000
   cluster-ipc-limit: 500
