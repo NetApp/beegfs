@@ -388,17 +388,20 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_uninstall_pcsd_dir: /var/lib/pcsd/                      # PCS daemon directory absolute path.
 
     # Debian / Ubuntu repository defaults
-    beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7_2
-    beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_2/gpg/DEB-GPG-KEY-beegfs
+    beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5
+    beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/DEB-GPG-KEY-beegfs
+
 
     # RedHat / CentOS repository defaults
-    beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7_2/dists/rhel7
-    beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_2/gpg/RPM-GPG-KEY-beegfs
+    beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5/dists/rhel8
+    beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/RPM-GPG-KEY-beegfs
+
 
     # SUSE repository defaults
     beegfs_ha_suse_allow_unsupported_module: true
-    beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7_2/dists/sles12
-    beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_2/gpg/RPM-GPG-KEY-beegfs
+    beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5/dists/sles15
+    beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/RPM-GPG-KEY-beegfs
+
 
 Role Tags
 ---------
