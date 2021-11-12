@@ -22,3 +22,10 @@
 - name: "Wait for {{ item['key'] }} resource to move to its preferred node [{{ item['value'] }}]"
   ansible.builtin.command: "crm_resource --wait"
   changed_when: false
+
+- name : "Clear {{ item['key'] }} resource move constraint."
+  ansible.builtin.command: "crm_resource --resource {{ item['key'] }}-monitor --clear"
+  register: move_resource
+  failed_when: move_resource["rc"] != 0
+  changed_when: true
+  become: true
