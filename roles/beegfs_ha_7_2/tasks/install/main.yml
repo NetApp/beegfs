@@ -159,16 +159,32 @@
 
     - name: Ensure BeeGFS HA cluster is out of maintenance and standby modes.
       block:
-        - name: Move cluster out of maintenance mode.
-          ansible.builtin.command:
-            cmd: "crm_attribute --name maintenance-mode --delete"
-          changed_when: false
-          when: inventory_hostname == preferred_management_node
+        - name: Ensure cluster nodes have joined the cluster.
+          ansible.builtin.systemd:
+            state: started
+            enabled: "{{ beegfs_ha_pacemaker_enabled }}"
+            name: "{{ item }}"
+          loop: ["corosync", "pacemaker"]
+          when: beegfs_ha_pacemaker_cluster_node == True
+
+        - name: Check whether cluster node is in standby.
+          ansible.builtin.command: "crm_standby --node={{ inventory_hostname }} --query"
+          register: standby_query
 
         - name: Move any cluster nodes out of standby mode.
-          ansible.builtin.command:
-            cmd: "crm_standby --node={{ inventory_hostname }} --delete"
-          changed_when: false
+          ansible.builtin.command: "crm_standby --node={{ inventory_hostname }} --update off"
+          register: standby_update
+          when: standby_query["stdout"] | regex_search(".*value=on")
+
+        - name: Check whether cluster is in maintenance-mode
+          ansible.builtin.command: "crm_attribute --name maintenance-mode --query"
+          register: maintenance_mode_query
+          when: inventory_hostname == preferred_management_node
+
+        - name: Move cluster out of maintenance mode.
+          ansible.builtin.command: "crm_attribute --name maintenance-mode --update off"
+          register: maintenance_mode_update
+          when: inventory_hostname == preferred_management_node and maintenance_mode_query["stdout"] | regex_search(".*value=true")
 
         - name: Wait for cluster changes to stabilize.
           ansible.builtin.command:
@@ -186,9 +202,35 @@
 
     - name: Attempt to return services to their preferred BeeGFS HA cluster nodes.
       block:
-        - name: Attempt to return services to their preferred BeeGFS HA cluster nodes.
-          include_tasks: move.yml
-          when: beegfs_ha_force_resource_move == True and inventory_hostname == preferred_management_node
+        - name: Determine current location of all cluster resources.
+          ansible.builtin.command: crm_mon -r1
+          register: resource_locations
+          changed_when: false
+          become: true
+
+        - name: Determine whether cluster resources are located on their preferred nodes.
+          set_fact:
+            move_resources: |-
+              {%- set resources = {} -%}
+              {%- for host in groups[beegfs_ha_ansible_cluster_group] if "node_info" in (hostvars[host].keys() | list) -%}
+                {%- set node_info = hostvars[host]["node_info"] -%}
+                {%- for service in node_info["services"] -%}
+                  {%- for resource_group_info in node_info[service] if host == resource_group_info["preferred_node_order"][0] and
+                                                                       (resource_group_info["resource_group"] not in resources.keys() | list) -%}
+                    {%- for line in resource_locations["stdout_lines"] if line | regex_search(resource_group_info["resource_group"] ~ "-service.*" ~ host) -%}
+                      {#- DO NOTHING -#}
+                    {%- else -%}
+                      {%- if resources.update({resource_group_info["resource_group"]: resource_group_info["preferred_node_order"][0]}) -%}{%- endif -%}
+                    {%- endfor -%}
+                  {%- endfor -%}
+                {%- endfor -%}
+              {%- endfor -%}
+              {{- resources -}}
+
+        - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
+          ansible.builtin.include_tasks: move.yml
+          loop: "{{ lookup('ansible.builtin.dict', move_resources) }}"
+      when: beegfs_ha_force_resource_move == True and inventory_hostname == preferred_management_node
       tags:
         - beegfs_ha_move_resource_to_preferred_node
         - beegfs_ha_configure_resource
