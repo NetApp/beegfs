@@ -34,11 +34,9 @@ beegfs_ha_filter_ip_ranges: []
 beegfs_ha_node_preference_scope_step: 200
 
 beegfs_ha_cluster_crm_config_defaults: # WARNING! These defaults are required for high-avaiability.
-  symmetric-cluster: false # opt-in architecture
-  fence-reaction: true  # This allows a fence to fence itself
-  concurrent-fencing: true # multiple nodes can be fenced at the concurrently
-  start-failure-is-fatal: false  # Allows migration-threshold to effect the number of failures that can occur during startup (This should be AVOIDED since we shouldn't be reporting errors unless one really occured)
-  batch-limit: -1  #-1 default is unlimited except for dynamic load determinations.
+  symmetric-cluster: false  # Opt-in architecture
+  fence-reaction: true  # Allows cluster nodes with a fence resource to fence itself.
+  concurrent-fencing: true # Allows cluster nodes to be fenced concurrently.
 
 beegfs_ha_cluster_resource_defaults:
   resource-stickiness: 15000
