@@ -2,7 +2,7 @@
   yum_repository:
     name: beegfs
     description: BeeGFS YUM Repo
-    file: beegfs_rhel7
+    file: beegfs_rhel
     baseurl: "{{ beegfs_ha_rhel_repository_base_url }}"
     enabled: true
     gpgcheck: true
