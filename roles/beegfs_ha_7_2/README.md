@@ -214,8 +214,9 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_cluster_username: hacluster                       # Pcs cluster username.
     beegfs_ha_cluster_password: hapassword                      # Pcs cluster password.
     beegfs_ha_cluster_password_sha512_salt: random$alt          # Pcs cluster password sha512 encryption salt.
-        
+
     # The default values for these variables may need to be overridden:      
+    beegfs_ha_cluster_node_ips: []                              # Defines an order list of IP addresses or hostnames with the first having the highest priority. When there are no listed IPs then node name will be used. Node names are defined in /etc/hosts.
     beegfs_ha_ntp_enabled: true                                 # Whether NTP should be enabled. **This will disable Chrony!
     beegfs_ha_chrony_enabled: false                             # Whether Chrony should be enabled. **This will disable NTP!
     beegfs_ha_allow_firewall_high_availability_service: true    # Open firewall ports required by the high-availability services.
