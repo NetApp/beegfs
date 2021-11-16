@@ -143,9 +143,18 @@
   become: true
 
 - name: Ensure BeeGFS HA cluster is in maintenance mode.
-  ansible.builtin.command:
-    cmd: "crm_attribute --name maintenance-mode --update true"
-  changed_when: false
+  block:
+    - name: Check whether cluster is in maintenance-mode
+      ansible.builtin.command: "crm_attribute --name maintenance-mode --query"
+      failed_when: false
+      changed_when: false
+      register: maintenance_mode_query
+
+    - name: Ensure BeeGFS HA cluster is in maintenance mode.
+      ansible.builtin.command: "crm_attribute --name maintenance-mode --update true"
+      when: maintenance_mode_query["stdout"] is defined and not maintenance_mode_query["stdout"] | regex_search(".*value=(true|on|y|1)", ignorecase=true)
+  when: inventory_hostname == preferred_management_node
+  become: true
 
 # Ensure pacemaker cib.xml has all theBeeGFS HA cluster nodes.
 - name: Ensure pacemaker cib.xml has all theBeeGFS HA cluster nodes.
