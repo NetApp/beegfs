@@ -14,7 +14,7 @@ beegfs_ha_top_level_variable_inclusion_pattern: "^(beegfs|eseries).*"
 beegfs_ha_cluster_username: hacluster
 beegfs_ha_cluster_password: hapassword
 beegfs_ha_cluster_password_sha512_salt: randomSalt
-# beegfs_ha_cluster_node_ips: []  # Defines an order list of interfaces with the first having the highest priority. If no interfaces are listed then the node name that will reference an entry in /etc/hosts.
+# beegfs_ha_cluster_node_ips: []  # Defines an order list of IP addresses or hostnames with the first having the highest priority. When there are no listed IPs then node name will be used. Node names are defined in /etc/hosts.
 
 beegfs_ha_allow_firewall_high_availability_service: true   # Allow high-availability firewall services.
 beegfs_ha_alert_email_subject: "ClusterNotification"
