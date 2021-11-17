@@ -5,19 +5,11 @@
       tags:
         - always
 
-    - name: Ensure BeeGFS HA cluster is in maintenance mode.
+    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode if cluster is available.
       block:
-        - name: Check whether cluster is in maintenance-mode
-          ansible.builtin.command: "crm_attribute --name maintenance-mode --query"
-          failed_when: false
-          changed_when: false
-          register: maintenance_mode_query
-
-        - name: Ensure BeeGFS HA cluster is in maintenance mode.
-          ansible.builtin.command: "crm_attribute --name maintenance-mode --update true"
-          when: maintenance_mode_query["stdout"] is defined and not maintenance_mode_query["stdout"] | regex_search(".*value=(true|on|y|1)", ignorecase=true)
-      when: inventory_hostname == preferred_management_node
-      become: true
+        - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+          ansible.builtin.include_tasks: ../common/maintenance/set.yml
+      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       tags:
         - beegfs_ha_configure_resource
         - beegfs_ha_configure
@@ -167,33 +159,14 @@
             state: started
             enabled: "{{ beegfs_ha_pacemaker_enabled }}"
             name: "{{ item }}"
+          when: beegfs_ha_pacemaker_cluster_node
           loop: ["corosync", "pacemaker"]
-          when: beegfs_ha_pacemaker_cluster_node == True
 
-        - name: Check whether cluster node is in standby.
-          ansible.builtin.command: "crm_standby --node={{ inventory_hostname }} --query"
-          register: standby_query
+        - name: Ensure BeeGFS HA cluster nodes are out of maintenance mode.
+          ansible.builtin.include_tasks: ../common/standby/clear.yml
 
-        - name: Move any cluster nodes out of standby mode.
-          ansible.builtin.command: "crm_standby --node={{ inventory_hostname }} --delete"
-          register: standby_update
-          when: standby_query["stdout"] | regex_search(".*value=(true|on|y|1)", ignorecase=true)
-
-        - name: Check whether cluster is in maintenance-mode
-          ansible.builtin.command: "crm_attribute --name maintenance-mode --query"
-          register: maintenance_mode_query
-          when: inventory_hostname == preferred_management_node
-
-        - name: Move cluster out of maintenance mode.
-          ansible.builtin.command: "crm_attribute --name maintenance-mode --delete"
-          register: maintenance_mode_update
-          when: inventory_hostname == preferred_management_node and maintenance_mode_query["stdout"] | regex_search(".*value=(true|on|y|1)", ignorecase=true)
-
-        - name: Wait for cluster changes to stabilize.
-          ansible.builtin.command:
-            cmd: "crm_resource --wait"
-          changed_when: false
-          when: inventory_hostname == preferred_management_node
+        - name: Ensure BeeGFS HA cluster nodes are out of maintenance mode.
+          ansible.builtin.include_tasks: ../common/maintenance/clear.yml
       when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       become: true
       tags:

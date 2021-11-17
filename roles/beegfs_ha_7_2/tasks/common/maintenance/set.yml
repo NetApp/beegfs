@@ -1,0 +1,19 @@
+# Note: If cluster_node variable is not specified then the inventory_hostname will be used.
+
+- name: Check whether cluster is in maintenance-mode or the cluster is stopped
+  ansible.builtin.command: "crm_attribute --node {{ cluster_node | default(inventory_hostname) }} --name maintenance --query"
+  register: maintenance_query
+  failed_when: false
+  changed_when: false
+  become: true
+
+- name: Ensure BeeGFS HA cluster nodes are in maintenance.
+  block:
+    - name: Ensure BeeGFS HA cluster nodes are in maintenance.
+      ansible.builtin.command: "crm_attribute --node {{ cluster_node | default(inventory_hostname) }} --name maintenance --update true"
+
+    - name: Wait for cluster changes to stabilize.
+      ansible.builtin.command: "crm_resource --node {{ cluster_node | default(inventory_hostname) }} --wait"
+      changed_when: false
+  when: maintenance_query["rc"] in [0, 105] and maintenance_query["stdout"] | regex_search(".*value=(?!true|on|y|1)", ignorecase=true)
+  become: true
