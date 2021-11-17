@@ -36,9 +36,9 @@
         - storage_provision
         - storage
 
-    - name: Ensure multipath and iscsi protocol are setup.
+    - name: Ensure multipath and protocol are setup.
       block:
-        - name: Ensure multipath and iscsi protocol are setup.
+        - name: Ensure multipath and protocol are setup.
           include_role:
             name: netapp_eseries.host.storage_setup
           when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
