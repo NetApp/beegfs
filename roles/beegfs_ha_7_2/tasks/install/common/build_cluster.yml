@@ -77,21 +77,9 @@
       failed_when: false
       changed_when: false
 
-    - name: Generate a temporary pacemaker authkey file.
-      ansible.builtin.command:
-        cmd: "dd if=/dev/urandom of=/tmp/~pacemaker_keygen_authkey bs=4096 count=1"
-      changed_when: false
-
-    - name: Get the temporary pacemaker authkey.
-      ansible.builtin.command:
-        cmd: "cat /tmp/~pacemaker_keygen_authkey"
+    - name: Generate a pacemaker authkey.
+      ansible.builtin.command: "dd if=/dev/urandom bs=4096 count=1"
       register: pacemaker_keygen
-      changed_when: false
-
-    - name: Delete temporary pacemaker authkey file.
-      ansible.builtin.file:
-        state: absent
-        path: /tmp/~pacemaker_keygen_authkey
       changed_when: false
 
     - name: Determine an usable pacemaker authkey.
