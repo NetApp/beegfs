@@ -135,72 +135,46 @@
   ansible.builtin.include_tasks: ../common/maintenance/set.yml
 
 # Ensure pacemaker cib.xml has all theBeeGFS HA cluster nodes.
-- name: Ensure pacemaker cib.xml has all theBeeGFS HA cluster nodes.
+- name: Ensure pacemaker cib.xml has only the expected BeeGFS HA cluster nodes.
   block:
-    - name: Get expected pacemaker nodes xml.
-      set_fact:
-        cluster_node_resources: "{{ lookup('template', 'common/node_resources.j2') }}"
-
-    - name: Query pacemaker resources.
-      ansible.builtin.command:
-        cmd: "cibadmin --query --scope nodes"
+    - name: Collect cluster node information.
+      ansible.builtin.command: "crm_node --list"
       changed_when: false
       register: nodes_query
 
-    # Remove any nodes that are not expected
-    - name: Determine node changes. Whether nodes should be added or removed.
+    - name: Determine the current cluster nodes.
       set_fact:
-        remove_node_list: |-
+        current_cluster_nodes: |-
           {%- set nodes = [] -%}
-          {%- for line in nodes_query["stdout_lines"] if line | regex_search("uname=") -%}
-            {%- set current_node = line | regex_replace('^.*uname="', '') | regex_replace('".*$', '') -%}
-            {%- for expected_node in groups[beegfs_ha_ansible_cluster_group] if (hostvars[expected_node]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == True and current_node == expected_node -%}
-              {#- DO NOTHING -#}
-            {%- else -%}
-              {%- if nodes.append(current_node) -%}{%- endif -%}
-            {%- endfor -%}
+          {%- for entry in nodes_query["stdout_lines"] if "member" in entry -%}
+            {%- if nodes.append(entry.split(" ")[1]) -%}{%- endif -%}
           {%- endfor -%}
-          {{- nodes -}}
+          {{- nodes | sort -}}
+        expected_cluster_nodes: |-
+          {%- set nodes = [] -%}
+          {%- for node in groups[beegfs_ha_ansible_cluster_group] if (hostvars[node]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == True -%}
+            {%- if nodes.append(node) -%}{%- endif -%}
+          {%- endfor -%}
+          {{- nodes | sort -}}
 
-    - name: Ensure pacemaker services are stopped and disabled on all nodes marked for removal.
-      ansible.builtin.systemd:
-        state: stopped
-        enabled: false
-        name: pacemaker
-      delegate_to: "{{ item }}"
-      loop: "{{ remove_node_list }}"
-      failed_when: false   # In case pacemaker has been uninstalled.
-      ignore_errors: true
-
-    - name: Ensure corosync services are stopped and disabled on all nodes marked for removal.
-      ansible.builtin.systemd:
-        state: stopped
-        enabled: false
-        name: corosync
-      delegate_to: "{{ item }}"
-      loop: "{{ remove_node_list }}"
-      failed_when: false   # In case corosync has been uninstalled.
-      ignore_errors: true
-
-    - name: Remove node from pacemaker
-      ansible.builtin.command:
-        cmd: "crm_node -R {{ item }} --force"
-      loop: "{{ remove_node_list }}"
-
-    - name: Determine whether changes are required for pacemaker resources.
-      set_fact:
-        node_resources_change_required: |-
-          {%- set existing = nodes_query["stdout"] | default("") | regex_replace("\n", "") | regex_replace("\s+", " ") | regex_replace(">\s+<", "><") -%}
-          {%- set expected = cluster_node_resources | regex_replace("\n", "") | regex_replace("\s+", " ") | regex_replace(">\s+<", "><") -%}
-          {{- not (existing == expected) -}}
+    - name: Remove unexpected cluster nodes.
+      block:
+        - name: "Remove nodes from the cluster."
+          ansible.builtin.include_tasks: ../common/remove_node.yml
+          loop: "{{ current_cluster_nodes | difference(expected_cluster_nodes) }}"
+          loop_control:
+            loop_var: cluster_node
 
     - name: Update cluster nodes.
       block:
         - name: Clear pacemaker cluster nodes.
           ansible.builtin.command: "cibadmin --replace --scope nodes --xml-text '<nodes/>'"
+
         - name: Update pacemaker cluster nodes.
-          ansible.builtin.command:
-            cmd: "cibadmin --replace --scope nodes --xml-text '{{ cluster_node_resources }}'"
-      when: node_resources_change_required
+          ansible.builtin.command: "cibadmin --replace --scope nodes --xml-text '{{ lookup('template', 'common/node_resources.j2') }}'"
+      when: current_cluster_nodes != expected_cluster_nodes
   when: beegfs_ha_pacemaker_cluster_node == True and inventory_hostname == preferred_management_node
   become: true
+
+- name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+  ansible.builtin.include_tasks: ../common/maintenance/set.yml

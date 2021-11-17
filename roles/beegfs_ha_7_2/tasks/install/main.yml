@@ -103,8 +103,7 @@
       block:
         - name: Ensure common BeeGFS HA tasks are applied to BeeGFS service nodes (Management/Metadata/Storage).
           ansible.builtin.include_tasks: common.yml
-          when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("management" in node_info["services"] or
-                                                                                    "metadata" in node_info["services"] or "storage" in node_info["services"])'
+      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       tags:
         - beegfs_ha_configure_resource
         - beegfs_ha_configure
@@ -204,6 +203,7 @@
 
         - name: Clear resource failures (Required to restore nodes)
           ansible.builtin.command: crm_resource --cleanup
+          when: move_resources | length > 0
           become: true
 
         - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
