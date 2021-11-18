@@ -208,7 +208,7 @@
 
         - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
           ansible.builtin.include_tasks: move.yml
-          loop: "{{ lookup('ansible.builtin.dict', move_resources) }}"
+          loop: "{{  query('dict', move_resources) }}"
       when: beegfs_ha_force_resource_move == True and inventory_hostname == preferred_management_node
       tags:
         - beegfs_ha_move_resource_to_preferred_node

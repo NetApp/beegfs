@@ -12,10 +12,13 @@
   changed_when: true
   become: true
 
+# If the resource was moved to the preferred node after we made the list of move_resources we'll get an error:
+#   `crm_resource: Error performing operation: Requested item already exists' which we ignore. 
+#   This is not unusual if the cluster was stopped when we ran the role. 
 - name : "Move {{ item['key'] }} resource to its preferred node [{{ item['value'] }}]"
   ansible.builtin.command: "crm_resource --resource {{ item['key'] }}-monitor --move --node {{ item['value'] }}"
   register: move_resource
-  failed_when: move_resource["rc"] != 0
+  failed_when: 'move_resource["rc"] != 0 and move_resource["stderr"] != "crm_resource: Error performing operation: Requested item already exists"'
   changed_when: true
   become: true
 
