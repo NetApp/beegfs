@@ -180,7 +180,6 @@
           ansible.builtin.command: crm_mon -r1
           register: resource_locations
           changed_when: false
-          become: true
 
         - name: Determine whether cluster resources are located on their preferred nodes.
           set_fact:
@@ -189,8 +188,7 @@
               {%- for host in groups[beegfs_ha_ansible_cluster_group] if "node_info" in (hostvars[host].keys() | list) -%}
                 {%- set node_info = hostvars[host]["node_info"] -%}
                 {%- for service in node_info["services"] -%}
-                  {%- for resource_group_info in node_info[service] if host == resource_group_info["preferred_node_order"][0] and
-                                                                       (resource_group_info["resource_group"] not in resources.keys() | list) -%}
+                  {%- for resource_group_info in node_info[service] if host == resource_group_info["preferred_node_order"][0] and (resource_group_info["resource_group"] not in resources.keys() | list) -%}
                     {%- for line in resource_locations["stdout_lines"] if line | regex_search(resource_group_info["resource_group"] ~ "-service.*" ~ host) -%}
                       {#- DO NOTHING -#}
                     {%- else -%}
@@ -201,15 +199,11 @@
               {%- endfor -%}
               {{- resources -}}
 
-        - name: Clear resource failures (Required to restore nodes)
-          ansible.builtin.command: crm_resource --cleanup
-          when: move_resources | length > 0
-          become: true
-
         - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
           ansible.builtin.include_tasks: move.yml
-          loop: "{{  query('dict', move_resources) }}"
-      when: beegfs_ha_force_resource_move == True and inventory_hostname == preferred_management_node
+          loop: "{{ lookup('ansible.builtin.dict', move_resources, wantlist=true) }}"
+      when: beegfs_ha_force_resource_move and inventory_hostname == preferred_management_node
+      become: true
       tags:
         - beegfs_ha_move_resource_to_preferred_node
         - beegfs_ha_configure_resource
