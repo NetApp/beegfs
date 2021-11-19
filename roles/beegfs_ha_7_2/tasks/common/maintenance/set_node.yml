@@ -1,0 +1,11 @@
+- name: Check whether node is in maintenance-mode or the cluster is stopped on the node.
+  ansible.builtin.command: "crm_attribute --node {{ cluster_node }} --name maintenance --query"
+  register: maintenance_query
+  failed_when: false
+  changed_when: false
+  become: true
+
+- name: Ensure BeeGFS HA cluster nodes are in maintenance.
+  ansible.builtin.command: "crm_attribute --node {{ cluster_node }} --name maintenance --update true"
+  when: maintenance_query["rc"] in [0, 105] and maintenance_query["stdout"] | regex_search(".*value=(?!true|on|y|1)", ignorecase=true)
+  become: true
