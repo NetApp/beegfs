@@ -13,7 +13,7 @@
       ansible.builtin.command: "crm_standby --node {{ cluster_node | default(inventory_hostname) }} --update true"
 
     - name: Wait for cluster changes to stabilize.
-      ansible.builtin.command: "crm_resource --node {{ cluster_node | default(inventory_hostname) }} --wait"
+      ansible.builtin.command: "crm_resource --wait"
       changed_when: false
   when: standby_query["rc"] in [0, 105] and standby_query["stdout"] | regex_search(".*value=(?!true|on|y|1)", ignorecase=true)
   become: true

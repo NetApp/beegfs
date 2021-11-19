@@ -161,7 +161,13 @@
           when: beegfs_ha_pacemaker_cluster_node
           loop: ["corosync", "pacemaker"]
 
-        - name: Ensure BeeGFS HA cluster nodes are out of maintenance mode.
+        - name: Cleanup cluster resource failures.
+          ansible.builtin.command: "crm_resource --cleanup"
+
+        - name: "Wait for cluster to stabilize."
+          ansible.builtin.command: "crm_resource --wait"
+
+        - name: Ensure BeeGFS HA cluster nodes are out of standby mode.
           ansible.builtin.include_tasks: ../common/standby/clear.yml
 
         - name: Ensure BeeGFS HA cluster nodes are out of maintenance mode.

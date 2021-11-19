@@ -12,7 +12,7 @@
       changed_when: true
   
     - name: "Wait for {{ cluster_node }} changes to stabilize."
-      ansible.builtin.command: "crm_resource --node {{ cluster_node }} --wait"
+      ansible.builtin.command: "crm_resource --wait"
       changed_when: false
   when: standby_query["stdout"] | regex_search(".*value=(true|on|y|1)", ignorecase=true)
   become: true
