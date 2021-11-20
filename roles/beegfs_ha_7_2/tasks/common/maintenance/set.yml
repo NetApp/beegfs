@@ -1,16 +1,63 @@
-- name: 
+- name: Determine whether cluster has started.
+  ansible.builtin.command: crm_mon --simple-status
+  register: crm_mon_status
+  failed_when: false
+  changed_when: false
+  become: true
+
+- name: Ensure cluster nodes are in maintenance mode.
   block:
-    - name: Move cluster nodes into maintenance mode.
-      ansible.builtin.include_tasks: set_node.yml
+    - name: Ensure pacemaker and corosync are started.
+      ansible.builtin.systemd:
+        state: started
+        name: corosync
+      delegate_to: "{{ item }}"
       loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
-      loop_control:
-        loop_var: cluster_node
+      when: beegfs_ha_pacemaker_cluster_node
+      become: true
 
-    - name: Wait for cluster changes to stabilize if the cluster is started.
-      ansible.builtin.command: "crm_resource --wait"
-      changed_when: false
-      register: crm_resource_wait_result
-      failed_when: "crm_resource_wait_result.rc != 0 and 'crm_resource: Could not connect to the CIB: Transport endpoint is not connected' not in crm_resource_wait_result.stderr"
+    - name: Ensure pacemaker and corosync are started.
+      ansible.builtin.systemd:
+        state: started
+        name: pacemaker
+      delegate_to: "{{ item }}"
+      loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+      when: beegfs_ha_pacemaker_cluster_node
+      become: true
 
-  run_once: true
+    - name: Ensure cluster nodes are in maintenance mode.
+      block:
+        - name: Check whether node is in maintenance-mode or the cluster is stopped on the node.
+          ansible.builtin.command: "crm_attribute --name maintenance-mode --query"
+          register: maintenance_mode_query
+          failed_when: false
+          changed_when: false
 
+        - name: Move cluster nodes into maintenance mode.
+          block:
+            - name: Move cluster nodes into maintenance mode.
+              ansible.builtin.include_tasks: set_node.yml
+              loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+              loop_control:
+                loop_var: cluster_node
+
+            - name: Wait for cluster changes to stabilize if the cluster is started.
+              ansible.builtin.command: "crm_resource --wait"
+              changed_when: false
+          when: maintenance_mode_query["stdout"] | regex_search(".*value=(?!true|on|y|1)", ignorecase=true)
+      when: crm_mon_status["rc"] == 0
+      become: true
+      run_once: true
+
+    - name: If cluster has started then move cluster nodes into maintenance mode.
+      block:
+        - name: Move cluster into maintenance mode.
+          ansible.builtin.command: "crm_attribute --name maintenance-mode --update true"
+
+        - name: Wait for cluster changes to stabilize if the cluster is started.
+          ansible.builtin.command: "crm_resource --wait"
+          changed_when: false
+      when: crm_mon_status["rc"] != 0
+      become: true
+      run_once: true
+  when: crm_mon_status["rc"] != 127  # command not found

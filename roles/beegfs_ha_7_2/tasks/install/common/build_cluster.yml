@@ -121,8 +121,11 @@
   become: true
   run_once: true
 
-# Ensure cluster and remote node service daemons are started and enabled.
-- name: Ensure pacemaker and corosync are enabled and started
+- name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+  ansible.builtin.include_tasks: ../common/maintenance/set.yml
+  when: inventory_hostname == preferred_management_node
+
+- name: Ensure pacemaker and corosync are enabled and started.
   ansible.builtin.systemd:
     state: '{% if pacemaker_authkey["changed"] == True or pacemaker_config["changed"] %}restarted{% else %}started{% endif %}'
     enabled: "{{ beegfs_ha_pacemaker_enabled }}"
@@ -130,9 +133,6 @@
   loop: ["corosync", "pacemaker"]
   when: beegfs_ha_pacemaker_cluster_node
   become: true
-
-- name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
-  ansible.builtin.include_tasks: ../common/maintenance/set.yml
 
 # Ensure pacemaker cib.xml has all theBeeGFS HA cluster nodes.
 - name: Ensure pacemaker cib.xml has only the expected BeeGFS HA cluster nodes.
@@ -173,8 +173,8 @@
         - name: Update pacemaker cluster nodes.
           ansible.builtin.command: "cibadmin --replace --scope nodes --xml-text '{{ lookup('template', 'common/node_resources.j2') }}'"
       when: current_cluster_nodes != expected_cluster_nodes
-  when: beegfs_ha_pacemaker_cluster_node == True and inventory_hostname == preferred_management_node
-  become: true
 
-- name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
-  ansible.builtin.include_tasks: ../common/maintenance/set.yml
+    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+      ansible.builtin.include_tasks: ../common/maintenance/set.yml
+  when: beegfs_ha_pacemaker_cluster_node and inventory_hostname == preferred_management_node
+  become: true
