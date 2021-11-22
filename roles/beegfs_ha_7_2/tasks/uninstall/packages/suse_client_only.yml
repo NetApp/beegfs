@@ -1,5 +1,5 @@
 - name: Ensure the BeeGFS client package is uninstalled (SUSE - Client).
-  zypper:
+  community.general.zypper:
     state: absent
     name:
       - beegfs-client

@@ -19,12 +19,12 @@
 - name: Ensure NTP is installed (SUSE - Client).
   block:
     - name: Ensure NTP is installed (SUSE - Client).
-      zypper:
+      community.general.zypper:
         state: latest
         name: ntp
       become: true
     - name: Ensure Chrony is uninstalled (SUSE - Client).
-      zypper:
+      community.general.zypper:
         state: absent
         name: chrony
       become: true
@@ -33,12 +33,12 @@
 - name: Ensure Chrony is installed (SUSE - Client).
   block:
     - name: Ensure Chrony is installed (SUSE - Client).
-      zypper:
+      community.general.zypper:
         state: latest
         name: chrony
       become: true
     - name: Ensure NTP is uninstalled (SUSE - Client).
-      zypper:
+      community.general.zypper:
         state: absent
         name: ntp
       become: true
@@ -60,25 +60,25 @@
   become: true
 
 - name: Ensure kernel-devel is installed (SUSE - Client).
-  zypper:
+  community.general.zypper:
     name: "kernel-devel={{ uname_shell_output['stdout_lines'][0] }}"
     state: present
   become: true
 
 - name: Ensure kernel-default-devel is installed (SUSE - Client).
-  zypper:
+  community.general.zypper:
     name: "kernel-default-devel={{ uname_shell_output['stdout_lines'][0] }}"
     state: present
   become: true
 
 - name: Ensure kernel-source is installed (SUSE - Client).
-  zypper:
+  community.general.zypper:
     name: "kernel-source={{ uname_shell_output['stdout_lines'][0] }}"
     state: present
   become: true
 
 - name: Ensure the BeeGFS client package is installed (SUSE - Client).
-  zypper:
+  community.general.zypper:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     name:
       - "beegfs-client"

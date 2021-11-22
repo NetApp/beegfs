@@ -1,46 +1,46 @@
 - name: Ensure all cluster services are removed (SUSE - Management, Metadata, Storage).
   block:
     - name: Ensure the BeeGFS management package is uninstalled (SUSE - Management).
-      zypper:
+      community.general.zypper:
         state: absent
         name: beegfs-mgmtd
       register: beegfs_mgmtd_package
       when: '"management" in node_info["services"]'
 
     - name: Ensure the BeeGFS metadata package is uninstalled (SUSE - Metadata).
-      zypper:
+      community.general.zypper:
         state: absent
         name: beegfs-meta
       register: beegfs_meta_package
       when: '"metadata" in node_info["services"]'
 
     - name: Ensure the BeeGFS storage package is uninstalled (SUSE - Storage).
-      zypper:
+      community.general.zypper:
         state: absent
         name: beegfs-storage
       register: beegfs_storage_package
       when: '"storage" in node_info["services"]'
 
     - name: Ensure the BeeGFS infiniband package is uninstalled (SUSE - Metadata/Storage).
-      zypper:
+      community.general.zypper:
         state: absent
         name: libbeegfs-ib
       when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and beegfs_ha_enable_rdma'
 
     - name: Ensure ha-cluster-bootstrap is installed.
-      zypper:
+      community.general.zypper:
         state: absent
         name: pacemaker
       when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
 
     - name: Ensure ha-cluster-bootstrap is installed.
-      zypper:
+      community.general.zypper:
         state: absent
         name: corosync
       when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
 
     - name: Ensure ha-cluster-bootstrap is uninstalled.
-      zypper:
+      community.general.zypper:
         state: absent
         name: ha-cluster-bootstrap
       when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
@@ -48,7 +48,7 @@
   become: true
 
 - name: Ensure the BeeGFS client package is uninstalled (SUSE - Client).
-  zypper:
+  community.general.zypper:
     state: absent
     name:
       - beegfs-client

@@ -1,23 +1,23 @@
 - name: Ensure ha-cluster-bootstrap is installed (SUSE - Cluster Node).
-  zypper:
+  community.general.zypper:
     state: present
     name: ha-cluster-bootstrap
   become: true
 
 - name: Ensure ha-cluster-bootstrap is installed (SUSE - Cluster Node).
-  zypper:
+  community.general.zypper:
     state: present
     name: pacemaker
   become: true
 
 - name: Ensure ha-cluster-bootstrap is installed (SUSE - Cluster Node).
-  zypper:
+  community.general.zypper:
     state: present
     name: corosync
   become: true
 
 - name: Ensure mailx is installed for alerts (SUSE - Cluster Node).
-  zypper:
+  community.general.zypper:
     state: present
     name: mailx
   when: beegfs_ha_enable_alerts == True
@@ -26,12 +26,12 @@
 - name: Ensure NTP is installed (SUSE - Cluster Node).
   block:
     - name: Ensure NTP is installed (SUSE - Cluster Node).
-      zypper:
+      community.general.zypper:
         state: latest
         name: ntp
       become: true
     - name: Ensure Chrony is uninstalled (SUSE - Cluster Node).
-      zypper:
+      community.general.zypper:
         state: absent
         name: chrony
       become: true
@@ -40,12 +40,12 @@
 - name: Ensure Chrony is installed (SUSE - Cluster Node).
   block:
     - name: Ensure Chrony is installed (SUSE - Cluster Node).
-      zypper:
+      community.general.zypper:
         state: latest
         name: chrony
       become: true
     - name: Ensure NTP is uninstalled (SUSE - Cluster Node).
-      zypper:
+      community.general.zypper:
         state: absent
         name: ntp
       become: true

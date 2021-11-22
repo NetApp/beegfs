@@ -60,4 +60,4 @@
       when: crm_mon_status["rc"] != 0
       become: true
       run_once: true
-  when: crm_mon_status["rc"] != 127  # command not found
+  when: 'crm_mon_status["rc"] != 2 or crm_mon_status["stderr"] | regex_search("crm_mon.*", ignorecase=true)'
