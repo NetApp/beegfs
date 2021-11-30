@@ -153,15 +153,6 @@
             name: "{{ item }}"
           when: beegfs_ha_pacemaker_cluster_node
           loop: ["corosync", "pacemaker"]
-
-        - name: "Wait for {{ inventory_hostname }} to come online."
-          ansible.builtin.command: "crm_mon --one-shot --node={{ inventory_hostname }} --exclude=all --include=nodes"
-          changed_when: false
-          register: cluster_node_status
-          delay: 1
-          retries: 30
-          until: 'cluster_node_status["stdout"] | regex_search(".*Online: \[ " ~ inventory_hostname ~ " \]", ignorecase=True)'
-          become: true
       when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       become: true
       tags:
@@ -189,6 +180,16 @@
 
         - name: Ensure BeeGFS HA cluster nodes are out of maintenance mode.
           ansible.builtin.include_tasks: ../common/maintenance/clear.yml
+
+        - name: "Wait for cluster nodes to come online"
+          ansible.builtin.command: "crm_mon --one-shot --node={{ item }} --exclude=all --include=nodes"
+          changed_when: false
+          loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+          register: cluster_node_status
+          delay: 1
+          retries: 30
+          until: 'cluster_node_status["stdout"] | regex_search(".*Online: \[ " ~ item ~ " \]", ignorecase=True)'
+          become: true
 
         - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
           block:
