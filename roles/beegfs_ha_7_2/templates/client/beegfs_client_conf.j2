@@ -34,13 +34,13 @@ connPortShift                 = 0
 connCommRetrySecs             = 600
 connFallbackExpirationSecs    = 900
 connInterfacesFile            = {{ beegfs_ha_client_configuration_directory }}beegfs-client-connInterfaces.conf
-connMaxInternodeNum           = {{ beegfs_ha_client_maximum_node_connections | default(beegfs_ha_client_maximum_node_connections) }}
+connMaxInternodeNum           = {{ beegfs_ha_client_maximum_node_connections }}
 connMaxConcurrentAttempts     = 0
 connNetFilterFile             =
 
 connUseRDMA                   = true
-connRDMABufNum                = 70
-connRDMABufSize               = 8192
+connRDMABufNum                = {{ beegfs_ha_client_rdma_buffer_count }}
+connRDMABufSize               = {{ beegfs_ha_client_rdma_buffer_size }}
 connRDMATypeOfService         = 0
 connTcpOnlyFilterFile         =
 

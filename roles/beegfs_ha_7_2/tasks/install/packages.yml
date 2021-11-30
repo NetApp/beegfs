@@ -1,3 +1,16 @@
+- name: Ensure /etc/beegfs/ directory exists.
+  ansible.builtin.file:
+    state: directory
+    path: /etc/beegfs/
+  become: true
+
+- name: Ensure beegfs_ha_service_daemon.sh is installed.
+  ansible.builtin.template:
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/beegfs_ha_service_daemon.j2') }}"
+    dest: "/etc/beegfs/beegfs_ha_service_daemon.sh"
+    mode: 0755
+  become: true
+
 - name: Ensure expected BeeGFS packages are installed (Always).
   include_tasks: "packages/{{ ansible_os_family | lower }}.yml"
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]

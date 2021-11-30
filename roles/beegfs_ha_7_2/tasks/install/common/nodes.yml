@@ -9,3 +9,13 @@
 
       {{ beegfs_ha_mgmtd_floating_ip }}	{{ management_info['resource_group'] }}
   become: true
+
+- name: Add required BeeGFS sysctl.conf entries.
+  sysctl:
+    name: "{{ item['key'] }}"
+    value: "{{ item['value'] }}"
+    state: present
+    reload: true
+    sysctl_file: "{{ sysctl_conf_path }}"
+  loop: "{{ lookup('dict', beegfs_ha_required_sysctl_entries) }}"
+  become: true

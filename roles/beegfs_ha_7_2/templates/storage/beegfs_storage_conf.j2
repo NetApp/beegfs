@@ -47,7 +47,7 @@ logLevel                     = 3
 logNoDate                    = false
 logNumLines                  = 50000
 logNumRotatedFiles           = 5
-logStdFile                   = /var/log/{{ item["volumes"][0]["name"] }}.log
+logStdFile                   = /var/log/beegfs-storage-{{ item["volumes"][0]["name"] }}.log
 
 runDaemonized                = true
 

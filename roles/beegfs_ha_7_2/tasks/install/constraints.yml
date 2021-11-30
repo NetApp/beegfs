@@ -16,7 +16,7 @@
 - name: Modify pacemaker constraints.
   block:
     - name: Create temporary resource xml file.
-      template:
+      ansible.builtin.template:
         src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'management/constraints.j2') }}"
         dest: /tmp/~tmp_beegfs_ha_cluster_constraints.xml
       become: true

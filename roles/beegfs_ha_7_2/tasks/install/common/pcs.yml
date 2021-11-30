@@ -7,14 +7,14 @@
   become: true
 
 - name: Ensure pcs_user.conf file is correct on all cluster and remote nodes
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pcs_users_conf.j2') }}"
     dest: "{{ beegfs_ha_pcsd_pcsd_path }}pcs_users.conf"
   register: pcs_users_conf
   become: true
 
 - name: Create PCS known_hosts file is correct on all cluster and remote nodes
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pcs_known_hosts.j2') }}"
     dest: "{{ beegfs_ha_pcsd_pcsd_path }}known-hosts"
   register: pcs_known_hosts

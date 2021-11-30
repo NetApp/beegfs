@@ -1,0 +1,17 @@
+#!/bin/sh
+service=$1  # example: /opt/beegfs/sbin/beegfs-meta
+conf=$2     # example: /mnt/%I/metadata_config/beegfs-meta.conf
+command="$service cfgFile=$conf runDaemonized=false"
+echo "command: $command"
+
+# Retrieve values from BeeGFS service configuration file.
+numa_zone=$(grep "^tuneBindToNumaZone" "$conf" | sed "s/ //g" | cut -f 2 -d "=")
+echo "numa_zone: $numa_zone"
+
+# Start the BeeGFS service.
+if [ -n "$numa_zones" ] && [ -n "$cpus" ]; then
+  exec /usr/bin/numactl --cpunodebind=$numa_zone --membind=$numa_zone $command
+else
+  exec $command
+fi
+

@@ -45,7 +45,7 @@
   run_once: true
 
 - name: Ensure each node has the expected corosync authkey.
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/corosync_authkey.j2') }}"
     dest: "{{ beegfs_ha_corosync_authkey_path }}"
   when: beegfs_ha_pacemaker_cluster_node == True
@@ -53,7 +53,7 @@
 
 # Ensure each node in the BeeGFS HA cluster has a common corosync.conf file.
 - name: Ensure each node has the expected corosync.conf file.
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/corosync_conf.j2') }}"
     dest: "{{ beegfs_ha_corosync_conf_path }}"
   when: beegfs_ha_pacemaker_cluster_node == True
@@ -113,7 +113,7 @@
   run_once: true
 
 - name: Ensure each node has the expected pacemaker authkey (cluster and remote nodes).
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pacemaker_authkey.j2') }}"
     dest: "{{ beegfs_ha_pacemaker_authkey_path }}"
   register: pacemaker_authkey
@@ -123,7 +123,7 @@
   run_once: true
 
 - name: Ensure pacemaker is configure on each node (cluster and remote nodes).
-  template:
+  ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pacemaker.j2') }}"
     dest: "{{ beegfs_ha_pacemaker_config_path }}"
   register: pacemaker_config

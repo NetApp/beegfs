@@ -29,6 +29,7 @@ This role is a complete end-to-end deployment of the [NetApp E-Series BeeGFS HA 
     - ipaddr
     - netaddr
 - Passwordless SSH setup from the Ansible control node to all BeeGFS HA nodes and clients.
+- Enabled package manager repository containing pacemaker, corosync and pcs packages 
 
 ## Support Matrix
 --------------
@@ -230,8 +231,9 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_cluster_username: hacluster                       # Pcs cluster username.
     beegfs_ha_cluster_password: hapassword                      # Pcs cluster password.
     beegfs_ha_cluster_password_sha512_salt: random$alt          # Pcs cluster password sha512 encryption salt.
-        
+
     # The default values for these variables may need to be overridden:      
+    beegfs_ha_cluster_node_ips: []                              # Defines an order list of IP addresses or hostnames with the first having the highest priority. When there are no listed IPs then node name will be used. Node names are defined in /etc/hosts.
     beegfs_ha_ntp_enabled: true                                 # Whether NTP should be enabled. **This will disable Chrony!
     beegfs_ha_chrony_enabled: false                             # Whether Chrony should be enabled. **This will disable NTP!
     beegfs_ha_allow_firewall_high_availability_service: true    # Open firewall ports required by the high-availability services.
@@ -252,6 +254,13 @@ This section gives a quick summary of the available variables to configure the B
     # RDMA defaults 
     beegfs_ha_enable_rdma: false                                # Whether to enable RDMA.
     beegfs_ha_ofed_include_path:                                # OFED library include path.
+    
+    # Required sysctl configuration defaults  
+    beegfs_ha_required_sysctl_entries:
+      net.ipv4.conf.all.rp_filter: 1
+      net.ipv4.conf.all.arp_filter: 1
+      net.ipv4.conf.all.arp_announce: 2
+      net.ipv4.conf.all.arp_ignore: 2
 
     # Performance tuning defaults (See `Performance Tuning` section below more information)
     beegfs_ha_enable_performance_tuning: False                  # Whether to enable performance tuning.
@@ -259,12 +268,13 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_eseries_nr_requests: 64                           # Raw volume device (dm-X) nr_requests value.
     beegfs_ha_eseries_read_ahead_kb: 4096                       # Raw volume device (dm-X) read_ahead_kb value.
     beegfs_ha_eseries_max_sectors_kb: 1024                      # Raw volume device (dm-X) max_sectors_kb value.
-    beegfs_ha_sysctl_entries:                                   # Kernel parameter settings
-      vm.dirty_background_ratio: 5
-      vm.dirty_ratio: 20
+    beegfs_ha_performance_sysctl_entries:
+      vm.dirty_background_ratio: 1
+      vm.dirty_ratio: 75
       vm.vfs_cache_pressure: 50
       vm.min_free_kbytes: 262144
       vm.zone_reclaim_mode: 1
+      vm.watermark_scale_factor: 1000
 
     # Performance tuning defaults for client settings
     beegfs_client_maximum_node_connections: 128                 # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 12
@@ -274,7 +284,7 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_metadata_worker_threads: 32                          # beegfs_meta.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel.
                                                                 #   On dedicated metadata servers, this is typically set to a value between four and eight times the number of CPU cores. Note: 0 means use twice the number
                                                                 #   of CPU cores (but at least 4). Default: 0
-    beegfs_metadata_file_creation_target_algorithm: roundrobin  # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file creation.
+    beegfs_metadata_file_creation_target_algorithm: randomized  # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file creation.
                                                                 #   Choices: [randomized, roundrobin, randomrobin, randominternode, randomintranode] Default: randomized
         
     # Performance tuning defaults for storage service settings
@@ -371,7 +381,7 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_uninstall_reboot: false                                   # Whether to reboot after uninstallation.
 
 
-    # Volume formatting and mounting defaults
+    # Volume formatting and mounting defaults. Note: sync must always be included in mount_options otherwise data loss may occur (sync disables caching)
     beegfs_ha_service_volume_configuration:
       management:                                                           # BeeGFS management service volume definition.
         format_type: ext4                                                   # Volume format type
@@ -396,17 +406,20 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_uninstall_pcsd_dir: /var/lib/pcsd/                      # PCS daemon directory absolute path.
 
     # Debian / Ubuntu repository defaults
-    beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7_2
-    beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_2/gpg/DEB-GPG-KEY-beegfs
+    beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5
+    beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/DEB-GPG-KEY-beegfs
+
 
     # RedHat / CentOS repository defaults
-    beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7_2/dists/rhel7
-    beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_2/gpg/RPM-GPG-KEY-beegfs
+    beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5/dists/rhel8
+    beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/RPM-GPG-KEY-beegfs
+
 
     # SUSE repository defaults
     beegfs_ha_suse_allow_unsupported_module: true
-    beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7_2/dists/sles12
-    beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7_2/gpg/RPM-GPG-KEY-beegfs
+    beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5/dists/sles15
+    beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/RPM-GPG-KEY-beegfs
+
 
 ## Role Tags
 ---------
@@ -414,17 +427,18 @@ Use the following tags when executing you BeeGFS HA playbook to only execute sel
 
         example: ansible-playbook -i inventory.yml playbook.yml --tags beegfs_ha_configure
 
-    - storage                         # Provisions storage and ensures volumes are presented on hosts.
-    - storage_provision               # Provision storage.
-    - storage_communication           # Setup communication protocol between storage and cluster nodes.
-    - storage_format                  # Format all provisioned storage.
-    - beegfs_ha                       # All BeeGFS HA tasks (Ensure volumes have been presented to the cluster nodes).
-    - beegfs_ha_package               # All BeeGFS HA package tasks.
-    - beegfs_ha_configure             # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
-    - beegfs_ha_configure_resource    # All BeeGFS HA pacemaker resource tasks.
-    - beegfs_ha_performance_tuning    # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
-    - beegfs_ha_backup                # Backup Pacemaker and Corosync configuration files.
-    - beegfs_ha_client                # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
+    - storage                                    # Provisions storage and ensures volumes are presented on hosts.
+    - storage_provision                          # Provision storage.
+    - storage_communication                      # Setup communication protocol between storage and cluster nodes.
+    - storage_format                             # Format all provisioned storage.
+    - beegfs_ha                                  # All BeeGFS HA tasks (Ensure volumes have been presented to the cluster nodes).
+    - beegfs_ha_package                          # All BeeGFS HA package tasks.
+    - beegfs_ha_configure                        # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
+    - beegfs_ha_configure_resource               # All BeeGFS HA pacemaker resource tasks.
+    - beegfs_ha_move_resource_to_preferred_node  # Restore all resources to their preferred nodes.
+    - beegfs_ha_performance_tuning               # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
+    - beegfs_ha_backup                           # Backup Pacemaker and Corosync configuration files.
+    - beegfs_ha_client                           # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
 
 ## General Notes
 -------------
@@ -480,7 +494,7 @@ To only run tasks related to BeeGFS performance tuning, use the tag "beegfs_ha_p
 
 BeeGFS recommends setting various kernel parameters under /proc/sys to help optimize the performance of BeeGFS storage/metadata nodes. One option to ensure these changes are persistent are setting them using sysctl. By default this role will will override the following parameters on BeeGFS storage and metadata nodes in /etc/sysctl.conf on RedHat or /etc/sysctl.d/99-eseries-beegfs.conf on SUSE:
 
-    beegfs_ha_sysctl_entries:
+    beegfs_ha_performance_sysctl_entries:
       vm.dirty_background_ratio: 5
       vm.dirty_ratio: 20
       vm.vfs_cache_pressure: 50
@@ -488,7 +502,7 @@ BeeGFS recommends setting various kernel parameters under /proc/sys to help opti
       vm.zone_reclaim_mode: 1
 
 Important:
-- If you define your own `beegfs_ha_sysctl_entries` you will need to explicitly list all sysctl key/value pairs you wish to be set.
+- If you define your own `beegfs_ha_performance_sysctl_entries` you will need to explicitly list all sysctl key/value pairs you wish to be set.
 - The documentation for some Linux distributions indicates you need to rebuild the initramfs after modifying the values of kernel variables using sysctl (reference: https://documentation.suse.com/sles/12-SP4/html/SLES-all/cha-boot.html#var-initrd-regenerate-kernelvars). Based on testing these values do persist through a reboot for the operating systems listed on the support matrix, and thus is not done automatically by the role. It is recommended users verify these settings persist in their environment, and rebuild the initramfs if needed.
 
 #### Tuning parameters on E-Series block devices/paths using udev:
