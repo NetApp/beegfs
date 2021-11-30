@@ -153,6 +153,15 @@
             name: "{{ item }}"
           when: beegfs_ha_pacemaker_cluster_node
           loop: ["corosync", "pacemaker"]
+
+        - name: "Wait for {{ inventory_hostname }} to come online."
+          ansible.builtin.command: "crm_mon --one-shot --node={{ inventory_hostname }} --exclude=all --include=nodes"
+          changed_when: false
+          register: cluster_node_status
+          delay: 1
+          retries: 30
+          until: 'cluster_node_status["stdout"] | regex_search(".*Online: \[ " ~ inventory_hostname ~ " \]", ignorecase=True)'
+          become: true
       when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       become: true
       tags:

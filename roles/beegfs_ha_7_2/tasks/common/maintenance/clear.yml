@@ -7,7 +7,7 @@
 
 - name: Clear cluster maintenance-mode.
   block:
-    - name: Ensure BeeGFS HA cluster nodes are in maintenance.
+    - name: Ensure BeeGFS HA cluster is not in maintenance mode.
       ansible.builtin.command: "crm_attribute --name maintenance-mode --delete"
 
     - name: "Wait for cluster to stabilize."
