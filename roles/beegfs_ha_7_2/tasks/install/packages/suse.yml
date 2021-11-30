@@ -17,7 +17,7 @@
   become: true
 
 - name: Ensure the BeeGFS management package is installed (SUSE - Management).
-  zypper:
+  community.general.zypper:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     name: "beegfs-mgmtd={{ beegfs_ha_beegfs_version }}*"
   register: beegfs_mgmtd_package
@@ -33,7 +33,7 @@
   become: true
 
 - name: Ensure the BeeGFS metadata package is installed (SUSE - Metadata).
-  zypper:
+  community.general.zypper:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     name: "beegfs-meta={{ beegfs_ha_beegfs_version }}*"
   register: beegfs_meta_package
@@ -49,7 +49,7 @@
   become: true
 
 - name: Ensure the BeeGFS storage package is installed (SUSE - Storage).
-  zypper:
+  community.general.zypper:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     name: "beegfs-storage={{ beegfs_ha_beegfs_version }}*"
   register: beegfs_storage_package
@@ -65,14 +65,14 @@
   become: true
 
 - name: Ensure the BeeGFS infiniband package is installed (SUSE - Metadata/Storage).
-  zypper:
+  community.general.zypper:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     name: libbeegfs-ib
   when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and beegfs_ha_enable_rdma'
   become: true
 
 - name: Ensure the numactl package is installed (SUSE - Metadata/Storage).
-  zypper:
+  community.general.zypper:
     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
     name: numactl
   when: '"metadata" in node_info["services"] or "storage" in node_info["services"]'

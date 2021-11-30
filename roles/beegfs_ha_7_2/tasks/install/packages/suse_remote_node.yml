@@ -1,19 +1,19 @@
 # TODO: ONLY INSTALL REMOTE_NODE PACKAGES
 
 - name: Ensure ha-cluster-bootstrap is installed (SUSE - Remote Node).
-  zypper:
+  community.general.zypper:
     state: present
     name: ha-cluster-bootstrap
   become: true
 
 - name: Ensure ha-cluster-bootstrap is installed (SUSE - Remote Node).
-  zypper:
+  community.general.zypper:
     state: present
     name: pacemaker-remote
   become: true
 
 - name: Ensure mailx is installed for alerts (SUSE - Remote Node).
-  zypper:
+  community.general.zypper:
     state: present
     name: mailx
   when: beegfs_ha_enable_alerts == True
@@ -22,12 +22,12 @@
 - name: Ensure NTP is installed (SUSE - Remote Node).
   block:
     - name: Ensure NTP is installed (SUSE - Remote Node).
-      zypper:
+      community.general.zypper:
         state: latest
         name: ntp
       become: true
     - name: Ensure Chrony is uninstalled (SUSE - Remote Node).
-      zypper:
+      community.general.zypper:
         state: absent
         name: chrony
       become: true
@@ -36,12 +36,12 @@
 - name: Ensure Chrony is installed (SUSE - Remote Node).
   block:
     - name: Ensure Chrony is installed (SUSE - Remote Node).
-      zypper:
+      community.general.zypper:
         state: latest
         name: chrony
       become: true
     - name: Ensure NTP is uninstalled (SUSE - Remote Node).
-      zypper:
+      community.general.zypper:
         state: absent
         name: ntp
       become: true

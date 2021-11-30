@@ -5,8 +5,16 @@
       tags:
         - always
 
-    # Client IP over IB needs to be configured prior to storage configuration to avoid unnecessary configuration.
-    #   This is because ipoib role variables are defined for other IB related storage protocols.
+    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode if cluster is available.
+      block:
+        - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+          ansible.builtin.include_tasks: ../common/maintenance/set.yml
+      when: inventory_hostname == preferred_management_node
+      tags:
+        - beegfs_ha_configure_resource
+        - beegfs_ha_configure
+        - beegfs_ha
+
     - name: Ensure InfiniBand IPoIB is configured.
       block:
         - name: Ensure InfiniBand IPoIB is configured.
@@ -28,9 +36,9 @@
         - storage_provision
         - storage
 
-    - name: Ensure multipath and iscsi protocol are setup.
+    - name: Ensure multipath and protocol are setup.
       block:
-        - name: Ensure multipath and iscsi protocol are setup.
+        - name: Ensure multipath and protocol are setup.
           include_role:
             name: netapp_eseries.host.storage_setup
           when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
@@ -95,21 +103,7 @@
       block:
         - name: Ensure common BeeGFS HA tasks are applied to BeeGFS service nodes (Management/Metadata/Storage).
           ansible.builtin.include_tasks: common.yml
-          when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("management" in node_info["services"] or
-                                                                                    "metadata" in node_info["services"] or "storage" in node_info["services"])'
-      tags:
-        - beegfs_ha_configure_resource
-        - beegfs_ha_configure
-        - beegfs_ha
-
-    - name: Ensure BeeGFS HA cluster is in maintenance mode.
-      block:
-        - name: Ensure BeeGFS HA cluster is in maintenance mode.
-          ansible.builtin.command:
-            cmd: "crm_attribute --name maintenance-mode --update true"
-          changed_when: false
-      when: inventory_hostname == preferred_management_node
-      become: true
+      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       tags:
         - beegfs_ha_configure_resource
         - beegfs_ha_configure
@@ -143,38 +137,31 @@
         - beegfs_ha_configure
         - beegfs_ha
 
-    - name: Ensure pacemaker_remote is enabled and started on remote nodes.
+    - name: Ensure pacemaker services are started and enabled.
       block:
         - name: Ensure pacemaker_remote is enabled and started on remote nodes.
           ansible.builtin.systemd:
             state: started
             enabled: true
             name: pacemaker_remote
-          when: beegfs_ha_pacemaker_cluster_node == False
+          when: not beegfs_ha_pacemaker_cluster_node
+
+        - name: Ensure cluster nodes have joined the cluster.
+          ansible.builtin.systemd:
+            state: started
+            enabled: "{{ beegfs_ha_pacemaker_enabled }}"
+            name: "{{ item }}"
+          when: beegfs_ha_pacemaker_cluster_node
+          loop: ["corosync", "pacemaker"]
+
+        - name: "Wait for {{ inventory_hostname }} to come online."
+          ansible.builtin.command: "crm_mon --one-shot --node={{ inventory_hostname }} --exclude=all --include=nodes"
+          changed_when: false
+          register: cluster_node_status
+          delay: 1
+          retries: 30
+          until: 'cluster_node_status["stdout"] | regex_search(".*Online: \[ " ~ inventory_hostname ~ " \]", ignorecase=True)'
           become: true
-      tags:
-        - beegfs_ha_configure_resource
-        - beegfs_ha_configure
-        - beegfs_ha
-
-    - name: Ensure BeeGFS HA cluster is out of maintenance and standby modes.
-      block:
-        - name: Move cluster out of maintenance mode.
-          ansible.builtin.command:
-            cmd: "crm_attribute --name maintenance-mode --delete"
-          changed_when: false
-          when: inventory_hostname == preferred_management_node
-
-        - name: Move any cluster nodes out of standby mode.
-          ansible.builtin.command:
-            cmd: "crm_standby --node={{ inventory_hostname }} --delete"
-          changed_when: false
-
-        - name: Wait for cluster changes to stabilize.
-          ansible.builtin.command:
-            cmd: "crm_resource --wait"
-          changed_when: false
-          when: inventory_hostname == preferred_management_node
       when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       become: true
       tags:
@@ -183,12 +170,55 @@
         - beegfs_ha_configure
         - beegfs_ha
 
-
-    - name: Attempt to return services to their preferred BeeGFS HA cluster nodes.
+    - name: Attempt to return cluster to an optimal state.
       block:
-        - name: Attempt to return services to their preferred BeeGFS HA cluster nodes.
-          include_tasks: move.yml
-          when: beegfs_ha_force_resource_move == True and inventory_hostname == preferred_management_node
+        - name: Wait for cluster to stabilize.
+          ansible.builtin.command: crm_resource --wait
+          changed_when: false
+
+        - name: Cleanup cluster resource failures.
+          ansible.builtin.command: crm_resource --cleanup
+          changed_when: false
+
+        - name: Wait for cluster to stabilize.
+          ansible.builtin.command: crm_resource --wait
+          changed_when: false
+
+        - name: Ensure BeeGFS HA cluster nodes are out of standby mode.
+          ansible.builtin.include_tasks: ../common/standby/clear.yml
+
+        - name: Ensure BeeGFS HA cluster nodes are out of maintenance mode.
+          ansible.builtin.include_tasks: ../common/maintenance/clear.yml
+
+        - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
+          block:
+            - name: Determine current location of all cluster resources.
+              ansible.builtin.command: crm_mon -r1
+              register: resource_locations
+              changed_when: false
+
+            - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
+              ansible.builtin.include_tasks: move.yml
+              loop: "{{ lookup('ansible.builtin.dict', move_resources, wantlist=true) }}"
+              vars:
+                move_resources: |-
+                  {%- set resources = {} -%}
+                  {%- for host in groups[beegfs_ha_ansible_cluster_group] if "node_info" in (hostvars[host].keys() | list) -%}
+                    {%- set node_info = hostvars[host]["node_info"] -%}
+                    {%- for service in node_info["services"] -%}
+                      {%- for resource_group_info in node_info[service] if host == resource_group_info["preferred_node_order"][0] and (resource_group_info["resource_group"] not in resources.keys() | list) -%}
+                        {%- for line in resource_locations["stdout_lines"] if line | regex_search(resource_group_info["resource_group"] ~ "-service.*" ~ host) -%}
+                          {#- DO NOTHING -#}
+                        {%- else -%}
+                          {%- if resources.update({resource_group_info["resource_group"]: resource_group_info["preferred_node_order"][0]}) -%}{%- endif -%}
+                        {%- endfor -%}
+                      {%- endfor -%}
+                    {%- endfor -%}
+                  {%- endfor -%}
+                  {{- resources -}}
+          when: beegfs_ha_force_resource_move
+      when: inventory_hostname == preferred_management_node
+      become: true
       tags:
         - beegfs_ha_move_resource_to_preferred_node
         - beegfs_ha_configure_resource

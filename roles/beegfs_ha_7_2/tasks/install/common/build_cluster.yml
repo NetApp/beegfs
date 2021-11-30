@@ -2,23 +2,20 @@
 - name: Ensure corosync authkey is the same for all hosts.
   block:
     - name: Determine whether an corosync authkey file exists.
-      ansible.builtin.command:
-        cmd: "cat {{ beegfs_ha_corosync_authkey_path }}"
+      ansible.builtin.command: "cat {{ beegfs_ha_corosync_authkey_path }}"
       failed_when: false
       changed_when: false
       register: corosync_authkey
       delegate_to: "{{ item }}"
       loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
-      when: (hostvars[item]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == True
+      when: (hostvars[item]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node))
 
     - name: Generate a temporary corosync authkey file.
-      ansible.builtin.command:
-        cmd: corosync-keygen -k /tmp/~corosync_keygen_authkey
+      ansible.builtin.command: corosync-keygen -k /tmp/~corosync_keygen_authkey
       changed_when: false
 
     - name: Get  the temporary corosync authkey.
-      ansible.builtin.command:
-        cmd: "cat /tmp/~corosync_keygen_authkey"
+      ansible.builtin.command: "cat /tmp/~corosync_keygen_authkey"
       register: corosync_keygen
       changed_when: false
 
@@ -29,7 +26,7 @@
       changed_when: false
 
     - name: Determine an usable corosync authkey.
-      set_fact:
+      ansible.builtin.set_fact:
         beegfs_ha_corosync_authkey: |-
           {%- set authkeys = [] -%}
           {%- for result in corosync_authkey["results"] if "rc" in (result.keys() | list) and result["rc"] == 0 and result["stdout"] not in authkeys -%}
@@ -40,7 +37,7 @@
           {%- elif corosync_keygen["rc"] == 0 -%}
             {{- corosync_keygen["stdout"] -}}
           {%- endif -%}
-  when: beegfs_ha_pacemaker_cluster_node == True and beegfs_ha_corosync_authkey is not defined or not beegfs_ha_corosync_authkey != ""
+  when: beegfs_ha_pacemaker_cluster_node and beegfs_ha_corosync_authkey is not defined or not beegfs_ha_corosync_authkey != ""
   become: true
   run_once: true
 
@@ -48,7 +45,8 @@
   ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/corosync_authkey.j2') }}"
     dest: "{{ beegfs_ha_corosync_authkey_path }}"
-  when: beegfs_ha_pacemaker_cluster_node == True
+    mode: 0644
+  when: beegfs_ha_pacemaker_cluster_node
   become: true
 
 # Ensure each node in the BeeGFS HA cluster has a common corosync.conf file.
@@ -56,7 +54,8 @@
   ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/corosync_conf.j2') }}"
     dest: "{{ beegfs_ha_corosync_conf_path }}"
-  when: beegfs_ha_pacemaker_cluster_node == True
+    mode: 0644
+  when: beegfs_ha_pacemaker_cluster_node
   become: true
 
 # Ensure pacemaker authkey is correct
@@ -66,37 +65,25 @@
       ansible.builtin.file:
         state: directory
         path: "{{ beegfs_ha_pacemaker_path }}"
+        mode: 0755
       delegate_to: "{{ item }}"
       loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
 
     - name: Determine whether an existing pacemaker authkey exists.
-      ansible.builtin.command:
-        cmd: "cat {{ beegfs_ha_pacemaker_authkey_path }}"
+      ansible.builtin.command: "cat {{ beegfs_ha_pacemaker_authkey_path }}"
       delegate_to: "{{ item }}"
       loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
       register: pacemaker_authkey
       failed_when: false
       changed_when: false
 
-    - name: Generate a temporary pacemaker authkey file.
-      ansible.builtin.command:
-        cmd: "dd if=/dev/urandom of=/tmp/~pacemaker_keygen_authkey bs=4096 count=1"
-      changed_when: false
-
-    - name: Get the temporary pacemaker authkey.
-      ansible.builtin.command:
-        cmd: "cat /tmp/~pacemaker_keygen_authkey"
+    - name: Generate a pacemaker authkey.
+      ansible.builtin.command: "dd if=/dev/urandom bs=4096 count=1"
       register: pacemaker_keygen
       changed_when: false
 
-    - name: Delete temporary pacemaker authkey file.
-      ansible.builtin.file:
-        state: absent
-        path: /tmp/~pacemaker_keygen_authkey
-      changed_when: false
-
     - name: Determine an usable pacemaker authkey.
-      set_fact:
+      ansible.builtin.set_fact:
         beegfs_ha_pacemaker_authkey: |-
           {%- set authkeys = [] -%}
           {%- for result in pacemaker_authkey["results"] if "rc" in (result.keys() | list) and result["rc"] == 0 and result["stdout"] not in authkeys -%}
@@ -116,6 +103,7 @@
   ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pacemaker_authkey.j2') }}"
     dest: "{{ beegfs_ha_pacemaker_authkey_path }}"
+    mode: 0644
   register: pacemaker_authkey
   delegate_to: "{{ item }}"
   loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
@@ -126,90 +114,67 @@
   ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pacemaker.j2') }}"
     dest: "{{ beegfs_ha_pacemaker_config_path }}"
+    mode: 0644
   register: pacemaker_config
   delegate_to: "{{ item }}"
   loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
   become: true
   run_once: true
 
-# Ensure cluster and remote node service daemons are started and enabled.
-- name: Ensure pacemaker and corosync are enabled and started
+- name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+  ansible.builtin.include_tasks: ../common/maintenance/set.yml
+  when: inventory_hostname == preferred_management_node
+
+- name: Ensure pacemaker and corosync are enabled and started.
   ansible.builtin.systemd:
     state: '{% if pacemaker_authkey["changed"] == True or pacemaker_config["changed"] %}restarted{% else %}started{% endif %}'
     enabled: "{{ beegfs_ha_pacemaker_enabled }}"
     name: "{{ item }}"
   loop: ["corosync", "pacemaker"]
-  when: beegfs_ha_pacemaker_cluster_node == True
+  when: beegfs_ha_pacemaker_cluster_node
   become: true
 
 # Ensure pacemaker cib.xml has all theBeeGFS HA cluster nodes.
-- name: Ensure pacemaker cib.xml has all theBeeGFS HA cluster nodes.
+- name: Ensure pacemaker cib.xml has only the expected BeeGFS HA cluster nodes.
   block:
-    - name: Get expected pacemaker nodes xml.
-      set_fact:
-        cluster_node_resources: "{{ lookup('template', 'common/node_resources.j2') }}"
-
-    - name: Query pacemaker resources.
-      ansible.builtin.command:
-        cmd: "cibadmin --query --scope nodes"
+    - name: Collect cluster node information.
+      ansible.builtin.command: "crm_node --list"
       changed_when: false
       register: nodes_query
 
-    # Remove any nodes that are not expected
-    - name: Determine node changes. Whether nodes should be added or removed.
+    - name: Determine the current cluster nodes.
       set_fact:
-        remove_node_list: |-
+        current_cluster_nodes: |-
           {%- set nodes = [] -%}
-          {%- for line in nodes_query["stdout_lines"] if line | regex_search("uname=") -%}
-            {%- set current_node = line | regex_replace('^.*uname="', '') | regex_replace('".*$', '') -%}
-            {%- for expected_node in groups[beegfs_ha_ansible_cluster_group] if (hostvars[expected_node]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == True and current_node == expected_node -%}
-              {#- DO NOTHING -#}
-            {%- else -%}
-              {%- if nodes.append(current_node) -%}{%- endif -%}
-            {%- endfor -%}
+          {%- for entry in nodes_query["stdout_lines"] if "member" in entry -%}
+            {%- if nodes.append(entry.split(" ")[1]) -%}{%- endif -%}
           {%- endfor -%}
-          {{- nodes -}}
+          {{- nodes | sort -}}
+        expected_cluster_nodes: |-
+          {%- set nodes = [] -%}
+          {%- for node in groups[beegfs_ha_ansible_cluster_group] if (hostvars[node]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == True -%}
+            {%- if nodes.append(node) -%}{%- endif -%}
+          {%- endfor -%}
+          {{- nodes | sort -}}
 
-    - name: Ensure pacemaker services are stopped and disabled on all nodes marked for removal.
-      ansible.builtin.systemd:
-        state: stopped
-        enabled: false
-        name: pacemaker
-      delegate_to: "{{ item }}"
-      loop: "{{ remove_node_list }}"
-      failed_when: false   # In case pacemaker has been uninstalled.
-      ignore_errors: true
-
-    - name: Ensure corosync services are stopped and disabled on all nodes marked for removal.
-      ansible.builtin.systemd:
-        state: stopped
-        enabled: false
-        name: corosync
-      delegate_to: "{{ item }}"
-      loop: "{{ remove_node_list }}"
-      failed_when: false   # In case corosync has been uninstalled.
-      ignore_errors: true
-
-    - name: Remove node from pacemaker
-      ansible.builtin.command:
-        cmd: "crm_node -R {{ item }} --force"
-      loop: "{{ remove_node_list }}"
-
-    - name: Determine whether changes are required for pacemaker resources.
-      set_fact:
-        node_resources_change_required: |-
-          {%- set existing = nodes_query["stdout"] | default("") | regex_replace("\n", "") | regex_replace("\s+", " ") | regex_replace(">\s+<", "><") -%}
-          {%- set expected = cluster_node_resources | regex_replace("\n", "") | regex_replace("\s+", " ") | regex_replace(">\s+<", "><") -%}
-          {{- not (existing == expected) -}}
+    - name: Remove unexpected cluster nodes.
+      block:
+        - name: "Remove nodes from the cluster."
+          ansible.builtin.include_tasks: ../common/remove_node.yml
+          loop: "{{ current_cluster_nodes | difference(expected_cluster_nodes) }}"
+          loop_control:
+            loop_var: cluster_node
 
     - name: Update cluster nodes.
       block:
         - name: Clear pacemaker cluster nodes.
-          ansible.builtin.command:
-            cmd: "cibadmin --replace --scope nodes --xml-text '<nodes/>'"
+          ansible.builtin.command: "cibadmin --replace --scope nodes --xml-text '<nodes/>'"
+
         - name: Update pacemaker cluster nodes.
-          ansible.builtin.command:
-            cmd: "cibadmin --replace --scope nodes --xml-text '{{ cluster_node_resources }}'"
-      when: node_resources_change_required
-  when: beegfs_ha_pacemaker_cluster_node == True and inventory_hostname == preferred_management_node
+          ansible.builtin.command: "cibadmin --replace --scope nodes --xml-text '{{ lookup('template', 'common/node_resources.j2') }}'"
+      when: current_cluster_nodes != expected_cluster_nodes
+
+    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+      ansible.builtin.include_tasks: ../common/maintenance/set.yml
+  when: inventory_hostname == preferred_management_node
   become: true

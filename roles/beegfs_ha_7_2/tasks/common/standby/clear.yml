@@ -1,0 +1,6 @@
+- name: Move cluster nodes out of standby mode.
+  ansible.builtin.include_tasks: clear_node.yml
+  loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+  loop_control:
+    loop_var: cluster_node
+  run_once: true

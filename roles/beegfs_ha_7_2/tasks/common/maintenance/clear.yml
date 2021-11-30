@@ -1,0 +1,23 @@
+- name: Check whether cluster is in maintenance-mode or the cluster is stopped
+  ansible.builtin.command: "crm_attribute --name maintenance-mode --query"
+  register: maintenance_query
+  failed_when: false
+  changed_when: false
+  become: true
+
+- name: Clear cluster maintenance-mode.
+  block:
+    - name: Ensure BeeGFS HA cluster is not in maintenance mode.
+      ansible.builtin.command: "crm_attribute --name maintenance-mode --delete"
+
+    - name: "Wait for cluster to stabilize."
+      ansible.builtin.command: "crm_resource --wait"
+  when: maintenance_query["rc"] in [0, 105] and maintenance_query["stdout"] | regex_search(".*value=(true|on|y|1)", ignorecase=true)
+  become: true
+
+- name: Move cluster nodes out of maintenance mode.
+  ansible.builtin.include_tasks: clear_node.yml
+  loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+  loop_control:
+    loop_var: cluster_node
+  run_once: true
