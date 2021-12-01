@@ -5,6 +5,16 @@ Installs the BeeGFS Client. Deployed the non-DKMS version by default, but can be
 
 Optionally can mount one or more BeeGFS file systems, or the same BeeGFS file system multiple times.
 
+Prerequisites
+-------------
+
+* When installing the BeeGFS client to Ubuntu, the ca-certificates package must be installed, or an error like the following will occur when attempting to add the BeeGFS repository using apt: `Certificate verification failed: The certificate is NOT trusted. The certificate chain uses expired certificate.  Could not handshake: Error in the certificate verification. [IP: 178.254.21.65 443]`. 
+
+Supported Tags
+--------------
+
+* beegfs_client_install
+* beegfs_client_mount
 
 Variables
 ---------

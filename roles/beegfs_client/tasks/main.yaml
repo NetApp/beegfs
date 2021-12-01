@@ -8,6 +8,7 @@
       when: ansible_facts['os_family'] | lower == 'suse'
     - import_tasks: packages/debian_packages.yml
       when: ansible_facts['os_family'] | lower == 'debian'
+    tags: beegfs_client_install
     
   - name: Ensure beegfs-helperd is started/enabled.
     systemd:
