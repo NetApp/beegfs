@@ -1,0 +1,66 @@
+- name: Determine the required ports.
+  ansible.builtin.set_fact:
+    ports: |-
+      {%- set ports = [] -%}
+      {%- for port in beegfs_ha_firewall_ufw_required_ports | default([]) if port | length == 2  -%}
+        {%- if ports.append(port[0] ~ "/" ~ port[1]) -%}{%- endif -%}
+      {%- endfor -%}
+      {%- for service_type in node_info["services"] | default([]) -%}
+        {%- for service in node_info[service_type] -%}
+          {%- if service["service_configuration_options"]["connMgmtdPortTCP"] is defined -%}
+            {%- if ports.append(service["service_configuration_options"]["connMgmtdPortTCP"] ~ "/tcp") -%}{%- endif -%}
+          {%- endif -%}
+          {%- if service["service_configuration_options"]["connMgmtdPortUDP"] is defined -%}
+            {%- if ports.append(service["service_configuration_options"]["connMgmtdPortUDP"] ~ "/udp") -%}{%- endif -%}
+          {%- endif -%}
+          {%- if service["service_configuration_options"]["connMetaPortTCP"] is defined -%}
+            {%- if ports.append(service["service_configuration_options"]["connMetaPortTCP"] ~ "/tcp") -%}{%- endif -%}
+          {%- endif -%}
+          {%- if service["service_configuration_options"]["connMetaPortUDP"] is defined -%}
+            {%- if ports.append(service["service_configuration_options"]["connMetaPortUDP"] ~ "/udp") -%}{%- endif -%}
+          {%- endif -%}
+          {%- if service["service_configuration_options"]["connStoragePortTCP"] is defined -%}
+            {%- if ports.append(service["service_configuration_options"]["connStoragePortTCP"] ~ "/tcp") -%}{%- endif -%}
+          {%- endif -%}
+          {%- if service["service_configuration_options"]["connStoragePortUDP"] is defined -%}
+            {%- if ports.append(service["service_configuration_options"]["connStoragePortUDP"] ~ "/udp") -%}{%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- ports -}}
+
+- name: "Ensure the required firewalld ports are enabled."
+  block:
+    - name: Start and enable the firewalld service
+      ansible.builtin.systemd:
+        name: firewalld.service
+        state: started
+        enabled: true
+      when: beegfs_ha_firewall_start_and_enable
+
+    - name: Allow required firewalld ports for each BeeGFS cluster service.
+      ansible.posix.firewalld:
+        state: enabled
+        port: "{{ item }}"
+        permanent: true
+        immediate: true
+        offline: true
+      loop: "{{ ports }}"
+      when: beegfs_ha_firewall_allow_required_ports
+  when: allow_ports
+  become: true
+
+- name: "Ensure the required firewalld ports are disabled."
+  block:
+    - name: Disable required firewalld ports for each BeeGFS cluster service.
+      ansible.posix.firewalld:
+        state: disabled
+        port: "{{ item }}"
+        permanent: true
+        immediate: true
+        offline: true
+      loop: "{{ ports }}"
+      when: beegfs_ha_firewall_allow_required_ports
+      vars:
+  when: not allow_ports
+  become: true

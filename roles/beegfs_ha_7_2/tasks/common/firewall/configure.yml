@@ -1,0 +1,17 @@
+- name: Determine firewall services and configure ports.
+  block:
+    - name: Get list of all current systemd services.
+      ansible.builtin.service_facts:
+
+    - name: Configure firewalld service.
+      ansible.builtin.include_tasks: firewalld.yml
+      vars:
+        allow_ports: true
+      when: ansible_facts["services"]["firewalld.service"] is defined
+
+    - name: Configure ufw service.
+      ansible.builtin.include_tasks: firewalld.yml
+      when: ansible_facts["services"]["ufw.service"] is defined
+      vars:
+        allow_ports: true
+  become: true
