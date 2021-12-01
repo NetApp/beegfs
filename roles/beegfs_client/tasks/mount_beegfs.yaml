@@ -86,7 +86,13 @@
         name: beegfs-client
         state: restarted
       when: update_beegfs_config_result.changed or update_beegfs_sysMgmtdHost_result.changed or update_beegfs_connInterface_file_result.changed or update_connInterface_path_result.changed or update_beegfs_mounts_result.changed 
-    
+
+    - name: Ensure the BeeGFS client is started/enabled so mounts persist across reboots.
+      systemd:
+        name: beegfs-client
+        state: started
+        enabled: yes
+
     when: beegfs_client_dkms_install == False
 
   # TODO: Add support for mounting BeeGFS using the DKMS client.

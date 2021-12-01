@@ -79,6 +79,21 @@ Notes:
 * Specifying `sysMgmtdHost` in `beegfs_client_config` is not supported since it is has to be configured elsewhere.
 * Specifying `connInterfacesFile` in `beegfs_client_config` is supported, though unnecessary as specifying `connInterfaces` will generate a file and populate this automatically.
 
+Tuning recommendations when mounting BeeGFS
+-------------------------------------------
+
+While the default parameters provided in beegfs-client.conf provide reasonable performance, adjusting the following `beegfs_client_config` parameters has been seen to improve performance with many workloads: 
+
+```
+beegfs_client_mounts:
+  - sysMgmtdHost: mgmt
+    mount_point: /mnt/beegfs   
+    beegfs_client_config:
+      connMaxInternodeNum: 128 # Maximum number of simultaneous connections to the same node (BeeGFS Client Default: 12).
+      connRDMABufNum: 36 # Allocates the number of buffers for transferring IO (BeeGFS Client Default: 8192).
+      connRDMABufSize: 65536 # Size of each allocated RDMA buffer (BeeGFS Client Default: 70).
+```
+
 Limitations
 -----------
 
