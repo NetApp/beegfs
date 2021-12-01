@@ -1,3 +1,6 @@
+## Table of Contents
+1. Performance Tuning (#performance-tuning)
+
 ## Performance Tuning (`beegfs_ha_enable_performance_tuning: False`)
 -----------------------------------------------------------------
 Performance tuning is disabled by default, but can be enabled by setting `beegfs_ha_enable_performance_tuning: True`. The default is to avoid a scenario where users are unaware these are being set, and they result in poor performance or stability issues that are difficult to troubleshoot. There is also the added consideration the default values will likely need to be adjusted to achieve optimal performance for a given hardware configuration.
