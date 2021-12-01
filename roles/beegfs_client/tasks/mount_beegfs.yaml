@@ -87,6 +87,8 @@
         state: restarted
       when: update_beegfs_config_result.changed or update_beegfs_sysMgmtdHost_result.changed or update_beegfs_connInterface_file_result.changed or update_connInterface_path_result.changed or update_beegfs_mounts_result.changed 
     
-    when: beegfs_install_dkms_client == False
+    when: beegfs_client_dkms_install == False
+
+  # TODO: Add support for mounting BeeGFS using the DKMS client.
 
   tags: beegfs_client_mount

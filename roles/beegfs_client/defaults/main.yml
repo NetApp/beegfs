@@ -1,47 +1,27 @@
-beegfs_force_beegfs_upgrade: False
+beegfs_client_force_upgrade: False
 beegfs_client_force_rebuild: False
 
-beegfs_install_dkms_client: False
+beegfs_client_dkms_install: False
 
-beegfs_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5/dists/rhel8
-beegfs_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/RPM-GPG-KEY-beegfs
+beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5/dists/rhel8
+beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/RPM-GPG-KEY-beegfs
 
-beegfs_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5/dists/sles15
-beegfs_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/RPM-GPG-KEY-beegfs
-beegfs_allow_unsupported_module: True
+beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5/dists/sles15
+beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/RPM-GPG-KEY-beegfs
+beegfs_ha_suse_allow_unsupported_module: True
 
-beegfs_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5
-beegfs_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/DEB-GPG-KEY-beegfs
+beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5
+beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/DEB-GPG-KEY-beegfs
 
 beegfs_client_ofed_enable: False
 beegfs_client_ofed_include_path: "/usr/src/ofa_kernel/default/include"
 
-beegfs_client_mounts:
-  - sysMgmtdHost: 100.127.101.0
-    mount_point: /mnt/beegfs
-    mounted: True
-    connInterfaces:
-      - ibs4f1
-      - ibs1f1
-    beegfs_client_config:
-      connMaxInternodeNum: 128
-      connMaxConcurrentAttempts: 0
-      connInterfacesFile: /etc/beegfs/connInterfacesFile2.conf
-
-  - sysMgmtdHost: test_no_conn
-    mount_point: /mnt/beegfs_test
-    mounted: False
-    # beegfs_client_config:
-    #   connMaxInternodeNum: 12
-    #   connMaxConcurrentAttempts: 0
-
-  - sysMgmtdHost: 100.127.101.0
-    mount_point: /mnt/beegfs_test2
-    mounted: False
-    connInterfaces:
-      - ib0
-      - ib1
-    beegfs_client_config:
-      connMaxInternodeNum: 12
-      connMaxConcurrentAttempts: 0
-      connClientPortUDP: 8042
+# beegfs_client_mounts:
+#   - sysMgmtdHost: <BeeGFS Management Service IP or Hostname> # Required
+#     mount_point: <Path to mount BeeGFS> # Required.
+#     mounted: [True|False] # Optional, defaults to 'True'.
+#     connInterfaces: # Optional list of one or more interfaces to use for BeeGFS. 
+#       - <Interface 1>
+#       - <Interface N>
+#     beegfs_client_config: # Optional dictionary of parameters to override in the default beegfs-client.conf file for this mount.
+#       <Key>: "<Value>"

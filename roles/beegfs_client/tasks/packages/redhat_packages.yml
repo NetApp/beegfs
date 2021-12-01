@@ -3,10 +3,10 @@
     name: beegfs
     description: BeeGFS YUM Repo
     file: beegfs_rhel7
-    baseurl: "{{ beegfs_rhel_repository_base_url }}"
+    baseurl: "{{ beegfs_ha_rhel_repository_base_url }}"
     enabled: yes
     gpgcheck: yes
-    gpgkey: "{{ beegfs_rhel_repository_gpgkey }}"
+    gpgkey: "{{ beegfs_ha_rhel_repository_gpgkey }}"
 
 - name: Get kernel version (RedHat/CentOS - Client).
   shell: "uname -r"
@@ -25,14 +25,14 @@
     name: 
       - elfutils-libelf-devel
     state: |-
-      {%- if beegfs_force_beegfs_upgrade %}latest{%- else %}present{%- endif %}
+      {%- if beegfs_client_force_upgrade %}latest{%- else %}present{%- endif %}
 
 - name: Ensure the BeeGFS client package is installed (RedHat/CentOS - Client).
   yum:
     state: |-
-      {%- if beegfs_force_beegfs_upgrade %}latest{%- else %}present{%- endif %}
+      {%- if beegfs_client_force_upgrade %}latest{%- else %}present{%- endif %}
     name:
-      - "{%- if beegfs_install_dkms_client %}beegfs-client-dkms{%- else %}beegfs-client{%- endif %}"
+      - "{%- if beegfs_client_dkms_install %}beegfs-client-dkms{%- else %}beegfs-client{%- endif %}"
       - beegfs-helperd
       - beegfs-utils
       - beegfs-client-devel

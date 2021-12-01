@@ -2,17 +2,17 @@
   zypper_repository:
     name: beegfs
     description: BeeGFS ZYPPER Repo
-    repo: "{{ beegfs_suse_repository_base_url }}"
+    repo: "{{ beegfs_ha_suse_repository_base_url }}"
     autorefresh: True
     state: present
     auto_import_keys: True
-  when: "'.repo' in beegfs_suse_repository_base_url"
+  when: "'.repo' in beegfs_ha_suse_repository_base_url"
 
 - name: Create BeeGFS repo file (SUSE).
   template:
     src: beegfs_suse_repo.j2
     dest: "/etc/zypp/repos.d/beegfs.repo"
-  when: "'.repo' not in beegfs_suse_repository_base_url"
+  when: "'.repo' not in beegfs_ha_suse_repository_base_url"
 
 - name: Get kernel version (SUSE - Client).
   shell: "uname -r | cut -f 1,2 -d \"-\""
@@ -40,14 +40,14 @@
     path: /etc/modprobe.d/10-unsupported-modules.conf
     regexp: 'allow_unsupported_modules 0'
     replace: 'allow_unsupported_modules 1'
-  when: 'beegfs_allow_unsupported_module == True'
+  when: 'beegfs_ha_suse_allow_unsupported_module == True'
 
 - name: Ensure the BeeGFS client package is installed (SUSE - Client).
   zypper:
     state: |-
-      {%- if beegfs_force_beegfs_upgrade %}latest{%- else %}present{%- endif %}
+      {%- if beegfs_client_force_upgrade %}latest{%- else %}present{%- endif %}
     name:
-      - "{%- if beegfs_install_dkms_client %}beegfs-client-dkms{%- else %}beegfs-client{%- endif %}"
+      - "{%- if beegfs_client_dkms_install %}beegfs-client-dkms{%- else %}beegfs-client{%- endif %}"
       - beegfs-helperd
       - beegfs-utils
       - beegfs-client-devel

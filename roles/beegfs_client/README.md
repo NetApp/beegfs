@@ -18,7 +18,7 @@ None.
 The following variables control how the BeeGFS client is installed and kernel module built: 
 
 * Specify if the DKMS or traditional BeeGFS client should be installed (default: False):
-  * `beegfs_install_dkms_client: False`
+  * `beegfs_client_dkms_install: False`
 * Specify if the Mellanox OFED driver should be used instead of the inbox drivers (default: False):
   * `beegfs_client_ofed_enable: False`
 * To use the InfiniBand kernel modules from the OpenFabrics OFED, you must specify the header include path: 

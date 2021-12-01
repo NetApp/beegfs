@@ -36,7 +36,8 @@
         shell:
           cmd: "/etc/init.d/beegfs-client rebuild"
         when: beegfs_client_autobuild.changed or beegfs_client_force_rebuild == True or package_mgr_result.changed == True
-    when: beegfs_install_dkms_client == False
+    when: beegfs_client_dkms_install == False
+    tags: beegfs_client_install    
 
   - name: Complete DKMS Client Tasks
     block:
@@ -72,7 +73,8 @@
           block: |
             # Load the BeeGFS client module at boot
             beegfs
-    when: beegfs_install_dkms_client == True
+    when: beegfs_client_dkms_install == True
+    tags: beegfs_client_install
 
   - name: Include tasks to mount BeeGFS if requested.
     include_tasks: mount_beegfs.yaml
