@@ -4,10 +4,11 @@
     marker: "# Managed by E-Series Ansible for {{ beegfs_ha_cluster_name }} - {mark}"
     block: |-
       {% for host in ansible_play_hosts_all if host in groups[beegfs_ha_ansible_cluster_group] and "ansible_host" in (hostvars[host].keys() | list) %}
-        {{- hostvars[host]["ansible_host"] }}	{{ host }}	{{ hostvars[host]["ansible_hostname"] }}
+        {{- hostvars[host]["ansible_host"] }} {{ host }} {{ hostvars[host]["ansible_hostname"] }}
       {% endfor %}
 
-      {{ beegfs_ha_mgmtd_floating_ip }}	{{ management_info['resource_group'] }}
+      {{ beegfs_ha_mgmtd_floating_ip }} {{ management_info['resource_group'] }}
+  register: etc_hosts
   become: true
 
 - name: Add required BeeGFS sysctl.conf entries.
