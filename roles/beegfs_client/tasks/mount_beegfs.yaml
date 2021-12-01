@@ -1,0 +1,92 @@
+---
+- name: Mount BeeGFS # We wrap things in a block to ensure the tags work right with include_tasks.
+  block:
+
+  - name: Generate the BeeGFS client configuration file for this mount point. 
+    block:
+    - name: Generate the path to the BeeGFS client configuration file for {{ item['sysMgmtdHost'] }}.
+      set_fact:
+        beegfs_client_conf_path: "/etc/beegfs/{{ item['sysMgmtdHost'] }}_beegfs-client.conf"
+
+    # If there are multiple BeeGFS mount points for the same sysMgmtdHost unique UDP ports would be provided. 
+    - name: Generate the path to the BeeGFS client configuration file for {{ item['sysMgmtdHost'] }} if a unique UDP port was requested.
+      set_fact:
+        beegfs_client_conf_path: "/etc/beegfs/{{ item['sysMgmtdHost'] }}_{{ item['beegfs_client_config']['connClientPortUDP'] }}_beegfs-client.conf"
+      when: item['beegfs_client_config']['connClientPortUDP'] is defined
+
+    - name: Create a copy of the default beegfs-client.conf file at {{ beegfs_client_conf_path }}.
+      copy:
+        src: /etc/beegfs/beegfs-client.conf
+        dest: "{{ beegfs_client_conf_path }}"
+        remote_src: yes
+
+    - name: Update {{ beegfs_client_conf_path }} with any user provided parameters for this BeeGFS mount point.
+      ansible.builtin.replace:
+        path: /etc/beegfs/beegfs-client.conf
+        regexp: '({{ item.key }}.*)=.*'
+        replace: '\1= {{ item.value }}'
+      loop: "{{ lookup('dict', beegfs_client_config, wantlist=True) }}"
+      when: beegfs_client_config is defined
+      register: update_beegfs_config_result
+
+    - name: Update the sysMgmtdHost line in {{ beegfs_client_conf_path }}.
+      ansible.builtin.replace:
+        path: "{{ beegfs_client_conf_path }}"
+        regexp: '(sysMgmtdHost.*)=.*'
+        replace: '\1= {{ item["sysMgmtdHost"] }}'
+      register: update_beegfs_sysMgmtdHost_result
+
+  - name: Configure connInterfaces for this mount point if defined. 
+    block: 
+    - name: Set beegfs_connInterfaces
+      set_fact: beegfs_connInterfaces="{{ item['connInterfaces'] }}"
+
+    - name: Generate a default connInterfacesFile path.
+      set_fact:
+        beegfs_connInterfaces_path_default: "/etc/beegfs/{{ item['sysMgmtdHost'] }}_connInterfaces.conf"
+
+    - name: Generate a default connInterfacesFile path if a custom UDP port was requested.
+      set_fact:
+        beegfs_connInterfaces_path_default: "/etc/beegfs/{{ item['sysMgmtdHost'] }}_{{ item['beegfs_client_config']['connClientPortUDP'] }}_connInterfaces.conf"
+      when: item['beegfs_client_config']['connClientPortUDP'] is defined
+
+    - name: Use the user defined connInterfacesFile path if provided.
+      set_fact: 
+        beegfs_connInterfaces_path: "{{ item['beegfs_client_config']['connInterfacesFile'] | default(beegfs_connInterfaces_path_default)}}"
+
+    - name: Create/populate the connInterfaces file at {{ beegfs_connInterfaces_path }}.
+      template:
+        src: beegfs_connection_interfaces.j2
+        dest: "{{ beegfs_connInterfaces_path }}"
+        owner: root
+        group: root
+        mode: 0644
+      register: update_beegfs_connInterface_file_result
+
+    - name: Set the connInterfacesFile path in {{ beegfs_client_conf_path }}.
+      ansible.builtin.replace:
+        path: "{{ beegfs_client_conf_path }}"
+        regexp: '(connInterfacesFile.*)=.*'
+        replace: '\1= {{ beegfs_connInterfaces_path }}'
+      register: update_connInterface_path_result
+
+    when: item['connInterfaces'] is defined
+
+  - name: Mount BeeGFS (non-DKMS client).
+    block: 
+    - name: Update /etc/beegfs/beegfs-mounts.conf to include requested BeeGFS file system.
+      lineinfile:
+        path: /etc/beegfs/beegfs-mounts.conf
+        line: "{{ item['mount_point'] }} {{ beegfs_client_conf_path }}"
+        state: "{%- if item['mounted'] is defined and item['mounted'] == False  %}absent{%- else %}present{%- endif %}"
+      register: update_beegfs_mounts_result
+
+    - name: Restart BeeGFS client service to mount requested BeeGFS file system.
+      systemd:
+        name: beegfs-client
+        state: restarted
+      when: update_beegfs_config_result.changed or update_beegfs_sysMgmtdHost_result.changed or update_beegfs_connInterface_file_result.changed or update_connInterface_path_result.changed or update_beegfs_mounts_result.changed 
+    
+    when: beegfs_install_dkms_client == False
+
+  tags: beegfs_client_mount

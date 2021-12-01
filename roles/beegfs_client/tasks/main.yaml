@@ -1,0 +1,83 @@
+- name: Execute all tasks to install the BeeGFS client and mount BeeGFS.
+  block: # Wrapping all tasks in a block so we can set become: yes once.
+  - name: Install BeeGFS packages (All).
+    block:
+    - import_tasks: packages/redhat_packages.yml
+      when: ansible_facts['os_family'] | lower == 'redhat'
+    - import_tasks: packages/suse_packages.yml
+      when: ansible_facts['os_family'] | lower == 'suse'
+    - import_tasks: packages/debian_packages.yml
+      when: ansible_facts['os_family'] | lower == 'debian'
+    
+  - name: Ensure beegfs-helperd is started/enabled.
+    systemd:
+      name: beegfs-helperd
+      state: started
+      enabled: yes
+
+  - name: Complete non-DKMS BeeGFS Client Tasks
+    block: 
+      - name: Remove the default beegfs-mount.conf entry
+        lineinfile:
+          path: /etc/beegfs/beegfs-mounts.conf
+          line: "/mnt/beegfs /etc/beegfs/beegfs-client.conf"
+          state: absent
+
+      - name: Update /etc/beegfs/beegfs-client-autobuild.conf to enable RDMA if needed.
+        template:
+          src: beegfs-client-autobuild.j2
+          dest: "/etc/beegfs/beegfs-client-autobuild.conf"
+          owner: root
+          group: root
+          mode: 0644
+        register: beegfs_client_autobuild
+
+      - name: Force a rebuild of the client kernel module if requested or the source/configuration changed.
+        shell:
+          cmd: "/etc/init.d/beegfs-client rebuild"
+        when: beegfs_client_autobuild.changed or beegfs_client_force_rebuild == True or package_mgr_result.changed == True
+    when: beegfs_install_dkms_client == False
+
+  - name: Complete DKMS Client Tasks
+    block:
+      - name: Update /etc/beegfs/beegfs-client-build.mk to add support for third party OFED drivers.
+        template:
+          src: beegfs-client-build.mk.j2
+          dest: "/etc/beegfs/beegfs-client-build.mk"
+          owner: root
+          group: root
+          mode: 0644
+        register: beegfs_client_build_mk_result
+
+      - name: Force a rebuild and reload of the client kernel module if requested or the source/configuration changed.
+        block: 
+        - name: Unload the BeeGFS kernel module before rebuilding it. 
+          modprobe:
+            name: beegfs
+            state: absent
+        - name: Force a rebuild of the client kernel module.
+          shell:
+            cmd: "/etc/init.d/beegfs-client rebuild"
+        when: beegfs_client_build_mk_result.changed or beegfs_client_force_rebuild == True or package_mgr_result.changed == True
+
+      - name: Load the BeeGFS kernel module.
+        modprobe:
+          name: beegfs
+          state: present
+
+      - name: Set the BeeGFS kernel module to load at boot by creating /etc/modules-load.d/beegfs-client-dkms.client.
+        blockinfile:
+          path: /etc/modules-load.d/beegfs-client-dkms.conf
+          create: true
+          block: |
+            # Load the BeeGFS client module at boot
+            beegfs
+    when: beegfs_install_dkms_client == True
+
+  - name: Include tasks to mount BeeGFS if requested.
+    include_tasks: mount_beegfs.yaml
+    loop: "{{ beegfs_client_mounts }}"
+    when: beegfs_client_mounts is defined
+    tags: beegfs_client_mount
+
+  become: true

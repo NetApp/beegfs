@@ -1,0 +1,85 @@
+BeeGFS Client Role 
+------------------
+
+Installs the BeeGFS Client. Deployed the non-DKMS version by default, but can be set to deploy the DKMS version instead.
+
+Optionally can mount one or more BeeGFS file systems, or the same BeeGFS file system multiple times.
+
+
+Variables
+---------
+
+### Required
+
+None.
+
+### Optional 
+
+The following variables control how the BeeGFS client is installed and kernel module built: 
+
+* Specify if the DKMS or traditional BeeGFS client should be installed (default: False):
+  * `beegfs_install_dkms_client: False`
+* Specify if the Mellanox OFED driver should be used instead of the inbox drivers (default: False):
+  * `beegfs_client_ofed_enable: False`
+* To use the InfiniBand kernel modules from the OpenFabrics OFED, you must specify the header include path: 
+  * `beegfs_client_ofed_include_path: "/usr/src/ofa_kernel/default/include"`
+
+Mounting one or more BeeGFS file systems is possible by specifying the following (at minimum): 
+```
+beegfs_client_mounts:
+  - sysMgmtdHost: <BeeGFS Management Server IP or Hostname>
+    mount_point: /mnt/beegfs
+
+  - sysMgmtdHost: <BeeGFS Management Server IP or Hostname>
+    mount_point: /mnt/beegfs_2
+```
+
+A connInterfacesFile will be created/populated by specifying `connInterfaces` and any parameters in the beegfs-client.conf file (except `sysMgmtdHost`) can be overridden by adding a `beegfs_client_config` section: 
+```
+  - sysMgmtdHost: <BeeGFS Management Server IP or Hostname>
+    mount_point: /mnt/beegfs
+    connInterfaces:
+      - ibs4f1
+      - ibs1f1
+    beegfs_client_config:
+      connMaxInternodeNum: 128
+      connMaxConcurrentAttempts: 0
+```
+
+Mounting the same BeeGFS file system multiple times is possible by providing different mount points and specifying different `connClientPortUDP` values: 
+
+```
+beegfs_client_mounts:
+  - sysMgmtdHost: mgmt
+    mount_point: /mnt/beegfs
+    connInterfaces:
+      - ibs4f1
+      - ibs1f1
+    beegfs_client_config:
+      connClientPortUDP: 8004
+
+  - sysMgmtdHost: mgmt
+    mount_point: /mnt/beegfs_2
+    connInterfaces:
+      - ibs1f1
+      - ibs4f1      
+    beegfs_client_config:
+      connClientPortUDP: 8005     
+```
+
+Unmounting BeeGFS is possible by setting `mounted: False` on individual entries: 
+```
+beegfs_client_mounts:
+  - sysMgmtdHost: mgmt
+    mount_point: /mnt/beegfs
+    mounted: False
+```    
+
+Notes: 
+* Specifying `sysMgmtdHost` in `beegfs_client_config` is not supported since it is has to be configured elsewhere.
+* Specifying `connInterfacesFile` in `beegfs_client_config` is supported, though unnecessary as specifying `connInterfaces` will generate a file and populate this automatically.
+
+Limitations
+-----------
+
+* When using the non-DKMS client, to allow support for mounting the same BeeGFS file system multiple times or mounting multiple BeeGFS file systems, mounting BeeGFS using the default BeeGFS mount point in combination with the default BeeGFS client conf file is not supported (`/mnt/beegfs /etc/beegfs/beegfs-client.conf`). The role will automatically remove this default entry from beegfs-mounts.conf. 

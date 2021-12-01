@@ -1,0 +1,39 @@
+- name: Ensure software properties common package is installed (Debian/Ubuntu).
+  apt:
+    state: present # TODO: Verify present works instead of latest. 
+    name: software-properties-common
+
+- name: Add BeeGFS apt key (Debian/Ubuntu).
+  apt_key:
+    url: "{{ beegfs_debian_repository_gpgkey }}"
+    state: present
+  become: yes
+
+- name: Add BeeGFS apt repository (Debian/Ubuntu).  
+  apt_repository:
+    state: present
+    repo: "deb [arch=amd64] {{ beegfs_debian_repository_base_url }} buster non-free"
+    update_cache: yes
+  become: yes
+
+# (jmccormi): At least when installing the DKMS version it will skip the module build if the kernel headers aren't installed.
+- name: Get kernel version (Debian/Ubuntu).
+  shell: "uname -r"
+  register: shell_output
+  failed_when: "shell_output.rc != 0"
+  changed_when: False
+
+- name: Ensure linux-headers-{{ shell_output.stdout_lines[0] }} is installed (Debian/Ubuntu).
+  apt:
+    name: "linux-headers-{{ shell_output.stdout_lines[0] }}"
+
+- name: Ensure BeeGFS client package is installed (Debian/Ubuntu - Client).
+  apt:
+    state: |-
+      {%- if beegfs_force_beegfs_upgrade %}latest{%- else %}present{%- endif %}
+    name:
+      - "{%- if beegfs_install_dkms_client %}beegfs-client-dkms{%- else %}beegfs-client{%- endif %}"
+      - beegfs-helperd
+      - beegfs-utils
+      - libelf-dev
+  register: package_mgr_result
