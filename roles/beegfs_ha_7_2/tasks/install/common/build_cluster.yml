@@ -46,6 +46,7 @@
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/corosync_authkey.j2') }}"
     dest: "{{ beegfs_ha_corosync_authkey_path }}"
     mode: 0644
+  register: corosync_authkey
   when: beegfs_ha_pacemaker_cluster_node
   become: true
 
@@ -55,6 +56,7 @@
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/corosync_conf.j2') }}"
     dest: "{{ beegfs_ha_corosync_conf_path }}"
     mode: 0644
+  register: corosync_config
   when: beegfs_ha_pacemaker_cluster_node
   become: true
 
@@ -127,7 +129,7 @@
 
 - name: Ensure pacemaker and corosync are enabled and started.
   ansible.builtin.systemd:
-    state: '{% if pacemaker_authkey["changed"] == True or pacemaker_config["changed"] %}restarted{% else %}started{% endif %}'
+    state: '{% if etc_hosts["changed"] or corosync_authkey["changed"] or corosync_config["changed"] or pacemaker_authkey["changed"] or pacemaker_config["changed"] %}restarted{% else %}started{% endif %}'
     enabled: "{{ beegfs_ha_pacemaker_enabled }}"
     name: "{{ item }}"
   loop: ["corosync", "pacemaker"]
