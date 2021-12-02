@@ -11,7 +11,7 @@ Requirements
   - Python (pip) packages:
     - ipaddr
     - netaddr
-- Passwordless SSH setup from the Ansible control node to all BeeGFS HA nodes and clients.
+- Passwordless SSH setup from the Ansible control node to all BeeGFS HA nodes.
 
 Getting Started
 ---------------
@@ -21,7 +21,7 @@ Step 1) Get the `beegfs_ha_7_2` example directory to you Ansible control node.
     cd <your_project_directory>
     git clone -b release-2.1.0 --single-branch https://github.com/netappeseries/beegfs.git && cp -r beegfs/examples/beegfs_ha_7_2/* . && rm -rf beegfs
 
-Step 2) Modify the `beegfs_ha_inventory.yml` file. In this step, you'll define BeeGFS HA cluster resource groups, storage targets and the BeeGFS clients.
+Step 2) Modify the `beegfs_ha_inventory.yml` file. In this step, you'll define BeeGFS HA cluster resource groups, and storage targets.
 - Read the comments in the `beegfs_ha_inventory.yml` file for modification details.
 
 Step 3) Setup a skeleton inventory structure based on the modified `beegfs_ha_inventory.yml` file from step 2.
@@ -29,7 +29,7 @@ Step 3) Setup a skeleton inventory structure based on the modified `beegfs_ha_in
 ```
 ansible-playbook -i beegfs_ha_inventory.yml create_inventory_structure.yml
 ```
-- Note that once the inventory files have been created, running the playbook again will only create new files that correspond to additions to the `beegfs_ha_inventory.yml` file (i.e. new resource groups, clients, storage targets), no existing files will be modified.
+- Note that once the inventory files have been created, running the playbook again will only create new files that correspond to additions to the `beegfs_ha_inventory.yml` file (i.e. new resource groups, storage targets), no existing files will be modified.
 
 Step 4) Review and update the generated files found in `group_vars` directory.
 * The `group_vars` directory contains all group-level variable files. Be sure to carefully read the comments in each file.
@@ -37,7 +37,7 @@ Step 4) Review and update the generated files found in `group_vars` directory.
 Step 5) Review and update the generated files found in `host_vars` directory.
 * The `host_vars` directory contains files for each BeeGFS HA node and E-Series storage. Carefully read the comments in each file.
 
-Step 6) Configure the BeeGFS HA services and clients.
+Step 6) Configure the BeeGFS HA services.
 ```
 ansible-playbook -i beegfs_ha_inventory.yml beegfs_ha_playbook.yml
 ```

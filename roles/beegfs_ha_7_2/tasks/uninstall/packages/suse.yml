@@ -46,13 +46,3 @@
       when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   become: true
-
-- name: Ensure the BeeGFS client package is uninstalled (SUSE - Client).
-  community.general.zypper:
-    state: absent
-    name:
-      - beegfs-client
-      - beegfs-helperd
-      - beegfs-utils
-  when: inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
-  become: true

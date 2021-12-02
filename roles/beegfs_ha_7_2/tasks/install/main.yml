@@ -27,9 +27,8 @@
         - name: Ensure InfiniBand IPoIB is configured.
           include_role:
             name: netapp_eseries.host.ipoib
-          when: eseries_ipoib_interfaces is defined and (inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([]))
+          when: eseries_ipoib_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       tags:
-        - beegfs_ha_client
         - beegfs_ha_configure
         - beegfs_ha
 
@@ -250,7 +249,6 @@
         - beegfs_ha_validation
         - beegfs_ha_configure_resource
         - beegfs_ha_configure
-        #- beegfs_ha_client
         - beegfs_ha
 
     - name: Backup current BeeGFS HA configuration.
@@ -264,16 +262,4 @@
         - beegfs_ha_backup
         - beegfs_ha
 
-    - name: Ensure BeeGFS HA clients are configured.
-      block:
-        - name: Ensure BeeGFS HA clients are configured.
-          ansible.builtin.include_tasks: services/client.yml
-          when: beegfs_ha_client_installed == True and inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
-
-        - name: Ensure BeeGFS HA clients are removed.
-          ansible.builtin.include_tasks: ../uninstall/services/client.yml
-          when: beegfs_ha_client_installed == False and inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
-      tags:
-        - beegfs_ha_client
-        - beegfs_ha
   when: beegfs_ha_uninstall == False
