@@ -1,9 +1,0 @@
-[
-{% for host in groups[beegfs_ha_ansible_cluster_group] %}
-  {
-    "username": "{{ beegfs_ha_cluster_username }}",
-    "token": "{{ host | to_uuid }}",
-    "creation_date": "{{ '%Y-%m-%d %H:%M:%S' | strftime(pcs_users_conf_stat['stat']['ctime'] | default(ansible_date_time['epoch'])) }}"
-  }
-{% endfor %}
-]

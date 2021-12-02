@@ -1,6 +1,0 @@
-{% for floating_ip in item['floating_ips'] %}
-  {%- set info = floating_ip.split(":") %}
-  {%- set interface = info[0] %}
-  {%- set iflabel = item['resource_group'][:12] ~ "_" ~ loop.index %}
-  {{- interface }}:{{ iflabel }}
-{% endfor %}
