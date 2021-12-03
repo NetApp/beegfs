@@ -4,9 +4,20 @@
 - name: Create mount point directory for each metadata volume.
   ansible.builtin.file:
     state: directory
-    path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}"
-  loop: "{{ node_info['metadata'] }}"
+    path: "{{ item }}"
+    mode: "0755"
+  loop: "{{ directories }}"
   become: true
+  vars:
+    directories: |-
+      {%- set directories = [] -%}
+      {%- for service in node_info['metadata'] -%}
+        {%- for volume in service["volumes"] -%}
+          {%- if directories.append(volume["metadata"]["mount_dir"] ~ volume["name"]) -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- directories -}}
+
 
 - name: Retrieve currently mounted volumes on the preferred host.
   ansible.builtin.command:
@@ -36,26 +47,30 @@
       {%- endfor -%}
       {{- volumes -}}
 
-- name: Create data directory for metadata service.
+- name: Create required directories for metadata service.
   ansible.builtin.file:
     state: directory
-    path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/data"
-  loop: "{{ node_info['metadata'] }}"
-  when: inventory_hostname == item['preferred_node_order'][0]
+    path: "{{ item }}"
+    mode: "0755"
+  loop: "{{ directories }}"
   become: true
-
-- name: Create metadata_config directory for metadata service.
-  ansible.builtin.file:
-    state: directory
-    path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config"
-  loop: "{{ node_info['metadata'] }}"
-  when: inventory_hostname == item['preferred_node_order'][0]
-  become: true
+  vars:
+    directories: |-
+      {%- set directories = [] -%}
+      {%- for service in node_info["metadata"] if inventory_hostname == service["preferred_node_order"][0] -%}
+        {%- for volume in service["volumes"] -%}
+          {%- set base = volume["metadata"]["mount_dir"] ~ volume["name"] -%}
+          {%- if directories.append(base ~ "/data") -%}{%- endif -%}
+          {%- if directories.append(base ~ "/metadata_config") -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- directories -}}
 
 - name: Generate connInterfacesFile.conf file.
   ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/connInterfacesFile_conf.j2') }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/connInterfacesFile.conf"
+    mode: "0644"
   loop: "{{ node_info['metadata'] }}"
   register: connInterfacesFile_conf
   when: inventory_hostname == item['preferred_node_order'][0]
@@ -65,15 +80,30 @@
   ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/connNetFilterFile_conf.j2') }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/connNetFilterFile.conf"
+    mode: "0644"
   loop: "{{ node_info['metadata'] }}"
   register: connNetFilterFile_conf
   when: inventory_hostname == item['preferred_node_order'][0]
   become: true
 
 - name: Ensure beegfs-meta.conf file is configured.
-  ansible.builtin.template:
-    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'metadata/beegfs_meta_conf.j2') }}"
+  netapp_eseries.beegfs.update_conf:
+    src: "{{ beegfs_ha_beegfs_meta_conf_path }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/beegfs-meta.conf"
+    options: |-
+      {%- set storeMetaDirectory = [] -%}
+      {%- for volume in item['volumes'] -%}
+        {%- if storeMetaDirectory.append(volume["metadata"]["mount_dir"] ~ volume["name"] ~ "/data") -%}{%- endif -%}
+      {%- endfor -%}
+      {%- set required_options = {"sysMgmtdHost": management_info["resource_group"],
+                                  "storeMetaDirectory": storeMetaDirectory | join(","),
+                                  "connInterfacesFile": item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/metadata_config/connInterfacesFile.conf",
+                                  "logStdFile": "/var/log/beegfs-meta-" ~ item["volumes"][0]["name"] ~ ".log"} -%}
+      {%- if (item["filter_ip_ranges"] | default(beegfs_ha_filter_ip_ranges)) | length > 0 -%}
+        {%- if required_options.update({"connNetFilterFile": item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/metadata_config/connNetFilterFile.conf"}) -%}{%- endif -%}
+      {%- endif -%}
+      {{- beegfs_ha_beegfs_meta_conf_default_options | combine(beegfs_ha_beegfs_meta_conf_group_options) | combine(item["beegfs_ha_beegfs_meta_conf_host_options"]) | combine(required_options) -}}
+    mode: "0644"
   loop: "{{ node_info['metadata'] }}"
   when: inventory_hostname == item['preferred_node_order'][0]
   become: true

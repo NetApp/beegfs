@@ -1,15 +1,13 @@
 # Determine expected BeeGFS HA management service information required for configuration.
 - name: Select details about management service.
-  set_fact:
+  ansible.builtin.set_fact:
     mgmt_volume: "{{ management_info['volumes'][0] }}"
     resource_group: "{{ management_info['resource_group'] }}"
     floating_ips: "{{ management_info['floating_ips'] }}"
     filter_ip_ranges: "{{ management_info['filter_ip_ranges'] | default(beegfs_ha_filter_ip_ranges) }}"
-    mgmt_tcp_port: "{{ management_info['tcp_port'] | default(management_info['port'] | default(beegfs_ha_management_tcp_port)) }}"
-    mgmt_udp_port: "{{ management_info['udp_port'] | default(management_info['port'] | default(beegfs_ha_management_udp_port)) }}"
 
 - name: Select details about the management volume.
-  set_fact:
+  ansible.builtin.set_fact:
     mgmt_volume_name: "{{ mgmt_volume['name'] }}"
     mgmt_volume_mount_device: "{{ mgmt_volume['path'] }}"
     mgmt_volume_format_type: "{{ mgmt_volume['metadata']['format_type'] }}"
@@ -18,10 +16,18 @@
     mgmt_config_path: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}/mgmt_config/"
     mgmt_data_path: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}/data"
 
+- name: Select details about the management volume.
+  ansible.builtin.set_fact:
+    beegfs_ha_beegfs_mgmtd_conf_required_options:
+      storeMgmtdDirectory: "{{ mgmt_data_path }}"
+      connInterfacesFile: "{{ mgmt_config_path }}connInterfacesFile.conf"
+      connNetFilterFile: "{% if (filter_ip_ranges | default(beegfs_ha_filter_ip_ranges)) | length > 0 %}{{ mgmt_config_path }}connNetFilterFile.conf{% endif %}"
+
 - name: "Create {{ mgmt_volume_mount }} directory as the mount point for the management volume."
   ansible.builtin.file:
     state: directory
     path: "{{ mgmt_volume_mount }}"
+    mode: "0755"
   become: true
 
 # TODO: Determine which cluster node is running the management service.
@@ -74,9 +80,11 @@
       register: connNetFilterFile_conf
 
     - name: Ensure beegfs-mgmtd.conf file is configured.
-      ansible.builtin.template:
-        src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'management/beegfs_mgmtd_conf.j2') }}"
+      netapp_eseries.beegfs.update_conf:
+        src: "{{ beegfs_ha_beegfs_mgmtd_conf_path }}"
         dest: "{{ mgmt_config_path }}beegfs-mgmtd.conf"
+        options: "{{ beegfs_ha_beegfs_mgmtd_conf_default_options | combine(beegfs_ha_beegfs_mgmtd_conf_group_options) | combine(beegfs_ha_beegfs_mgmtd_conf_host_options) | combine(beegfs_ha_beegfs_mgmtd_conf_required_options) }}"
+        mode: "0644"
       register: beegfs_mgmtd_conf
 
     - name: Initialize management storage directory for beegfs-mgmtd server daemon and update the beegfs-mgmtd config file.

@@ -1,18 +1,19 @@
 - name: Create mount point directory for each storage volume from each storage service.
   ansible.builtin.file:
     state: directory
-    path: "{{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
-  loop: "{{ all_volumes }}"
+    path: "{{ item }}"
+    mode: "0755"
+  loop: "{{ directories }}"
   become: true
   vars:
-    all_volumes: |-
-      {%- set all_volumes = [] -%}
-      {%- for storage in node_info["storage"] -%}
-        {%- for volume in storage["volumes"] -%}
-          {%- if all_volumes.append(volume) -%}{%- endif -%}
+    directories: |-
+      {%- set directories = [] -%}
+      {%- for service in node_info['storage'] if inventory_hostname == service['preferred_node_order'][0] -%}
+        {%- for volume in service["volumes"] -%}
+          {%- if directories.append(volume["metadata"]["mount_dir"] ~ volume["name"]) -%}{%- endif -%}
         {%- endfor -%}
       {%- endfor -%}
-      {{- all_volumes -}}
+      {{- directories -}}
 
 - name: Retrieve currently mounted volumes on the preferred host.
   ansible.builtin.command:
@@ -53,21 +54,39 @@
       {%- endfor -%}
       {{- volumes -}}
 
-- name: Create data directory for storage service.
+- name: Create required directories for storage service.
   ansible.builtin.file:
     state: directory
-    path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/data"
-  loop: "{{ node_info['storage'] }}"
-  when: inventory_hostname == item['preferred_node_order'][0]
+    path: "{{ item }}"
+    mode: "0700"
+  loop: "{{ directories }}"
   become: true
+  vars:
+    directories: |-
+      {%- set directories = [] -%}
+      {%- for service in node_info['storage'] if inventory_hostname == service['preferred_node_order'][0] -%}
+        {%- for volume in service["volumes"] -%}
+          {%- if directories.append(volume["metadata"]["mount_dir"] ~ volume["name"] ~ "/data") -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- directories -}}
 
-- name: Create storage_config directory for metadata service.
+- name: Create required directories for storage service.
   ansible.builtin.file:
     state: directory
-    path: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config"
-  loop: "{{ node_info['storage'] }}"
-  when: inventory_hostname == item['preferred_node_order'][0]
+    path: "{{ item }}"
+    mode: "0755"
+  loop: "{{ directories }}"
   become: true
+  vars:
+    directories: |-
+      {%- set directories = [] -%}
+      {%- for service in node_info['storage'] if inventory_hostname == service['preferred_node_order'][0] -%}
+        {%- for volume in service["volumes"] -%}
+          {%- if directories.append(volume["metadata"]["mount_dir"] ~ volume["name"] ~ "/storage_config") -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- directories -}}
 
 - name: Generate storage connInterfacesFile.conf file.
   ansible.builtin.template:
@@ -88,9 +107,23 @@
   become: true
 
 - name: Ensure beegfs-storage.conf file is configured.
-  ansible.builtin.template:
-    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'storage/beegfs_storage_conf.j2') }}"
+  netapp_eseries.beegfs.update_conf:
+    src: "{{ beegfs_ha_beegfs_storage_conf_path }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config/beegfs-storage.conf"
+    options: |-
+      {%- set storeStorageDirectory = [] -%}
+      {%- for volume in item["volumes"] -%}
+        {%- if storeStorageDirectory.append(volume["metadata"]["mount_dir"] ~ volume["name"] ~ "/data") -%}{%- endif -%}
+      {%- endfor -%}
+      {%- set required_options = {"sysMgmtdHost": management_info["resource_group"],
+                                  "storeStorageDirectory": storeStorageDirectory | join(","),
+                                  "connInterfacesFile": item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/storage_config/connInterfacesFile.conf",
+                                  "logStdFile": "/var/log/beegfs-storage-" ~ item["volumes"][0]["name"] ~ ".log"} -%}
+      {%- if (item["filter_ip_ranges"] | default(beegfs_ha_filter_ip_ranges)) | length > 0 -%}
+        {%- if required_options.update({"connNetFilterFile": item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/storage_config/connNetFilterFile.conf"}) -%}{%- endif -%}
+      {%- endif -%}
+      {{- beegfs_ha_beegfs_storage_conf_default_options | combine(beegfs_ha_beegfs_storage_conf_group_options) | combine(item["beegfs_ha_beegfs_storage_conf_host_options"]) | combine(required_options) -}}
+    mode: "0644"
   loop: "{{ node_info['storage'] }}"
   when: inventory_hostname == item['preferred_node_order'][0]
   become: true

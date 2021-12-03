@@ -66,14 +66,14 @@
 - name: Purge pcs configuration directory.
   ansible.builtin.file:
     state: absent
-    path: "{{ beegfs_ha_uninstall_pcsd_dir }}"
+    path: "{{ beegfs_ha_pcsd_path }}"
   become: true
   when: beegfs_ha_management_tool == 'pcs'
 
 - name: Purge pacemaker configuration directory.
   ansible.builtin.file:
     state: absent
-    path: "{{ beegfs_ha_uninstall_pacemaker_cib_dir }}"
+    path: "{{ beegfs_ha_pacemaker_cib_path }}"
   become: true
 
 - name: Purge BeeGFS service overides.
