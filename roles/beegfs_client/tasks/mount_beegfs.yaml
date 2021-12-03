@@ -106,6 +106,16 @@
 
     when: beegfs_client_dkms_install == False
 
-  # TODO: Add support for mounting BeeGFS using the DKMS client.
+  - name: Mount BeeGFS (DKMS client).
+    block: 
+    - name: Mount BeeGFS and add entry to /etc/fstab.
+      ansible.posix.mount:
+        path: "{{ item['mount_point'] }}"
+        src: beegfs_nodev
+        fstype: beegfs
+        opts: "rw,relatime,cfgFile={{ beegfs_client_conf_path }},_netdev,x-systemd.after=beegfs-helperd"
+        state: "{%- if item['mounted'] is defined and item['mounted'] == False  %}unmounted{%- else %}mounted{%- endif %}"
+
+    when: beegfs_client_dkms_install == True
 
   tags: beegfs_client_mount

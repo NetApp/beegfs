@@ -1,14 +1,12 @@
 BeeGFS Client Role 
 ------------------
 
-Installs the BeeGFS Client. Deployed the non-DKMS version by default, but can be set to deploy the DKMS version instead.
-
-Optionally can mount one or more BeeGFS file systems, or the same BeeGFS file system multiple times.
+Installs the BeeGFS Client and optionally mounts one or more BeeGFS file systems, or the same BeeGFS file system multiple times.
 
 Prerequisites
 -------------
 
-* When installing the BeeGFS client to Ubuntu, the ca-certificates package must be installed, or an error like the following will occur when attempting to add the BeeGFS repository using apt: `Certificate verification failed: The certificate is NOT trusted. The certificate chain uses expired certificate.  Could not handshake: Error in the certificate verification. [IP: 178.254.21.65 443]`. 
+* When installing the BeeGFS client to Ubuntu, the ca-certificates package must be installed, or an error like the following will occur when attempting to add the BeeGFS repository using apt: `Certificate verification failed: The certificate is NOT trusted. The certificate chain uses expired certificate.  Could not handshake: Error in the certificate verification. [IP: 178.254.21.65 443]`. If you still get this error with ca-certificates installed try updating the package. 
 
 Supported Tags
 --------------
@@ -27,12 +25,13 @@ None.
 
 The following variables control how the BeeGFS client is installed and kernel module built: 
 
-* Specify if the DKMS or traditional BeeGFS client should be installed (default: False):
-  * `beegfs_client_dkms_install: False`
 * Specify if the Mellanox OFED driver should be used instead of the inbox drivers (default: False):
   * `beegfs_client_ofed_enable: False`
 * To use the InfiniBand kernel modules from the OpenFabrics OFED, you must specify the header include path: 
   * `beegfs_client_ofed_include_path: "/usr/src/ofa_kernel/default/include"`
+* Experimental - Specify if the DKMS or traditional BeeGFS client should be installed (default: False):
+  * `beegfs_client_dkms_install: False`
+  * Note: Currently installing the beegfs-client-dkms package using this role is an experimental feature. In particular changes to enable/disable the OFED driver will not automatically rebuild/reload the BeeGFS kernel module.
 
 Mounting one or more BeeGFS file systems is possible by specifying the following (at minimum): 
 ```
