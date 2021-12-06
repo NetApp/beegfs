@@ -1,4 +1,9 @@
-## Role Variables
+# Role Variables
+
+## Table of Contents
+
+1. [All Role Variables](#all-role-variables)
+## All Role Variables
 --------------
 This section gives a quick summary of the available variables to configure the BeeGFS HA role. For additional details on select variables please see the follow on sections.
     

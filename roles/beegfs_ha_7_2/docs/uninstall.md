@@ -1,4 +1,8 @@
-## Uninstall (`beegfs_ha_uninstall: False`)
+# Uninstall
+
+## Table of Contents
+1. [How to Uninstall](#how-to-uninstall)
+## How to Uninstall (`beegfs_ha_uninstall: False`)
 ----------------------------------------
 Uninstall your BeeGFS HA instance by setting `beegfs_ha_uninstall: True`. At minimum, BeeGFS and HA applications, configuration, performance tunings, and mount points will be removed. The uninstallation process requires the original inventory files so just modify the `beegfs_ha_uninstall_x` variables at the group level.
 

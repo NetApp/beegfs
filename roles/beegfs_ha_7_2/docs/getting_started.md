@@ -1,3 +1,11 @@
+# Getting Started
+
+## Table of Contents:
+1. [Requirements](#requirements)
+2. [Getting Started](#getting-started)
+3. [Example Playbook, Inventory, Group/Host Variables](#example-playbook,-inventory,-group/host-variables)
+4. [General Notes](#general-notes)
+
 ## Requirements
 ------------
 - Ansible control node with Ansible 2.9 or later and the following dependencies installed:
@@ -94,11 +102,14 @@ The variables in this section are described in greater detail under the "Role Va
                 beegfs_targets:                            # Only one target volume is needed for the management service.
                   eseries_storage_system_01:               # Ansible hostname for E-Series storage system.
                     eseries_storage_pool_configuration:    # netapp_eseries.santricity.nar_santricity_host role structure. See https://galaxy.ansible.com/netapp_eseries/santricity.
+                    
                       - name: mgmt_meta_01_02              # The name parameter is only required when multiple service targets are utilizing the same volume group.
                         raid_level: raid1                  # RAID level
                         criteria_drive_count: 2            # Required number of drives
                         volumes:                           # Do not specify volume name parameter; it will be automatically determined.
                           - size: 10                       # Size parameter default size is gibibytes.
+                          segment_size_kb: 512             # Indicates the segment size for this volume.
+
             meta_01:   # Metadata resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
               hosts:
                 node_mm1:
@@ -117,6 +128,7 @@ The variables in this section are described in greater detail under the "Role Va
                         criteria_drive_count: 2
                         volumes:
                           - size: 100
+                          segment_size_kb: 512
             stor_01:    # Storage resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
               hosts:
                 node_ss1:

@@ -1,7 +1,9 @@
+# Role Tags
+
 ## Table of Contents
 1. Role Tags(#role-tags)
 
-## Role Tags
+## All Role Tags
 ---------
 Use the following tags when executing you BeeGFS HA playbook to only execute select tasks:
 

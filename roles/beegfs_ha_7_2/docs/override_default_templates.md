@@ -1,3 +1,5 @@
+# Overriding Default Templates
+
 ## Table of Contents
 1. Override Default Templates (#override-default-templates)
 
