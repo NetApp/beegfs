@@ -143,6 +143,50 @@ check_network_connectivity() {
   return 1
 }
 
+# Check whether block device is actively completing I/O.
+is_device_active() {
+  parent_device=$1
+  uuid=$(cat /sys/class/block/${parent_device}/uuid)
+
+  rc=1
+  for child_device_path in /sys/class/block/*; do
+    child_device=$(basename $child_device_path)
+
+    # Find childe devices UUIDs matching the parent device.
+    if [ "$child_device" != "$parent_device" ] && [ -f ${child_device_path}/uuid ]; then
+      if [ "$(cat ${child_device_path}/uuid)" == "$uuid" ]; then
+        current=$(awk '{reads=$1; writes=$5; print reads+writes}' ${child_device_path}/stat)
+
+        # Check whether previous devices stats file exists.
+        if ! [ -f /tmp/~beegfs_ha_${child_device}_stats ]; then
+          echo $current > /tmp/~beegfs_ha_${child_device}_stats
+          continue
+        fi
+
+        # Determine whether there are new completed I/O requests.
+        previous=$(awk '{reads=$1; writes=$5; print reads+writes}' /tmp/~beegfs_ha_${child_device}_stats)
+        echo $current > /tmp/~beegfs_ha_${child_device}_stats
+        if [ "$current" != "$previous" ]; then
+          rc=0
+        fi
+
+      fi
+    fi
+  done
+
+  #ocf_log info "is_device_active rc=$rc"
+  return $rc
+}
+
+is_device_accessible() {
+  device_path=$1
+  dd if=$device_path iflag=direct bs=4k count=1 > /dev/null 2>&1
+  rc=$?
+
+  #ocf_log info "is_device_accessible rc=$rc"
+  return $rc
+}
+
 # Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
 check_filesystem_mounts() {
   mounts=$(grep "^store.*Directory" "$conf_path" 2> /dev/null | cut -f 2 -d "=" | sed 's/\/data//g' | sed 's/,/ /g')
@@ -155,14 +199,15 @@ check_filesystem_mounts() {
   # Test mount information
   for mount in $mounts; do
     mount_device_path=$(mount | grep "$mount" | cut -f 1 -d ' ')
+    mount_device_devname=$(basename $mount_device_path)
 
     # Check whether device is mounted.
     if [ -z "$mount_device_path" ]; then
       return 2
 
     # Check whether device is readable.
-    elif ! (dd if=$mount_device_path iflag=direct bs=4k count=1 > /dev/null 2>&1); then
-      return 3
+    elif ! is_device_active $mount_device_devname && ! is_device_accessible $mount_device_path; then
+        return 3
     fi
   done
 
