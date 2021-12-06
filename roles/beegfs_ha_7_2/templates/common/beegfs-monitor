@@ -152,7 +152,7 @@ is_device_active() {
   for child_device_path in /sys/class/block/*; do
     child_device=$(basename $child_device_path)
 
-    # Find childe devices UUIDs matching the parent device.
+    # Find child devices UUIDs matching the parent device.
     if [ "$child_device" != "$parent_device" ] && [ -f ${child_device_path}/uuid ]; then
       if [ "$(cat ${child_device_path}/uuid)" == "$uuid" ]; then
         current=$(awk '{reads=$1; writes=$5; print reads+writes}' ${child_device_path}/stat)
