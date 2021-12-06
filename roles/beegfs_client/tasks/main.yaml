@@ -35,18 +35,15 @@
           line: "/mnt/beegfs /etc/beegfs/beegfs-client.conf"
           state: absent
 
-      - name: Update /etc/beegfs/beegfs-client-autobuild.conf to enable RDMA if needed.
+      - name: Update /etc/beegfs/beegfs-client-autobuild.conf to include support for the Mellanox OFED drivers if requested.
         template:
           src: beegfs-client-autobuild.j2
           dest: "/etc/beegfs/beegfs-client-autobuild.conf"
-          owner: root
-          group: root
           mode: 0644
         register: beegfs_client_autobuild
 
       - name: Force a rebuild of the client kernel module if requested or the source/configuration changed.
-        shell:
-          cmd: "/etc/init.d/beegfs-client rebuild"
+        command: "/etc/init.d/beegfs-client rebuild"
         when: beegfs_client_autobuild.changed or beegfs_client_force_rebuild == True or package_mgr_result.changed == True
     when: beegfs_client_dkms_install == False
     tags: beegfs_client_install    
