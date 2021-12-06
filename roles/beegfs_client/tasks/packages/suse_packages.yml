@@ -3,22 +3,24 @@
     name: beegfs
     description: BeeGFS ZYPPER Repo
     repo: "{{ beegfs_ha_suse_repository_base_url }}"
-    autorefresh: True
+    autorefresh: true
     state: present
-    auto_import_keys: True
+    auto_import_keys: true
   when: "'.repo' in beegfs_ha_suse_repository_base_url"
 
 - name: Create BeeGFS repo file (SUSE).
   template:
     src: beegfs_suse_repo.j2
     dest: "/etc/zypp/repos.d/beegfs.repo"
+    mode: 0644  # TODO: Verify the standard mode/owner/group set for Zypper repos if support is added.
+    owner: root
   when: "'.repo' not in beegfs_ha_suse_repository_base_url"
 
 - name: Get kernel version (SUSE - Client).
-  shell: "uname -r | cut -f 1,2 -d \"-\""
+  command: "uname -r | cut -f 1,2 -d \"-\""
   register: shell_output
   failed_when: "shell_output.rc != 0"
-  changed_when: False
+  changed_when: false
 
 - name: Ensure kernel-devel is installed (SUSE - Client).
   zypper:
@@ -40,7 +42,7 @@
     path: /etc/modprobe.d/10-unsupported-modules.conf
     regexp: 'allow_unsupported_modules 0'
     replace: 'allow_unsupported_modules 1'
-  when: 'beegfs_ha_suse_allow_unsupported_module == True'
+  when: beegfs_ha_suse_allow_unsupported_module
 
 - name: Ensure the BeeGFS client package is installed (SUSE - Client).
   zypper:
@@ -51,4 +53,4 @@
       - beegfs-helperd
       - beegfs-utils
       - beegfs-client-devel
-  register: package_mgr_result      
+  register: package_mgr_result

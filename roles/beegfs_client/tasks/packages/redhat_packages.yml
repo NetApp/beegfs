@@ -4,25 +4,26 @@
     description: BeeGFS YUM Repo
     file: beegfs_rhel7
     baseurl: "{{ beegfs_ha_rhel_repository_base_url }}"
-    enabled: yes
-    gpgcheck: yes
+    enabled: true
+    gpgcheck: true
     gpgkey: "{{ beegfs_ha_rhel_repository_gpgkey }}"
 
 - name: Get kernel version (RedHat/CentOS - Client).
-  shell: "uname -r"
+  command: "uname -r"
   register: shell_output
   failed_when: "shell_output.rc != 0"
-  changed_when: False
+  changed_when: false
 
 - name: Ensure kernel-devel is installed (RedHat/CentOS - Client).
   yum:
     name: "kernel-devel-{{ shell_output.stdout_lines[0] }}"
 
-# (jmccormi) Required to workaround this issue building the BeeGFS client on RHEL 8.3: 
-# Makefile:984: *** \"Cannot generate ORC metadata for CONFIG_UNWINDER_ORC=y, please install libelf-dev, libelf-devel or elfutils-libelf-devel\". Stop.\nmake[1]: *** [Makefile:144: module] Error 2\nmake: *** [AutoRebuild.mk:34: auto_rebuild] Error 2"
-- name: Ensure elfutils-libelf-devel is installed. 
+#  (jmccormi) Required to workaround this issue building the BeeGFS client on RHEL 8.3:
+#  Makefile:984: *** \"Cannot generate ORC metadata for CONFIG_UNWINDER_ORC=y,please install libelf-dev, libelf-devel or elfutils-libelf-devel\".
+#  Stop.\nmake[1]: *** [Makefile:144: module] Error 2\nmake: *** [AutoRebuild.mk:34: auto_rebuild] Error 2"
+- name: Ensure elfutils-libelf-devel is installed.
   yum:
-    name: 
+    name:
       - elfutils-libelf-devel
     state: |-
       {%- if beegfs_client_force_upgrade %}latest{%- else %}present{%- endif %}
@@ -36,4 +37,4 @@
       - beegfs-helperd
       - beegfs-utils
       - beegfs-client-devel
-  register: package_mgr_result      
+  register: package_mgr_result
