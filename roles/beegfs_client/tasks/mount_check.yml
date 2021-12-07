@@ -1,0 +1,18 @@
+- name: Verify the state of each BeeGFS mount point.
+  block:
+    - name: Check BeeGFS is mounted at "{{ item['mount_point'] }}".
+      shell:
+        cmd: "mount | grep {{ item['mount_point'] }}"
+      register: beegfs_client_mount_check
+      failed_when: false
+      changed_when: >
+        (item['mounted'] is not defined and beegfs_client_mount_check.rc == 1) or
+        ((item['mounted'] is defined and item['mounted']) and beegfs_client_mount_check.rc == 1)
+      notify: Restart BeeGFS Client
+
+    - name: Unmount BeeGFS if requested.
+      command: "umount {{ item['mount_point'] }}"
+      when: >
+        beegfs_client_mount_check.rc == 0 and
+        item['mounted'] is defined and not item['mounted']
+  tags: beegfs_client_mount

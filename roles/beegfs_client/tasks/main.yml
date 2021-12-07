@@ -71,7 +71,17 @@
     when: beegfs_client_mounts is defined
     tags: beegfs_client_mount
 
-  - name: Flush handlers
+  - name: Flush handlers to restart the non-DKMS BeeGFS client on configuration changes.
+    meta: flush_handlers
+    tags: beegfs_client_mount
+
+  - name: Verify all expected BeeGFS mounts are present/unmounted when using the non-DKMS client.
+    include_tasks: mount_check.yml
+    loop: "{{ beegfs_client_mounts }}"
+    when: beegfs_client_mounts is defined and not beegfs_client_dkms_install
+    tags: beegfs_client_mount
+
+  - name: Flush handlers to restart the non-DKMS BeeGFS client if any BeeGFS mounts are missing.
     meta: flush_handlers
     tags: beegfs_client_mount
 

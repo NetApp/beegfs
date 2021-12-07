@@ -1,7 +1,7 @@
 BeeGFS Client Role 
 ------------------
 
-Installs the BeeGFS Client and optionally mounts one or more BeeGFS file systems, or the same BeeGFS file system multiple times.
+Installs the BeeGFS Client and optionally mounts one or more BeeGFS file systems, or the same BeeGFS file system multiple times. The role can also unmount one or more BeeGFS file systems if requested.
 
 Prerequisites
 -------------
@@ -87,6 +87,7 @@ beegfs_client_mounts:
 Notes: 
 * Specifying `sysMgmtdHost` in `beegfs_client_config` is not supported since it is has to be configured elsewhere.
 * Specifying `connInterfacesFile` in `beegfs_client_config` is supported, though unnecessary as specifying `connInterfaces` will generate a file and populate this automatically.
+* By default the role will attempt to mount all BeeGFS filesystems listed in `beegfs_client_mounts` every time it runs unless `mounted: False`, in which case it will ensure that file system is unmounted.
 
 Tuning recommendations when mounting BeeGFS
 -------------------------------------------
