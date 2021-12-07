@@ -27,7 +27,7 @@
           replace: '\1= {{ config.value }}'
         loop: "{{ lookup('dict', item['beegfs_client_config'], wantlist=True) }}"
         when: item['beegfs_client_config'] is defined
-        register: update_beegfs_config_result
+        notify: Restart BeeGFS Client
         loop_control:
           loop_var: config
 
@@ -36,7 +36,7 @@
           path: "{{ beegfs_client_conf_path }}"
           regexp: '(sysMgmtdHost.*)=.*'
           replace: '\1= {{ item["sysMgmtdHost"] }}'
-        register: update_beegfs_sysMgmtdHost_result
+        notify: Restart BeeGFS Client
 
   - name: Configure connInterfaces for this mount point if defined.
     block:
@@ -64,14 +64,14 @@
           owner: root
           group: root
           mode: 0644
-        register: update_beegfs_connInterface_file_result
+        notify: Restart BeeGFS Client
 
       - name: Set the connInterfacesFile path in {{ beegfs_client_conf_path }}.
         ansible.builtin.replace:
           path: "{{ beegfs_client_conf_path }}"
           regexp: '(connInterfacesFile.*)=.*'
           replace: '\1= {{ beegfs_connInterfaces_path }}'
-        register: update_conninterface_path_result
+        notify: Restart BeeGFS Client
     when: item['connInterfaces'] is defined
 
   # This ensures if connInterfaces is removed or present in the default beegfs-client.conf we clean it up.
@@ -80,7 +80,7 @@
       path: "{{ beegfs_client_conf_path }}"
       regexp: '(connInterfacesFile.*)=.*'
       replace: '\1= '
-    register: update_conninterface_path_result
+    notify: Restart BeeGFS Client
     when: item['connInterfaces'] is not defined and item['beegfs_client_config']['connInterfacesFile'] is not defined
 
   - name: Mount BeeGFS (non-DKMS client).
@@ -90,24 +90,7 @@
           path: /etc/beegfs/beegfs-mounts.conf
           line: "{{ item['mount_point'] }} {{ beegfs_client_conf_path }}"
           state: "{%- if item['mounted'] is defined and item['mounted'] == False  %}absent{%- else %}present{%- endif %}"
-        register: update_beegfs_mounts_result
-
-      - name: Restart BeeGFS client service to mount requested BeeGFS file system.
-        systemd:
-          name: beegfs-client
-          state: restarted
-        when: >
-          update_beegfs_config_result.changed or
-          update_beegfs_sysMgmtdHost_result.changed or
-          update_beegfs_connInterface_file_result.changed or
-          update_conninterface_path_result.changed or
-          update_beegfs_mounts_result.changed
-
-      - name: Ensure the BeeGFS client is started/enabled so mounts persist across reboots.
-        systemd:
-          name: beegfs-client
-          state: started
-          enabled: true
+        notify: Restart BeeGFS Client
     when: not beegfs_client_dkms_install
 
   - name: Mount BeeGFS (DKMS client).

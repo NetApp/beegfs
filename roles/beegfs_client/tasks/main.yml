@@ -66,9 +66,21 @@
     tags: beegfs_client_install
 
   - name: Include tasks to mount BeeGFS if requested.
-    include_tasks: mount_beegfs.yaml
+    include_tasks: mount_beegfs.yml
     loop: "{{ beegfs_client_mounts }}"
     when: beegfs_client_mounts is defined
+    tags: beegfs_client_mount
+
+  - name: Flush handlers
+    meta: flush_handlers
+    tags: beegfs_client_mount
+
+  - name: When using the non-DKMS BeeGFS client ensure it is started/enabled so mounts persist across reboots.
+    systemd:
+      name: beegfs-client
+      state: started
+      enabled: true
+    when: beegfs_client_mounts is defined and not beegfs_client_dkms_install
     tags: beegfs_client_mount
 
   become: true
