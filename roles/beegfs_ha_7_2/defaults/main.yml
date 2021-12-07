@@ -1,6 +1,5 @@
 # General configuration defaults
 beegfs_ha_ansible_cluster_group: ha_cluster
-beegfs_ha_ansible_client_group: ha_clients
 beegfs_ha_ansible_storage_group: eseries_storage_systems
 beegfs_ha_cluster_name: hacluster
 
