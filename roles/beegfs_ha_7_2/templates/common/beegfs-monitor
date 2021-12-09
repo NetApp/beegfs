@@ -99,6 +99,32 @@ get_subnet_ips() {
   echo "$filter_ips"
 }
 
+get_parent_slaves() {
+  parent_path=$1
+  parent_name=$2
+  parent_slaves="$(ls -A /sys/class/block/$parent_name/slaves)"
+
+  # Check whether the slaves directory was populated which means multipath is used. If not then
+  #   attempt to discover block devices with wwids matching the parent device (nvme native).
+  if [ -z "$parent_slaves" ] && [ -f /sys/class/block/$parent_name/wwid ]; then
+    parent_wwid=$(cat /sys/class/block/$parent_name/wwid)
+    for device_path in /sys/class/block/*; do
+      if ! [ -f $device_path/wwid ]; then
+        continue
+      fi
+
+      # Find child devices wwids matching the parent device.
+      name=$(basename $device_path)
+      wwid=$(cat $device_path/wwid)
+      if [ "$name" != "$parent_name" ] && [ "$wwid" == "$parent_wwid" ]; then
+        parent_slaves="$parent_slaves $name"
+      fi
+    done
+  fi
+
+  echo $parent_slaves
+}
+
 # Ping specified IP address from select interface until successful or retries are exhausted.
 ping_interface() {
   interface=$1
@@ -135,11 +161,11 @@ check_network_connectivity() {
         return 0
       fi
     done
-    
+
     # Check for whether ping processes have completed.
     pings_complete=0
     for pid in $pids; do
-      if ps -p $pid > /dev/null/ 2>&1; then
+      if ps -p $pid > /dev/null 2>&1; then
         pings_complete=1
         break
       fi
@@ -188,29 +214,24 @@ check_filesystem_mounts() {
   for shm_device_path in $shm_group_path/devices/*; do
     parent_name=$(cat $shm_device_path/name)
     parent_path=$(cat $shm_device_path/path)
-    parent_uuid=$(cat $shm_device_path/uuid)
     mount=$(cat $shm_device_path/mount)
 
     # Check for new device links
-    for device_path in /sys/class/block/*; do
-      name=$(basename $device_path)
-      if [ -d $shm_device_path/stats/$name ] || ! [ -f $device_path/uuid ]; then
+    parent_slaves="$(get_parent_slaves $parent_path $parent_name)"
+    stats_path=$shm_device_path/stats
+    for device_name in $parent_slaves; do
+      if [ -d $stats_path/$device_name ]; then
         continue
       fi
-
-      # Find child devices UUIDs matching the parent device.
-      uuid=$(cat $device_path/uuid)
-      if [ "$name" != "$parent_name" ] && [ "$uuid" == "$parent_uuid" ]; then
-        mkdir $stats_path/$name
-        ln -s $device_path/stat $stats_path/$name/current
-        current=$(awk '{reads=$1; writes=$5; print reads+writes}' $device_path/stat)
-        echo "$current" > $stats_path/$name/previous
-      fi
+      device_path="/sys/class/block/$device_name"
+      mkdir $stats_path/$device_name
+      ln -s $device_path/stat $stats_path/$device_name/current
+      awk '{reads=$1; writes=$5; print reads+writes}' $device_path/stat > $stats_path/$device_name/previous
     done
 
     if ! mountpoint -q $mount; then
       return 1
-    elif ! is_device_active $parent_uuid $shm_device_path && ! is_device_accessible $parent_path; then
+    elif ! is_device_active $shm_device_path && ! is_device_accessible $parent_path; then
         return 2
     fi
   done
@@ -231,7 +252,6 @@ Parameters:
   service_type                  (Required) Beegfs service (Choices: management, metadata, storage)
   service_name                  (Required) BeeGFS service name
   service_configuration_mount   (Required) BeeGFS service configuration mount path
-  test_neighbor_count           (Optional) Maximum number of neighboring IP address to test.
 END
 }
 
@@ -265,11 +285,6 @@ beegfs_monitor_meta_data() {
       <shortdesc lang="en">BeeGFS service configuration file</shortdesc>
       <content type="string"/>
     </parameter>
-    <parameter name="test_neighbor_count" unique="0" required="1">
-      <longdesc lang="en">Maximum number of addresses to test. These tests will continue until either a ping is successful or the maximum ping count is reached.</longdesc>
-      <shortdesc lang="en">Maximum ping tests.</shortdesc>
-      <content type="integer" default="5"/>
-    </parameter>
   </parameters>
   <actions>
     <action name="start"/>
@@ -281,29 +296,6 @@ beegfs_monitor_meta_data() {
 </resource-agent>
 END
 }
-
-
-# Example: mgmt resource
-# ├── mgmt
-# │   ├── devices
-# │   │   └── nvme0n5
-# │   │       ├── mount
-# │   │       ├── name
-# │   │       ├── path
-# │   │       ├── stats
-# │   │       │   ├── nvme0c0n5
-# │   │       │   │   ├── current -> /sys/class/block/nvme0c0n5/stat
-# │   │       │   │   └── previous
-# │   │       │   ├── nvme0c1n5
-# │   │       │   │   ├── current -> /sys/class/block/nvme0c0n5/stat
-# │   │       │   │   └── previous
-# │   │       │   └── nvme0cXn5
-# │   │       │       ├── current -> /sys/class/block/nvme0c1n5/stat
-# │   │       │       └── previous
-# │   │       └── uuid
-# │   ├── filter_ips
-# │   ├── interfaces
-# │   └── mgmt_ip
 
 beegfs_monitor_start() {
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
@@ -324,34 +316,24 @@ beegfs_monitor_start() {
       mounts=$(grep "^store.*Directory" "$conf_path" | cut -f 2 -d "=" | sed 's/\/data//g' | sed 's/,/ /g')
       for mount in $mounts; do
         parent_path=$(mount | grep "$mount" | cut -f 1 -d ' ')
-        parent_name=$(basename $parent_path)
-        parent_uuid=$(cat /sys/class/block/$parent_name/uuid)
+        parent_name=$(lsblk -n -o "KNAME" $parent_path) # grab the kernel name of the device
 
         # Populate the /dev/shm/eseries_beegfs_ha/<group>/devices/nvmeXnX
         parent_device_path=$shm_group_path/devices/$parent_name
+        stats_path=$parent_device_path/stats
         mkdir $parent_device_path
+        mkdir $stats_path
         echo "$parent_name" > $parent_device_path/name
         echo "$parent_path" > $parent_device_path/path
-        echo "$parent_uuid" > $parent_device_path/uuid
         echo "$mount" > $parent_device_path/mount
 
         # Populate the /dev/shm/eseries_beegfs_ha/<group>/devices/nvmeXnX/stats
-        stats_path=$parent_device_path/stats
-        mkdir $stats_path
-        for device_path in /sys/class/block/*; do
-          if ! [ -f $device_path/uuid ]; then
-            continue
-          fi
-
-          # Find child devices UUIDs matching the parent device.
-          name=$(basename $device_path)
-          uuid=$(cat $device_path/uuid)
-          if [ "$name" != "$parent_name" ] && [ "$uuid" == "$parent_uuid" ]; then
-            mkdir $stats_path/$name
-            ln -s $device_path/stat $stats_path/$name/current
-            current=$(awk '{reads=$1; writes=$5; print reads+writes}' $device_path/stat)
-            echo "$current" > $stats_path/$name/previous
-          fi
+        parent_slaves="$(get_parent_slaves $parent_path $parent_name)"
+        for device_name in $parent_slaves; do
+          device_path="/sys/class/block/$device_name"
+          mkdir $stats_path/$device_name
+          ln -s $device_path/stat $stats_path/$device_name/current
+          awk '{reads=$1; writes=$5; print reads+writes}' $device_path/stat > $stats_path/$device_name/previous
         done
       done
 
@@ -360,9 +342,8 @@ beegfs_monitor_start() {
       mkdir $interfaces_path
       for interface in $(get_interfaces); do
         neighbors=$(ip neigh show dev $interface | grep REACHABLE | cut -d ' ' -f 1)
-        
-        #TODO: Filter neighbors
 
+        #TODO: Filter neighbors
         echo $neighbors > $interfaces_path/$interface
       done
 
@@ -444,7 +425,6 @@ case $__OCF_ACTION in
 esac
 
 # Set argument variables
-test_neighbor_count=${OCF_RESKEY_test_neighbor_count:-5}
 group=${OCF_RESKEY_service_group:-""}
 type=${OCF_RESKEY_service_type:-""}
 service=${OCF_RESKEY_service_name:-""}
