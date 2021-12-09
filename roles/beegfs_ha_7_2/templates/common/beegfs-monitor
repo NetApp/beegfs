@@ -140,6 +140,7 @@ check_network_connectivity() {
 
   # Issue all pings to known neighbors in parallel
   pids=
+  mgmt_ip=$(cat $shm_group_path/mgmt_ip)
   for interfaces_path in $shm_group_path/interfaces/*; do
     interface=$(basename $interfaces_path)
     addresses="$(ip neigh show dev $interface | grep -E "(REACHABLE|STALE)" | sort -k 4 | cut -f 1 -d ' ' | head -n 10)"
