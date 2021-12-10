@@ -693,7 +693,7 @@ delete_interface () {
         # Handle deleting strict multi-homing
         rt_table="$OCF_RESKEY_rt_tables_prefix$iface-$ipaddr"
         subnet_cidr=$(address_cidr_to_subnet $ipaddr/$netmask)
-        $IP2UTIL rule del to $ipaddr table $rt_tabled
+        $IP2UTIL rule del to $ipaddr table $rt_table
         $IP2UTIL rule del from $ipaddr table $rt_table
         $IP2UTIL route del default via $ipaddr dev $iface table $rt_table
         $IP2UTIL route del $subnet_cidr dev $iface src $ipaddr table $rt_table
