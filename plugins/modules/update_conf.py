@@ -44,8 +44,8 @@ options:
         require: false
     mode:
         description:
-            - The file permissions the file should have in octal number form ("0644", "644")
-            - When not specified the file permissions will be determined by the operating system defaults.
+            - The permissions must be in octal number form ("0644", "644")
+            - When not specified, the file permissions will be determined by the operating system defaults.
         type: str
         required: false
 """

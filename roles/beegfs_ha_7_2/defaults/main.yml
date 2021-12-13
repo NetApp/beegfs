@@ -1,20 +1,12 @@
 # General configuration defaults
-beegfs_ha_ansible_cluster_group: ha_cluster
-beegfs_ha_ansible_storage_group: eseries_storage_systems
-beegfs_ha_cluster_name: hacluster
-
-# Patterns for top-level variables collected from cluster group inventory to be added to each resource inventory.
-#   The resource inventories are generated at the beginning of the role's execution. High-availability requires
-#   resources to be available on multiple hosts these patterns help select what information is used.
-beegfs_ha_top_level_variable_exclusion_pattern: "^ansible.*"
-beegfs_ha_top_level_variable_inclusion_pattern: "^(beegfs|eseries).*"
-
-# THESE MAY ONLY BE NEEDED TO AUTHENTICATE USING THE PCS TOOL. ANSIBLE MAYBE A VIABLE REPLACEMENT FOR THIS TASK.
-beegfs_ha_cluster_username: hacluster
-beegfs_ha_cluster_password: hapassword
-beegfs_ha_cluster_password_sha512_salt: randomSalt
-# beegfs_ha_cluster_node_ips: []  # Defines an order list of IP addresses or hostnames with the first having the highest priority. When there are no listed IPs then node name will be used. Node names are defined in /etc/hosts.
-
+beegfs_ha_ansible_cluster_group: ha_cluster                # Name for the pacemaker cluster.
+beegfs_ha_ansible_storage_group: eseries_storage_systems   # Name of the Ansible E-Series storage group
+beegfs_ha_cluster_name: hacluster                          # Pacemaker cluster group name
+beegfs_ha_cluster_username: hacluster                      # Cluster group's username
+beegfs_ha_cluster_password: hapassword                     # Cluster group's password
+beegfs_ha_cluster_password_sha512_salt: randomSalt         # Cluster group's password salt
+# beegfs_ha_cluster_node_ips: []                           # Defines an order list of IP addresses or hostnames with the first having the highest priority. When
+                                                           #    there are no listed IPs then node name will be used. Node names are defined in /etc/hosts.
 beegfs_ha_allow_firewall_high_availability_service: true   # Allow high-availability firewall services.
 beegfs_ha_alert_email_subject: "ClusterNotification"
 beegfs_ha_alert_email_list: []  # List of emails to alert when changes occur.
@@ -61,7 +53,6 @@ beegfs_ha_resource_systemd_monitor_interval: 13s     # ocf:heartbeat:systemd res
 # RDMA defaults
 beegfs_ha_enable_rdma: true
 #beegfs_ha_ofed_include_path:
-
 
 # Performance tuning defaults
 beegfs_ha_enable_performance_tuning: false
@@ -114,18 +105,18 @@ beegfs_ha_required_sysctl_entries:
   net.ipv4.conf.all.arp_ignore: 2
 
 # BeeGFS management service configuration
-beegfs_ha_beegfs_mgmtd_conf_path: /etc/beegfs/beegfs-mgmtd.conf       # Default BeeGFS management service configuration file path.
-beegfs_ha_beegfs_mgmtd_conf_host_options: {}                          # Ansible host specific options. 
-beegfs_ha_beegfs_mgmtd_conf_group_options: {}                         # Ansible group specific options.
-beegfs_ha_beegfs_mgmtd_conf_default_options:                          # Default options.
+beegfs_ha_beegfs_mgmtd_conf_path: /etc/beegfs/beegfs-mgmtd.conf   # Default BeeGFS management service configuration file path.
+beegfs_ha_beegfs_mgmtd_conf_resource_group_options: {}            # Ansible resource group specific options. For BeeGFS management resource specific configuration.
+beegfs_ha_beegfs_mgmtd_conf_ha_group_options: {}                  # Ansible cluster group specific options. For all common or expected management configuration defaults.
+beegfs_ha_beegfs_mgmtd_conf_default_options:                      # Default management configuration options.
   connMgmtdPortTCP: 8008
   connMgmtdPortUDP: 8008
 
 # BeeGFS metadata service configuration
-beegfs_ha_beegfs_meta_conf_path: /etc/beegfs/beegfs-meta.conf         # Default BeeGFS metadata service configuration file path.
-beegfs_ha_beegfs_meta_conf_host_options: {}                           # Ansible host specific options. 
-beegfs_ha_beegfs_meta_conf_group_options: {}                          # Ansible group specific options.
-beegfs_ha_beegfs_meta_conf_default_options:                           # Default options.
+beegfs_ha_beegfs_meta_conf_path: /etc/beegfs/beegfs-meta.conf   # Default BeeGFS metadata service configuration file path.
+beegfs_ha_beegfs_meta_conf_resource_group_options: {}           # Ansible resource group specific options. For BeeGFS metadata resource specific configuration.
+beegfs_ha_beegfs_meta_conf_ha_group_options: {}                 # Ansible cluster group specific options. For all common or expected metadata configuration defaults.
+beegfs_ha_beegfs_meta_conf_default_options:                     # Default metadata configuration options.
   tuneTargetChooser: randomized
   connMetaPortTCP: 8005
   connMetaPortUDP: 8005
@@ -135,9 +126,9 @@ beegfs_ha_beegfs_meta_conf_default_options:                           # Default 
 
 # BeeGFS storage service configuration
 beegfs_ha_beegfs_storage_conf_path: /etc/beegfs/beegfs-storage.conf   # Default BeeGFS storage service configuration file path.
-beegfs_ha_beegfs_storage_conf_host_options: {}                        # Ansible host specific options. 
-beegfs_ha_beegfs_storage_conf_group_options: {}                       # Ansible group specific options.
-beegfs_ha_beegfs_storage_conf_default_options:                        # Default options.
+beegfs_ha_beegfs_storage_conf_resource_group_options: {}              # Ansible resource group specific options. For BeeGFS storage resource specific configuration.
+beegfs_ha_beegfs_storage_conf_ha_group_options: {}                    # Ansible cluster group specific options. For all common or expected storage configuration defaults.
+beegfs_ha_beegfs_storage_conf_default_options:                        # Default storage configuration options.
   connMaxInternodeNum: 128
   connMgmtdPortTCP: 8008
   connMgmtdPortUDP: 8008
@@ -184,19 +175,19 @@ beegfs_ha_uninstall_delete_volumes: false                           # Whether to
 beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false   # Whether to delete all storage pools/volume groups and host/host group mappings created for BeeGFS HA solution.
                                                                     #   Be aware that removing storage pools/volume groups and host/host group mappings will effect any volumes or
                                                                     #   host mappings dependent on them.  **WARNING! This action is unrecoverable.**
-beegfs_ha_uninstall_storage_setup: false                            # Whether to remove configuration that allows storage to be accessible to the BeeGFS HA node (i.e. multipath, communications protocols (iSCSI, IB iSER)).
+beegfs_ha_uninstall_storage_setup: false                            # Whether to remove configuration that allows storage to be accessible to the BeeGFS HA node
 beegfs_ha_uninstall_reboot: false                                   # Whether to reboot after uninstallation.
 
 
 
 # Package version defaults
-beegfs_ha_beegfs_version:            # beegfs-* 7.2 (Control BeeGFS versioning with the installed repository)
-beegfs_ha_corosync_version:          # corosync 2.4
-beegfs_ha_pacemaker_version:         # pacemaker 1.1
-beegfs_ha_pcs_version:               # pcs 0.9
-beegfs_ha_pacemaker_remote_version:  # pacemaker_remote 1.1
-beegfs_ha_resource_agent_version:    #
-beegfs_ha_fence_agents_all_version:  #TODO: is there a version for this???
+beegfs_ha_beegfs_version:                    # beegfs-* 7.2 (Control BeeGFS versioning with the installed repository)
+beegfs_ha_corosync_version:                  # Tested with corosync 3.1.5
+beegfs_ha_pacemaker_version:                 # Tested with pacemaker 2.1.0
+beegfs_ha_pcs_version:                       # Tested with pcs 0.10.8
+beegfs_ha_pacemaker_remote_version:          # Tested with pacemaker_remote 2.1.0
+beegfs_ha_resource_agent_version:            # Tested with 4.1.1
+beegfs_ha_fence_agents_all_version:          # Tested with 4.2.1
 beegfs_ha_force_beegfs_patch_upgrade: false  # Major and master versions must not change; however the patch versions can and this flag will ensure that its the latest version.
 
 # Volume formatting and mounting defaults
@@ -231,6 +222,13 @@ beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg
 beegfs_ha_suse_allow_unsupported_module: true
 beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5/dists/sles15
 beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/RPM-GPG-KEY-beegfs
+
+
+# Patterns for top-level variables collected from cluster group inventory to be added to each resource inventory.
+#   The resource inventories are generated at the beginning of the role's execution. High-availability requires
+#   resources to be available on multiple hosts these patterns help select what information is used.
+beegfs_ha_top_level_variable_exclusion_pattern: "^ansible.*"
+beegfs_ha_top_level_variable_inclusion_pattern: "^(beegfs|eseries).*"
 
 # netapp_eseries.host collection defaults.
 eseries_common_force_skip_uninstall: True

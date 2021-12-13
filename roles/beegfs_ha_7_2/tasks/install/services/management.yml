@@ -83,7 +83,7 @@
       netapp_eseries.beegfs.update_conf:
         src: "{{ beegfs_ha_beegfs_mgmtd_conf_path }}"
         dest: "{{ mgmt_config_path }}beegfs-mgmtd.conf"
-        options: "{{ beegfs_ha_beegfs_mgmtd_conf_default_options | combine(beegfs_ha_beegfs_mgmtd_conf_group_options) | combine(beegfs_ha_beegfs_mgmtd_conf_host_options) | combine(beegfs_ha_beegfs_mgmtd_conf_required_options) }}"
+        options: "{{ beegfs_ha_beegfs_mgmtd_conf_default_options | combine(beegfs_ha_beegfs_mgmtd_conf_ha_group_options) | combine(beegfs_ha_beegfs_mgmtd_conf_resource_group_options) | combine(beegfs_ha_beegfs_mgmtd_conf_required_options) }}"
         mode: "0644"
       register: beegfs_mgmtd_conf
 
