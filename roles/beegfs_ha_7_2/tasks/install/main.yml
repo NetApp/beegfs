@@ -1,3 +1,10 @@
+- name: Prompt for force data format override.
+  ansible.builtin.pause:
+    prompt: "WARNING! eseries_mount_force_format is set to true. This will result in wiping all target file systems as part of this deployment. Are you sure you want to continue (y/N)?"
+  register: force_file_system
+  failed_when: force_file_system["user_input"] != "y"
+  when: eseries_mount_force_format is defined and eseries_mount_force_format
+
 - name: Ensure BeeGFS HA cluster is installed.
   block:
     - name: Collect NetApp E-Series volume information (Always).
