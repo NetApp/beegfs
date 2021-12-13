@@ -131,7 +131,7 @@ class CreateConfFile(object):
 
     @property
     def update_required(self):
-        """Determine whether and update is required."""
+        """Determine whether an update is required."""
         if self.update_required_cached is None:
 
             self.update_required_cached = False
