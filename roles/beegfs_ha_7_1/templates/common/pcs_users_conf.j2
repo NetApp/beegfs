@@ -1,9 +1,0 @@
-[
-{% for host in groups[beegfs_ha_ansible_cluster_group] %}
-  {
-    "username": "{{ beegfs_ha_cluster_username }}",
-    "token": "{{ host | to_uuid }}",
-    "creation_date": "{{ template_run_date }}"
-  }
-{% endfor %}
-]

@@ -1,9 +1,0 @@
-- name: Ensure BeeGFS client package is uninstalled (Debian/Ubuntu - Client).
-  ansible.builtin.apt:
-    state: absent
-    name:
-      - beegfs-client
-      - beegfs-helperd
-      - beegfs-utils
-  when: inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
-  become: true

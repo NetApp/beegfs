@@ -6,7 +6,7 @@
 
 all:
   vars:
-    ansible_python_interpreter: /usr/bin/python
+    ansible_python_interpreter: /usr/bin/python3
   children:
 
 
@@ -73,12 +73,3 @@ all:
 
         # Define all E-Series storage targets here used by the BeeGFS cluster.
         eseries_storage_system_01:
-
-
-    # BeeGFS clients Ansible group
-    ha_clients:
-      hosts:
-
-        # Define all BeeGFS clients of the BeeGFS HA cluster.
-        client1:
-        client2:

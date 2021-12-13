@@ -95,11 +95,3 @@ eseries_nvme_ib_interfaces:
 #  vm.vfs_cache_pressure: 50
 #  vm.min_free_kbytes: 262144
 #  vm.zone_reclaim_mode: 1
-{% endif %}
-
-{% if item['item'] in groups[beegfs_ha_ansible_client_group] %}
-beegfs_ha_client_connInterfaces:    # List of host interfaces that are used to communicate with the BeeGFS HA cluster.
-  - eth0
-#beegfs_ha_client_installed: true    # Whether to install BeeGFS client on the host. Uncommenting this value overrides the value in the group_vars/ha_client.yml.
-#beegfs_ha_client_started: true      # Whether BeeGFS client should be running on the host. Uncommenting this value overrides the value in the group_vars/ha_client.yml.
-{% endif %}

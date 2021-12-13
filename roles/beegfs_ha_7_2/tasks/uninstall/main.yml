@@ -1,39 +1,22 @@
 - name: Set current storage system credentials
-  include_role:
+  ansible.builtin.include_role:
     name: netapp_eseries.santricity.nar_santricity_common
     tasks_from: build_info.yml
   when: inventory_hostname in groups[beegfs_ha_ansible_storage_group] and current_eseries_api_url is not defined
 
 - name: Collect NetApp E-Series volume information (Always).
-  include_tasks: ../collect_facts.yml
+  ansible.builtin.include_tasks: ../collect_facts.yml
 
-- name: Collect facts about systemd services.
-  service_facts:
-  become: true
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
+- name: Stop cluster.
+  ansible.builtin.include_tasks: stop_cluster.yml
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ansible_facts['services']['corosync.service'] is defined
 
-- name: Uninstall any configure OS-specific client packages.
-  include_tasks: "services/client.yml"
-  when: inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
-
-- name: Stop Pacemaker service.
-  ansible.builtin.systemd:
-    state: stopped
-    enabled: false
-    name: pacemaker
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and 'pacemaker.service' in (ansible_facts['services'].keys() | list)
-  become: true
-
-- name: Stop Corosync service.
-  ansible.builtin.systemd:
-    state: stopped
-    enabled: false
-    name: corosync
-  when: "inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and 'corosync.service' in (ansible_facts['services'].keys() | list)"
-  become: true
+- name: Unconfigure cluster nodes.
+  ansible.builtin.include_tasks: unconfigure.yml
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 - name: Ensure storage has been deprovisioned for hosts.
-  include_role:
+  ansible.builtin.include_role:
     name: netapp_eseries.host.unmount
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   vars:
@@ -51,97 +34,14 @@
         {%- endfor -%}
       {%- endif -%}
       {{- volumes -}}
-    eseries_unmount_purge: "{{ beegfs_ha_uninstall_unmap_volumes or beegfs_ha_uninstall_delete_volumes or
-                               beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
-    eseries_unmount_unmap: "{{ beegfs_ha_uninstall_unmap_volumes or beegfs_ha_uninstall_delete_volumes or
-                               beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
-    eseries_unmount_wipe_format_signatures: "{{ beegfs_ha_uninstall_wipe_format_volumes }}"
+    eseries_unmount_purge: "{{ beegfs_ha_uninstall_unmap_volumes or beegfs_ha_uninstall_delete_volumes or beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
+    eseries_unmount_unmap: "{{ beegfs_ha_uninstall_unmap_volumes or beegfs_ha_uninstall_delete_volumes or beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
+    eseries_unmount_wipe_format_signatures: "{{ beegfs_ha_uninstall_wipe_format_volumes }}" 
     eseries_unmount_delete: "{{ beegfs_ha_uninstall_delete_volumes or beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
-
-- name: Ensure InfiniBand IPoIB is unconfigured.
-  include_role:
-    name: netapp_eseries.host.ipoib
-    tasks_from: uninstall.yml
-  when: eseries_ipoib_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
-
-- name: Ensure host-storage communications are uninstalled.
-  include_role:
-    name: netapp_eseries.host.storage_setup
-    tasks_from: uninstall.yml
-  when: beegfs_ha_uninstall_storage_setup == True and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-
+    
 - name: Ensure storage has been removed for hosts.
   include_role:
     name: netapp_eseries.santricity.nar_santricity_host
-  when: beegfs_ha_uninstall_delete_storage_pools_and_host_mappings == True and inventory_hostname in groups[beegfs_ha_ansible_storage_group]
+  when: beegfs_ha_uninstall_delete_storage_pools_and_host_mappings and inventory_hostname in groups[beegfs_ha_ansible_storage_group]
   vars:
     eseries_remove_all_configuration: true
-
-- name: "Delete the mount point for the management volume."
-  ansible.builtin.file:
-    state: absent
-    path: "{{ management_info['volumes'][0]['metadata']['mount_dir'] }}{{ management_info['volumes'][0]['name'] }}"
-  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and "management" in node_info["services"]'
-  become: true
-
-- name: Delete mount point directory for each metadata volume.
-  ansible.builtin.file:
-    state: absent
-    path: "{{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
-  loop: "{{ all_volumes }}"
-  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and "metadata" in node_info["services"]'
-  become: true
-  vars:
-    all_volumes: |-
-      {%- set all_volumes = [] -%}
-      {%- for metadata in node_info["metadata"] -%}
-        {%- for volume in metadata["volumes"] -%}
-          {%- if all_volumes.append(volume) -%}{%- endif -%}
-        {%- endfor -%}
-      {%- endfor -%}
-      {{- all_volumes -}}
-
-- name: Delete mount point directory for each storage volume from each storage service.
-  ansible.builtin.file:
-    state: absent
-    path: "{{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
-  loop: "{{ all_volumes }}"
-  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and "storage" in node_info["services"]'
-  become: true
-  vars:
-    all_volumes: |-
-      {%- set all_volumes = [] -%}
-      {%- for storage in node_info["storage"] -%}
-        {%- for volume in storage["volumes"] -%}
-          {%- if all_volumes.append(volume) -%}{%- endif -%}
-        {%- endfor -%}
-      {%- endfor -%}
-      {{- all_volumes -}}
-
-- name: Uninstall any configure OS-specific packages.
-  include_tasks: "packages/{{ ansible_os_family | lower }}.yml"
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-
-- name: Ensure any performance tuning has been removed.
-  include_tasks: "performance_tuning.yml"
-  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("metadata" in node_info["services"] or "storage" in node_info["services"])'
-
-- name: Remove BeeGFS required sysctl.conf entries.
-  sysctl:
-    name: "{{ item['key'] }}"
-    value: "{{ item['value'] }}"
-    state: absent
-    reload: true
-    sysctl_file: "{{ sysctl_conf_path }}"
-  loop: "{{ lookup('dict', beegfs_ha_required_sysctl_entries) }}"
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-  become: true
-
-- name: Ensure any cluster and BeeGFS configuration files are removed.
-  include_tasks: "configuration.yml"
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-
-- name: Reboot nodes
-  reboot:
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and beegfs_ha_uninstall_reboot == True
-  become: true

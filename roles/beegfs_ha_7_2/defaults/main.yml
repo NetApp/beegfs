@@ -1,6 +1,5 @@
 # General configuration defaults
 beegfs_ha_ansible_cluster_group: ha_cluster
-beegfs_ha_ansible_client_group: ha_clients
 beegfs_ha_ansible_storage_group: eseries_storage_systems
 beegfs_ha_cluster_name: hacluster
 
@@ -69,15 +68,6 @@ beegfs_ha_metadata_udp_port: 8005
 beegfs_ha_storage_tcp_port: 8003
 beegfs_ha_storage_udp_port: 8003
 
-# BeeGFS client defaults
-beegfs_ha_client_installed: true           # Whether to install BeeGFS client on the host.
-beegfs_ha_client_started: true             # Whether BeeGFS client should be running on the host.
-#beegfs_ha_client_connInterfaces:
-beegfs_ha_client_udp_port: 8004
-beegfs_ha_helperd_tcp_port: 8006
-beegfs_ha_client_configuration_directory: "/etc/beegfs/"
-beegfs_ha_client_updatedb_conf_path: "/etc/updatedb.conf"
-
 # RDMA defaults
 beegfs_ha_enable_rdma: true
 #beegfs_ha_ofed_include_path:
@@ -130,12 +120,6 @@ beegfs_ha_required_sysctl_entries:
   net.ipv4.conf.all.arp_filter: 1
   net.ipv4.conf.all.arp_announce: 2
   net.ipv4.conf.all.arp_ignore: 2
-
-# Performance tuning defaults for client settings
-beegfs_ha_client_maximum_node_connections: 128                # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 128
-beegfs_ha_client_rdma_buffer_count: 36                        # beegfs_client.conf connRDMABufNum value - Allocates the number of buffers for transferring IO. Default: 36
-beegfs_ha_client_rdma_buffer_size: 65536                      # beegfs_client.conf connRDMABufSize value - Size of each allocated RDMA buffer. Default: 65536
-                                                              #   Note the total allocated buffer (beegfs_ha_client_rdma_buffer_num x beegfs_ha_client_rdma_buffer_size) must be larger than the BeeGFS chunk size.
 
 # Performance tuning defaults for both metadata and storage service settings
 beegfs_ha_numa: ""                                            # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be applied whenever and

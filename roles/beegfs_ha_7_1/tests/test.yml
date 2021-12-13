@@ -1,5 +1,0 @@
----
-- hosts: localhost
-  remote_user: root
-  roles:
-    - nar_santricity_beegfs_ha

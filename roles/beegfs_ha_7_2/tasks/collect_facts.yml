@@ -13,14 +13,14 @@
       {%- endfor -%}
       {{- invalid_hosts -}}
 
-- name: Gather minimally required facts for BeeGFS HA cluster and client nodes.
+- name: Gather minimally required facts for BeeGFS HA cluster nodes.
   setup:
     gather_subset: min
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 - name: Include operating specific variables (Always).
   include_vars: "{{ ansible_os_family | lower }}.yml"
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 # Include all distribution-version variables that are prefixed with default_
 - name: Include all distribution-version variables that are prefixed with default_
@@ -35,7 +35,7 @@
         "{{ item[8:] }}": "{{ unmerged_distribution_inventory[item] }}"
       when: item is match("^default_") and hostvars[inventory_hostname][item[8:]] is not defined
       loop: "{{ unmerged_distribution_inventory.keys() | list }}"
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] or inventory_hostname in groups[beegfs_ha_ansible_client_group] | default([])
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 # The following section builds up inventory for each resource group and appends it to each host's inventory inside a variable with the resource's name.
 # Determine and build inventory contents.
@@ -85,7 +85,7 @@
   set_fact:
     cluster_resource_groups: |-
       {%- set resources = [] -%}
-      {%- for group in (groups.keys() | list) if group not in [beegfs_ha_ansible_cluster_group, beegfs_ha_ansible_client_group] -%}
+      {%- for group in (groups.keys() | list) if group not in beegfs_ha_ansible_cluster_group -%}
         {%- for host in groups[group] if host not in groups[beegfs_ha_ansible_cluster_group] -%}
           {#- DO NOTHING -#}
         {%- else -%}
@@ -202,7 +202,7 @@
   vars:
     resources: |-
       {%- set resources = {} -%}
-      {%- for group in (groups.keys() | list) if group not in [beegfs_ha_ansible_cluster_group, beegfs_ha_ansible_client_group] -%}
+      {%- for group in (groups.keys() | list) if group not in beegfs_ha_ansible_cluster_group -%}
 
         {#- Collect and merge variables from the group_vars files -#}
         {%- if resources.update({group: {}}) -%}{%- endif -%}

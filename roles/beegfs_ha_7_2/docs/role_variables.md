@@ -57,9 +57,6 @@ This section gives a quick summary of the available variables to configure the B
       vm.zone_reclaim_mode: 1
       vm.watermark_scale_factor: 1000
 
-    # Performance tuning defaults for client settings
-    beegfs_client_maximum_node_connections: 128                 # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 12
-        
     # Performance tuning defaults for metadata service settings
     beegfs_metadata_maximum_node_connections: 128               # beegfs_meta.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 32
     beegfs_metadata_worker_threads: 32                          # beegfs_meta.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel.
@@ -92,7 +89,6 @@ This section gives a quick summary of the available variables to configure the B
 
     # These variables don't need to be changed unless you want to use use different inventory group names:     
     beegfs_ha_ansible_cluster_group: ha_cluster                 # Ansible inventory group name for the BeeGFS HA cluster. Define all resource group in this group.
-    beegfs_ha_ansible_client_group: ha_clients                  # Ansible inventory group name for the BeeGFS clients.
     beegfs_ha_ansible_storage_group: eseries_storage_systems    # Ansible inventory group name for the BeeGFS HA E-Series storage systems.
 
     # These values will likely not need to be changed:
@@ -102,13 +98,7 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_force_resource_move: true                         # Forces node and resource changes to migrate services to preferred nodes.
     beegfs_ha_storage_system_hostgroup_prefix: beegfs           # Prefix that is added to the storage system's host group name which is created to map volumes to
                                                                 #   all cluster nodes within the specific resource group.
-    # BeeGFS client defaults 
-    beegfs_ha_client_connInterfaces:                            # List of node interfaces to use to communicate with the BeeGFS file system.
-    beegfs_ha_client_udp_port: 8004                             # Client UDP port to communicate with the BeeGFS file system.
-    beegfs_ha_helperd_tcp_port: 8006                            # Client helper daemon TCP port.
-    beegfs_ha_client_configuration_directory: "/etc/beegfs/"    # Client directory path for the BeeGFS client configuration.
-    beegfs_ha_client_updatedb_conf_path: "/etc/updatedb.conf"   # Client directory path for mlocate package configuration file.
-    
+
     # Corosync defaults
     beegfs_ha_corosync_authkey_path: /etc/corosync/authkey                # Absolute path for the Corosync authkey file.
     beegfs_ha_corosync_conf_path: /etc/corosync/corosync.conf             # Absolute path for the Corosync configuration file.
@@ -116,9 +106,6 @@ This section gives a quick summary of the available variables to configure the B
 
     # Pcs defaults
     beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/                    # Absolute path for the pcsd directory.
-
-    # Performance tuning defaults for client settings
-    beegfs_ha_client_maximum_node_connections:                  # beegfs_client.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 128
 
     # Performance tuning defaults for both metadata and storage service settings
     beegfs_ha_numa:                                             # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be applied whenever and
@@ -219,7 +206,6 @@ Use the following tags when executing you BeeGFS HA playbook to only execute sel
     - beegfs_ha_move_resource_to_preferred_node  # Restore all resources to their preferred nodes.
     - beegfs_ha_performance_tuning               # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
     - beegfs_ha_backup                           # Backup Pacemaker and Corosync configuration files.
-    - beegfs_ha_client                           # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
 
 ## General Notes
 -------------
@@ -227,7 +213,6 @@ Use the following tags when executing you BeeGFS HA playbook to only execute sel
 - Fencing agents should be used to ensure failed nodes are definitely down.  
   - WARNING! If beegfs_ha_enable_fence is set to false then a fencing agent will not be configured!
 - Uninstall functionality will remove required BeeGFS 7.2 packages. This means that there will be no changes made to the kernel development/NTP/chrony packages whether they previously existed or not.
-- BeeGFS is added to the PRUNEFS list in /etc/updatedb.conf to prevent daily indexing scans on clients which causes performance degradations.
 - Please refer to the documentation for your Linux distribution/version for guidance on the maximum cluster size. For example the limitations for RedHat can be found [here](https://access.redhat.com/articles/3069031).
 
 ## Override Default Templates
