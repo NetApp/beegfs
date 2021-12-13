@@ -197,7 +197,6 @@ is_device_active() {
     fi
   done
 
-  #ocf_log info "is_device_active rc=$rc"
   return $rc
 }
 
@@ -206,7 +205,6 @@ is_device_accessible() {
   dd if=$device_path iflag=direct bs=4k count=1 > /dev/null 2>&1
   rc=$?
 
-  #ocf_log info "is_device_accessible rc=$rc"
   return $rc
 }
 
