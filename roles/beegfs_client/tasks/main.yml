@@ -4,8 +4,6 @@
     template:
       src: beegfs-client-build.mk.j2
       dest: "/etc/beegfs/beegfs-client-build.mk"
-      owner: root
-      group: root
       mode: 0644
     when: beegfs_client_dkms_install
     # register: beegfs_client_build_mk_result

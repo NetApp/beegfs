@@ -61,8 +61,6 @@
         template:
           src: beegfs_connection_interfaces.j2
           dest: "{{ beegfs_connInterfaces_path }}"
-          owner: root
-          group: root
           mode: 0644
         notify: Restart BeeGFS Client
 
