@@ -13,29 +13,21 @@
           beegfs_client_conf_path: "/etc/beegfs/{{ item['sysMgmtdHost'] }}_{{ item['beegfs_client_config']['connClientPortUDP'] }}_beegfs-client.conf"
         when: item['beegfs_client_config']['connClientPortUDP'] is defined
 
-      - name: Create a copy of the default beegfs-client.conf file at {{ beegfs_client_conf_path }} if one doesn't exist.
-        copy:
+      - name: Ensure BeeGFS client service is configured.
+        netapp_eseries.beegfs.update_conf:
           src: /etc/beegfs/beegfs-client.conf
           dest: "{{ beegfs_client_conf_path }}"
-          remote_src: true
-          force: false
-
-      - name: Update {{ beegfs_client_conf_path }} with any user provided parameters for this BeeGFS mount point.
-        ansible.builtin.replace:
-          path: "{{ beegfs_client_conf_path }}"
-          regexp: '({{ config.key }}.*)=.*'
-          replace: '\1= {{ config.value }}'
-        loop: "{{ lookup('dict', item['beegfs_client_config'], wantlist=True) }}"
-        when: item['beegfs_client_config'] is defined
-        notify: Restart BeeGFS Client
-        loop_control:
-          loop_var: config
-
-      - name: Update the sysMgmtdHost line in {{ beegfs_client_conf_path }}.
-        ansible.builtin.replace:
-          path: "{{ beegfs_client_conf_path }}"
-          regexp: '(sysMgmtdHost.*)=.*'
-          replace: '\1= {{ item["sysMgmtdHost"] }}'
+          options: |-
+            {%- set required_options = {'sysMgmtdHost': item['sysMgmtdHost']} -%}
+            {%- if item["connInterfaces"] is defined -%}
+              {%- if item['beegfs_client_config']['connClientPortUDP'] is defined -%}
+                {%- if required_options.update({'connInterfacesFile': '/etc/beegfs/' ~ item['sysMgmtdHost'] ~ '_' ~ item['beegfs_client_config']['connClientPortUDP'] ~ '_connInterfaces.conf'}) -%}{%- endif -%}
+              {%- else -%}
+                {%- if required_options.update({'connInterfacesFile': '/etc/beegfs/' ~ item['sysMgmtdHost'] ~ '_connInterfaces.conf'}) -%}{%- endif -%}
+              {%- endif -%}
+            {%- endif -%}
+            {{- beegfs_client_config_default_options | combine(item['beegfs_client_config']) | combine(required_options) -}}
+          mode: "0644"
         notify: Restart BeeGFS Client
 
   - name: Configure connInterfaces for this mount point if defined.
@@ -64,22 +56,7 @@
           mode: 0644
         notify: Restart BeeGFS Client
 
-      - name: Set the connInterfacesFile path in {{ beegfs_client_conf_path }}.
-        ansible.builtin.replace:
-          path: "{{ beegfs_client_conf_path }}"
-          regexp: '(connInterfacesFile.*)=.*'
-          replace: '\1= {{ beegfs_connInterfaces_path }}'
-        notify: Restart BeeGFS Client
     when: item['connInterfaces'] is defined
-
-  # This ensures if connInterfaces is removed or present in the default beegfs-client.conf we clean it up.
-  - name: Clear the connInterfacesFile path in {{ beegfs_client_conf_path }} if connInterfaces is not defined.
-    ansible.builtin.replace:
-      path: "{{ beegfs_client_conf_path }}"
-      regexp: '(connInterfacesFile.*)=.*'
-      replace: '\1= '
-    notify: Restart BeeGFS Client
-    when: item['connInterfaces'] is not defined and item['beegfs_client_config']['connInterfacesFile'] is not defined
 
   - name: Mount BeeGFS (non-DKMS client).
     block:
