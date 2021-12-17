@@ -86,7 +86,8 @@ beegfs_client_mounts:
 
 Notes: 
 * Specifying `sysMgmtdHost` in `beegfs_client_config` is not supported since it is has to be configured elsewhere.
-* Specifying `connInterfacesFile` in `beegfs_client_config` is supported, though unnecessary as specifying `connInterfaces` will generate a file and populate this automatically.
+* Specifying `connInterfacesFile` in `beegfs_client_config` is supported, though unnecessary as specifying `connInterfaces` will generate a file and populate this automatically. 
+  * If both `connInterfaces` and `connInterfacesFile` are specified then any existing `connInterfacesFile` will be overwritten to reflect `connInterfaces`.
 * By default the role will attempt to mount all BeeGFS filesystems listed in `beegfs_client_mounts` every time it runs unless `mounted: False`, in which case it will ensure that file system is unmounted.
 
 Tuning recommendations when mounting BeeGFS

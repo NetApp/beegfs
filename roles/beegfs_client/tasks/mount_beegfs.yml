@@ -19,7 +19,9 @@
           dest: "{{ beegfs_client_conf_path }}"
           options: |-
             {%- set required_options = {'sysMgmtdHost': item['sysMgmtdHost']} -%}
-            {%- if item["connInterfaces"] is defined -%}
+            {%- if item['beegfs_client_config']['connInterfacesFile'] is defined -%}
+                {%- if required_options.update({'connInterfacesFile': item['beegfs_client_config']['connInterfacesFile']}) -%}{%- endif -%}
+            {%- elif item["connInterfaces"] is defined -%}
               {%- if item['beegfs_client_config']['connClientPortUDP'] is defined -%}
                 {%- if required_options.update({'connInterfacesFile': '/etc/beegfs/' ~ item['sysMgmtdHost'] ~ '_' ~ item['beegfs_client_config']['connClientPortUDP'] ~ '_connInterfaces.conf'}) -%}{%- endif -%}
               {%- else -%}

@@ -2,7 +2,7 @@
   block:
     - name: Check BeeGFS is mounted at "{{ item['mount_point'] }}".
       shell:
-        cmd: "mount | grep {{ item['mount_point'] }}"
+        cmd: "mount | grep -w {{ item['mount_point'] }}"
       register: beegfs_client_mount_check
       failed_when: false
       changed_when: >
