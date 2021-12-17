@@ -50,10 +50,6 @@ beegfs_ha_resource_ipaddr_monitor_interval: 17s      # ocf:eseries:beegfs-ipaddr
 beegfs_ha_resource_mailto_monitor_interval: 60s      # ocf:heartbeat:mailTo resource monitor operation interval
 beegfs_ha_resource_systemd_monitor_interval: 13s     # ocf:heartbeat:systemd resource monitor operation interval
 
-# RDMA defaults
-beegfs_ha_enable_rdma: true
-#beegfs_ha_ofed_include_path:
-
 # Performance tuning defaults
 beegfs_ha_enable_performance_tuning: false
 beegfs_ha_eseries_nvme_attributes:
@@ -123,6 +119,7 @@ beegfs_ha_beegfs_meta_conf_default_options:                     # Default metada
   connMgmtdPortTCP: 8008
   connMgmtdPortUDP: 8008
   tuneNumWorkers: 32
+  connUseRDMA: true
 
 # BeeGFS storage service configuration
 beegfs_ha_beegfs_storage_conf_path: /etc/beegfs/beegfs-storage.conf   # Default BeeGFS storage service configuration file path.
@@ -139,6 +136,7 @@ beegfs_ha_beegfs_storage_conf_default_options:                        # Default 
   tuneUseAggressiveStreamPoll: true
   tuneFileReadSize: 2048k
   tuneFileWriteSize: 2048k
+  connUseRDMA: true
 
 # NTP configuration defaults
 beegfs_ha_ntp_configuration_file: /etc/ntp.conf

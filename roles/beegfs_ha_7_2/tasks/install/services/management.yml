@@ -83,8 +83,9 @@
       netapp_eseries.beegfs.update_conf:
         src: "{{ beegfs_ha_beegfs_mgmtd_conf_path }}"
         dest: "{{ mgmt_config_path }}beegfs-mgmtd.conf"
-        options: "{{ beegfs_ha_beegfs_mgmtd_conf_default_options | combine(beegfs_ha_beegfs_mgmtd_conf_ha_group_options) | combine(beegfs_ha_beegfs_mgmtd_conf_resource_group_options) | combine(beegfs_ha_beegfs_mgmtd_conf_required_options) }}"
+        options: "{{ item['service_configuration_options'] | combine(beegfs_ha_beegfs_mgmtd_conf_required_options) }}"
         mode: "0644"
+      loop: "{{ node_info['management'] }}"
       register: beegfs_mgmtd_conf
 
     - name: Initialize management storage directory for beegfs-mgmtd server daemon and update the beegfs-mgmtd config file.

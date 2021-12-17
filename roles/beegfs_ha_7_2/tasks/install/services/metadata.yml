@@ -102,7 +102,7 @@
       {%- if (item["filter_ip_ranges"] | default(beegfs_ha_filter_ip_ranges)) | length > 0 -%}
         {%- if required_options.update({"connNetFilterFile": item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/metadata_config/connNetFilterFile.conf"}) -%}{%- endif -%}
       {%- endif -%}
-      {{- beegfs_ha_beegfs_meta_conf_default_options | combine(beegfs_ha_beegfs_meta_conf_ha_group_options) | combine(item["beegfs_ha_beegfs_meta_conf_resource_group_options"] | default({})) | combine(required_options) -}}
+      {{- item["service_configuration_options"] | combine(required_options) -}}
     mode: "0644"
   loop: "{{ node_info['metadata'] }}"
   when: inventory_hostname == item['preferred_node_order'][0]

@@ -32,10 +32,6 @@ This section gives a quick summary of the available variables to configure the B
                                                                 #   Use the following command to restore a previous configuration: pcs config restore <backup>
     beegfs_ha_backup_path: /tmp/                                # Pcs backup file path.            
 
-    # RDMA defaults 
-    beegfs_ha_enable_rdma: false                                # Whether to enable RDMA.
-    beegfs_ha_ofed_include_path:                                # OFED library include path.
-    
     # Required sysctl configuration defaults  
     beegfs_ha_required_sysctl_entries:
       net.ipv4.conf.all.rp_filter: 1
