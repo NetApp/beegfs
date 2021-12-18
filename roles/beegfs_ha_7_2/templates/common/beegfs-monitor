@@ -99,6 +99,7 @@ get_subnet_ips() {
   echo "$filter_ips"
 }
 
+# Retrieves the volume path devices (slaves) for the BeeGFS service target.
 get_parent_slaves() {
   parent_path=$1
   parent_name=$2
