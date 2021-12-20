@@ -201,6 +201,7 @@ is_device_active() {
   return $rc
 }
 
+# Check whether the block device is accessible.
 is_device_accessible() {
   device_path=$1
   dd if=$device_path iflag=direct bs=4k count=1 > /dev/null 2>&1
