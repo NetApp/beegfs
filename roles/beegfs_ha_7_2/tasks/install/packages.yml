@@ -2,6 +2,7 @@
   ansible.builtin.file:
     state: directory
     path: /etc/beegfs/
+  when: node_info["services"] | length > 0
   become: true
 
 - name: Ensure beegfs_ha_service_daemon.sh is installed.
@@ -9,11 +10,12 @@
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/beegfs_ha_service_daemon.j2') }}"
     dest: "/etc/beegfs/beegfs_ha_service_daemon.sh"
     mode: 0755
+  when: node_info["services"] | length > 0
   become: true
 
 - name: Ensure expected BeeGFS packages are installed (Always).
   include_tasks: "packages/{{ ansible_os_family | lower }}.yml"
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
 
 - name: Ensure expected high-availability packages are installed on Pacemaker cluster node (Always).
   include_tasks: "packages/{{ ansible_os_family | lower }}_cluster_node.yml"

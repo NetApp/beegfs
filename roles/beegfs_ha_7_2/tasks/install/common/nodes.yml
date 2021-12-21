@@ -19,4 +19,5 @@
     reload: true
     sysctl_file: "{{ sysctl_conf_path }}"
   loop: "{{ lookup('dict', beegfs_ha_required_sysctl_entries) }}"
+  when: node_info["services"] | length > 0
   become: true
