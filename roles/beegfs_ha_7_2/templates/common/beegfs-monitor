@@ -316,7 +316,7 @@ beegfs_monitor_start() {
       # Load file system information into memory
       mounts=$(grep "^store.*Directory" "$conf_path" | cut -f 2 -d "=" | sed 's/\/data//g' | sed 's/,/ /g')
       for mount in $mounts; do
-        parent_path=$(mount | grep "$mount" | cut -f 1 -d ' ')
+        parent_path=$(mount | grep -w "$mount" | cut -f 1 -d ' ')
         parent_name=$(lsblk -n -o "KNAME" $parent_path) # grab the kernel name of the device
 
         # Populate the /dev/shm/eseries_beegfs_ha/<group>/devices/nvmeXnX
