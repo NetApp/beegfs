@@ -210,7 +210,7 @@ is_device_accessible() {
   return $rc
 }
 
-# Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
+# Check file system mounts are indeed mounted and accessible.
 check_filesystem_mounts() {
   for shm_device_path in $shm_group_path/devices/*; do
     parent_name=$(cat $shm_device_path/name)
