@@ -105,6 +105,7 @@ beegfs_ha_beegfs_mgmtd_conf_path: /etc/beegfs/beegfs-mgmtd.conf   # Default BeeG
 beegfs_ha_beegfs_mgmtd_conf_resource_group_options: {}            # Ansible resource group specific options. For BeeGFS management resource specific configuration.
 beegfs_ha_beegfs_mgmtd_conf_ha_group_options: {}                  # Ansible cluster group specific options. For all common or expected management configuration defaults.
 beegfs_ha_beegfs_mgmtd_conf_default_options:                      # Default management configuration options.
+  storeAllowFirstRunInit: "false" # The quotes prevent the value from being treated like a boolean which converts to True/False.
   connMgmtdPortTCP: 8008
   connMgmtdPortUDP: 8008
 
@@ -115,12 +116,13 @@ beegfs_ha_beegfs_meta_conf_ha_group_options: {}                 # Ansible cluste
 beegfs_ha_beegfs_meta_conf_default_options:                     # Default metadata configuration options.
   storeAllowFirstRunInit: "false"
   tuneTargetChooser: randomized
+  connMaxInternodeNum: 128
   connMetaPortTCP: 8005
   connMetaPortUDP: 8005
   connMgmtdPortTCP: 8008
   connMgmtdPortUDP: 8008
   tuneNumWorkers: 32
-  connUseRDMA: true
+  connUseRDMA: "true"
 
 # BeeGFS storage service configuration
 beegfs_ha_beegfs_storage_conf_path: /etc/beegfs/beegfs-storage.conf   # Default BeeGFS storage service configuration file path.
@@ -135,10 +137,10 @@ beegfs_ha_beegfs_storage_conf_default_options:                        # Default 
   connStoragePortUDP: 8003
   tuneNumStreamListeners: 2
   tuneNumWorkers: 14
-  tuneUseAggressiveStreamPoll: true
+  tuneUseAggressiveStreamPoll: "true"
   tuneFileReadSize: 2048k
   tuneFileWriteSize: 2048k
-  connUseRDMA: true
+  connUseRDMA: "true"
 
 # NTP configuration defaults
 beegfs_ha_ntp_configuration_file: /etc/ntp.conf
