@@ -2,6 +2,7 @@
   ansible.builtin.file:
     state: directory
     path: /etc/beegfs/
+    mode: 0755
   when: node_info["services"] | length > 0
   become: true
 
