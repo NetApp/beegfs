@@ -1,11 +1,12 @@
-{%- set resource_group = management_info["resource_group"] -%}
-{%- set mgmt_volume = management_info["volumes"][0] -%}
-{%- set mgmt_volume_name = mgmt_volume["name"] -%}
-{%- set mgmt_volume_mount_device = mgmt_volume["path"] -%}
-{%- set mgmt_volume_format_type = mgmt_volume["metadata"]["format_type"] -%}
-{%- set mgmt_volume_mount_options = mgmt_volume["metadata"]["mount_options"] -%}
-{%- set mgmt_volume_mount = mgmt_volume["metadata"]["mount_dir"] ~ mgmt_volume["name"] -%}
-{%- set floating_ips = management_info["floating_ips"] %}
+{%- if management_info["volumes"] is defined -%}
+  {%- set resource_group = management_info["resource_group"] -%}
+  {%- set mgmt_volume = management_info["volumes"][0] -%}
+  {%- set mgmt_volume_name = mgmt_volume["name"] -%}
+  {%- set mgmt_volume_mount_device = mgmt_volume["path"] -%}
+  {%- set mgmt_volume_format_type = mgmt_volume["metadata"]["format_type"] -%}
+  {%- set mgmt_volume_mount_options = mgmt_volume["metadata"]["mount_options"] -%}
+  {%- set mgmt_volume_mount = mgmt_volume["metadata"]["mount_dir"] ~ mgmt_volume["name"] -%}
+  {%- set floating_ips = management_info["floating_ips"] %}
 
 <primitive class="ocf" id="{{ resource_group }}-monitor" provider="eseries" type="beegfs-monitor">
   <instance_attributes id="{{ resource_group }}-monitor-instance_attributes">
@@ -39,12 +40,12 @@
     </operations>
   </primitive>
 
-  {% for floating_ip in floating_ips -%}
-    {%- set floating_ip_info = floating_ip.split(":") -%}
-    {%- set interface = floating_ip_info[0] -%}
-    {%- set address = floating_ip_info[1].split("/")[0] -%}
-    {%- set cidr_netmask = floating_ip_info[1].split("/")[1] -%}
-    {%- set ipaddr_id = resource_group ~ "-IP" ~ loop["index"] %}
+    {% for floating_ip in floating_ips -%}
+      {%- set floating_ip_info = floating_ip.split(":") -%}
+      {%- set interface = floating_ip_info[0] -%}
+      {%- set address = floating_ip_info[1].split("/")[0] -%}
+      {%- set cidr_netmask = floating_ip_info[1].split("/")[1] -%}
+      {%- set ipaddr_id = resource_group ~ "-IP" ~ loop["index"] %}
   <primitive class="ocf" id="{{ ipaddr_id }}" provider="eseries" type="beegfs-ipaddr2">
     <instance_attributes id="{{ ipaddr_id }}-instance_attributes">
       <nvpair id="{{ ipaddr_id }}-instance_attributes-cidr_netmask" name="cidr_netmask" value="{{ cidr_netmask }}"/>
@@ -60,11 +61,11 @@
       <op id="{{ ipaddr_id }}-stop" interval="0s" name="stop"/>
     </operations>
   </primitive>
-  {% endfor %}
+    {% endfor %}
 
-  {%- if beegfs_ha_enable_alerts == True -%}
-    {%- for email in beegfs_ha_alert_email_list -%}
-      {%- set alert_id = resource_group ~ "-mailto" ~ loop["index"] %}
+    {%- if beegfs_ha_enable_alerts == True -%}
+      {%- for email in beegfs_ha_alert_email_list -%}
+        {%- set alert_id = resource_group ~ "-mailto" ~ loop["index"] %}
   <primitive class="ocf" id="{{ alert_id }}" provider="heartbeat" type="MailTo">
     <instance_attributes id="{{ alert_id }}-instance_attributes">
       <nvpair id="{{ alert_id }}-instance_attributes-email" name="email" value="{{ email }}"/>
@@ -77,8 +78,8 @@
     </operations>
 
   </primitive>
-    {% endfor %}
-  {% endif %}
+      {% endfor %}
+    {% endif %}
 
   <primitive class="systemd" id="{{ resource_group }}-service" type="beegfs-mgmtd">
     <operations>
@@ -88,3 +89,4 @@
     </operations>
   </primitive>
 </group>
+{% endif %}

@@ -43,7 +43,7 @@
 # Determine management information.
 - name: Determine management group information.
   set_fact:
-    management_group_info: |-
+    management_info: |-
       {%- set mgmt_group_info = {} -%}
 
       {%- for host in ansible_play_hosts_all -%}
@@ -51,13 +51,10 @@
           {%- if mgmt_group_info.update(hostvars[host]["node_info"]) -%}{%- endif -%}
         {%- endif -%}
       {%- endfor -%}
-      {{- mgmt_group_info -}}
-  run_once: true
-
-- name: Determine preferred management node.
-  set_fact:
-    management_info: "{{ management_group_info['management'][0] }}"
-    preferred_management_node: "{{ management_group_info['management'][0]['preferred_node_order'][0] }}"
+      {%- if not mgmt_group_info -%}
+        {%- if mgmt_group_info.update({"management": [{"resource_group": beegfs_ha_mgmtd_group}]}) -%}{%- endif -%}
+      {%- endif -%}
+      {{- mgmt_group_info['management'][0] -}}
   run_once: true
 
 # Determine inventory preferred nodes for each resource group.
