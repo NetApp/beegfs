@@ -58,6 +58,7 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_beegfs_mgmtd_conf_resource_group_options: {}            # Ansible resource group specific options. For BeeGFS management resource specific configuration.
     beegfs_ha_beegfs_mgmtd_conf_ha_group_options: {}                  # Ansible cluster group specific options. For all common or expected management configuration defaults.
     beegfs_ha_beegfs_mgmtd_conf_default_options:                      # Default management configuration options.
+      storeAllowFirstRunInit: "false"                                 # The quotes prevent the value from being treated like a boolean which converts to True/False.
       connMgmtdPortTCP: 8008
       connMgmtdPortUDP: 8008
 
@@ -66,7 +67,9 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_beegfs_meta_conf_resource_group_options: {}           # Ansible resource group specific options. For BeeGFS metadata resource specific configuration.
     beegfs_ha_beegfs_meta_conf_ha_group_options: {}                 # Ansible cluster group specific options. For all common or expected metadata configuration defaults.
     beegfs_ha_beegfs_meta_conf_default_options:                     # Default metadata configuration options.
+      storeAllowFirstRunInit: "false"
       tuneTargetChooser: randomized
+      connMaxInternodeNum: 128
       connMetaPortTCP: 8005
       connMetaPortUDP: 8005
       connMgmtdPortTCP: 8008
@@ -78,6 +81,7 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_beegfs_storage_conf_resource_group_options: {}              # Ansible resource group specific options. For BeeGFS storage resource specific configuration.
     beegfs_ha_beegfs_storage_conf_ha_group_options: {}                    # Ansible cluster group specific options. For all common or expected storage configuration defaults.
     beegfs_ha_beegfs_storage_conf_default_options:                        # Default storage configuration options.
+      storeAllowFirstRunInit: "false"
       connMaxInternodeNum: 128
       connMgmtdPortTCP: 8008
       connMgmtdPortUDP: 8008
@@ -118,7 +122,7 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_corosync_log_path: /var/log/corosync.log                    # Absolute path for the Corosync log file.
 
     # Pcs defaults
-    beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/                    # Absolute path for the pcsd directory.
+    beegfs_ha_pcsd_path: /var/lib/pcsd/
 
     # Package version defaults (Warning! Only the patch version can change.)
     beegfs_ha_beegfs_version:                                   # BeeGFS package version.
@@ -157,12 +161,6 @@ This section gives a quick summary of the available variables to configure the B
         format_options: "-d su=VOLUME_SEGMENT_SIZE_KBk,sw=VOLUME_STRIPE_COUNT -l version=2,su=VOLUME_SEGMENT_SIZE_KBk"
         mount_options: "sync,noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k,nobarrier"
         mount_dir: /mnt/
-
-    # General path defaults
-    beegfs_ha_pcsd_tokens: /var/lib/pcsd/tokens                       # PCS daemon tokens absolute file path.
-    beegfs_ha_pacemaker_cib_xml: /var/lib/pacemaker/cib/cib.xml       # Pacemaker cib.xml absolute file path.
-    beegfs_ha_uninstall_pacemaker_cib_dir: /var/lib/pacemaker/cib/    # Pacemaker cib directory absolute path.
-    beegfs_ha_uninstall_pcsd_dir: /var/lib/pcsd/                      # PCS daemon directory absolute path.
 
     # Debian / Ubuntu repository defaults
     beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5
