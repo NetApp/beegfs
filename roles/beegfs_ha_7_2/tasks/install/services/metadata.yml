@@ -12,9 +12,7 @@
     directories: |-
       {%- set directories = [] -%}
       {%- for service in node_info['metadata'] -%}
-        {%- for volume in service["volumes"] -%}
-          {%- if directories.append(volume["metadata"]["mount_dir"] ~ volume["name"]) -%}{%- endif -%}
-        {%- endfor -%}
+        {%- if directories.append(service["volumes"][0]["metadata"]["mount_dir"] ~ service["volumes"][0]["name"]) -%}{%- endif -%}
       {%- endfor -%}
       {{- directories -}}
 
@@ -58,11 +56,9 @@
     directories: |-
       {%- set directories = [] -%}
       {%- for service in node_info["metadata"] if inventory_hostname == service["preferred_node_order"][0] -%}
-        {%- for volume in service["volumes"] -%}
-          {%- set base = volume["metadata"]["mount_dir"] ~ volume["name"] -%}
-          {%- if directories.append(base ~ "/data") -%}{%- endif -%}
-          {%- if directories.append(base ~ "/metadata_config") -%}{%- endif -%}
-        {%- endfor -%}
+        {%- set base = service["volumes"][0]["metadata"]["mount_dir"] ~ service["volumes"][0]["name"] -%}
+        {%- if directories.append(base ~ "/data") -%}{%- endif -%}
+        {%- if directories.append(base ~ "/metadata_config") -%}{%- endif -%}
       {%- endfor -%}
       {{- directories -}}
 
@@ -91,12 +87,9 @@
     src: "{{ beegfs_ha_beegfs_meta_conf_path }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/beegfs-meta.conf"
     options: |-
-      {%- set storeMetaDirectory = [] -%}
-      {%- for volume in item['volumes'] -%}
-        {%- if storeMetaDirectory.append(volume["metadata"]["mount_dir"] ~ volume["name"] ~ "/data") -%}{%- endif -%}
-      {%- endfor -%}
+      {%- set metadata_directory = item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/data" -%}
       {%- set required_options = {"sysMgmtdHost": management_info["resource_group"],
-                                  "storeMetaDirectory": storeMetaDirectory | join(","),
+                                  "storeMetaDirectory": metadata_directory,
                                   "connInterfacesFile": item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/metadata_config/connInterfacesFile.conf",
                                   "logStdFile": "/var/log/beegfs-meta-" ~ item["volumes"][0]["name"] ~ ".log"} -%}
       {%- if (item["filter_ip_ranges"] | default(beegfs_ha_filter_ip_ranges)) | length > 0 -%}
