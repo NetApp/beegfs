@@ -1,6 +1,6 @@
 - name: Ensure software properties common package is installed (Debian/Ubuntu).
   apt:
-    state: present  # TODO: Verify present works instead of latest.
+    state: present
     name: software-properties-common
 
 - name: Add BeeGFS apt key (Debian/Ubuntu).
@@ -16,7 +16,7 @@
     update_cache: true
   become: true
 
-# (jmccormi): At least when installing the DKMS version it will skip the module build if the kernel headers aren't installed.
+# At least when installing the DKMS version it will skip the module build if the kernel headers aren't installed.
 - name: Get kernel version (Debian/Ubuntu).
   command: "uname -r"
   register: shell_output

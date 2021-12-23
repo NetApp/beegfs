@@ -1,12 +1,19 @@
-BeeGFS Client Role 
-------------------
+netappeseries.beegfs.client Role
+================================
 
 Installs the BeeGFS Client and optionally mounts one or more BeeGFS file systems, or the same BeeGFS file system multiple times. The role can also unmount one or more BeeGFS file systems if requested.
 
-Prerequisites
--------------
+Requirements
+------------
 
 * When installing the BeeGFS client to Ubuntu, the ca-certificates package must be installed, or an error like the following will occur when attempting to add the BeeGFS repository using apt: `Certificate verification failed: The certificate is NOT trusted. The certificate chain uses expired certificate.  Could not handshake: Error in the certificate verification. [IP: 178.254.21.65 443]`. If you still get this error with ca-certificates installed try updating the package. 
+
+Support Matrix
+--------------
+
+| Component              | BeeGFS Version | Operating System          | Client Protocols  |
+| ---------------------- | -------------- | ------------------------- | ----------------- |
+| BeeGFS Client service  | 7.2.5          | RedHat 8.3, Ubuntu 20.04  | TCP/UDP and RDMA  |
 
 Supported Tags
 --------------
