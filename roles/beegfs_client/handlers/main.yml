@@ -1,0 +1,6 @@
+- name: Restart BeeGFS Client
+  systemd:
+    name: beegfs-client
+    state: restarted
+  when: not beegfs_client_dkms_install
+  become: true
