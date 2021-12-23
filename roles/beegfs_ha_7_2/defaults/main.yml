@@ -113,6 +113,7 @@ beegfs_ha_beegfs_meta_conf_path: /etc/beegfs/beegfs-meta.conf   # Default BeeGFS
 beegfs_ha_beegfs_meta_conf_resource_group_options: {}           # Ansible resource group specific options. For BeeGFS metadata resource specific configuration.
 beegfs_ha_beegfs_meta_conf_ha_group_options: {}                 # Ansible cluster group specific options. For all common or expected metadata configuration defaults.
 beegfs_ha_beegfs_meta_conf_default_options:                     # Default metadata configuration options.
+  storeAllowFirstRunInit: "false"
   tuneTargetChooser: randomized
   connMetaPortTCP: 8005
   connMetaPortUDP: 8005
@@ -126,6 +127,7 @@ beegfs_ha_beegfs_storage_conf_path: /etc/beegfs/beegfs-storage.conf   # Default 
 beegfs_ha_beegfs_storage_conf_resource_group_options: {}              # Ansible resource group specific options. For BeeGFS storage resource specific configuration.
 beegfs_ha_beegfs_storage_conf_ha_group_options: {}                    # Ansible cluster group specific options. For all common or expected storage configuration defaults.
 beegfs_ha_beegfs_storage_conf_default_options:                        # Default storage configuration options.
+  storeAllowFirstRunInit: "false"
   connMaxInternodeNum: 128
   connMgmtdPortTCP: 8008
   connMgmtdPortUDP: 8008
