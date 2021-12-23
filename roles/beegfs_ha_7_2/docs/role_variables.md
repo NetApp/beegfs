@@ -32,10 +32,6 @@ This section gives a quick summary of the available variables to configure the B
                                                                 #   Use the following command to restore a previous configuration: pcs config restore <backup>
     beegfs_ha_backup_path: /tmp/                                # Pcs backup file path.            
 
-    # RDMA defaults 
-    beegfs_ha_enable_rdma: false                                # Whether to enable RDMA.
-    beegfs_ha_ofed_include_path:                                # OFED library include path.
-    
     # Required sysctl configuration defaults  
     beegfs_ha_required_sysctl_entries:
       net.ipv4.conf.all.rp_filter: 1
@@ -57,24 +53,45 @@ This section gives a quick summary of the available variables to configure the B
       vm.zone_reclaim_mode: 1
       vm.watermark_scale_factor: 1000
 
-    # Performance tuning defaults for metadata service settings
-    beegfs_metadata_maximum_node_connections: 128               # beegfs_meta.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 32
-    beegfs_metadata_worker_threads: 32                          # beegfs_meta.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel.
-                                                                #   On dedicated metadata servers, this is typically set to a value between four and eight times the number of CPU cores. Note: 0 means use twice the number
-                                                                #   of CPU cores (but at least 4). Default: 0
-    beegfs_metadata_file_creation_target_algorithm: randomized  # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file creation.
-                                                                #   Choices: [randomized, roundrobin, randomrobin, randominternode, randomintranode] Default: randomized
-        
-    # Performance tuning defaults for storage service settings
-    beegfs_storage_maximum_node_connections: 128                # beegfs_storage.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 12
-    beegfs_storage_incoming_data_event_threads: 2               # The number of threads waiting for incoming data events. Connections with incoming data will be handed over to the worker threads for actual message processing. Default: 1
-    beegfs_storage_worker_threads: 14                           # beegfs_storage.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel.
-                                                                #   On dedicated metadata servers, this is typically set to a value between four and eight times the number of CPU cores.
-                                                                #   Note: 0 means use twice the number of CPU cores (but at least 4). Default: 12
-    beegfs_storage_use_aggressive_stream_polling: true          # If set to true, the StreamListener component, which waits for incoming requests, will keep actively polling for events instead of sleeping until an event occurs.
-                                                                #   Active polling will reduce latency for processing of incoming requests at the cost of higher CPU usage. Default: false
-    beegfs_storage_maximum_write_chunk_size: 2048k              # The maximum amount of data that the server should write to the underlying local file system in a single operation. Default: 2048k
-    beegfs_storage_maximum_read_chunk_size: 2048k               # The maximum amount of data that the server should read to the underlying local file system in a single operation. Default: 2048k
+    # BeeGFS management service configuration
+    beegfs_ha_beegfs_mgmtd_conf_path: /etc/beegfs/beegfs-mgmtd.conf   # Default BeeGFS management service configuration file path.
+    beegfs_ha_beegfs_mgmtd_conf_resource_group_options: {}            # Ansible resource group specific options. For BeeGFS management resource specific configuration.
+    beegfs_ha_beegfs_mgmtd_conf_ha_group_options: {}                  # Ansible cluster group specific options. For all common or expected management configuration defaults.
+    beegfs_ha_beegfs_mgmtd_conf_default_options:                      # Default management configuration options.
+      storeAllowFirstRunInit: "false"                                 # The quotes prevent the value from being treated like a boolean which converts to True/False.
+      connMgmtdPortTCP: 8008
+      connMgmtdPortUDP: 8008
+
+    # BeeGFS metadata service configuration
+    beegfs_ha_beegfs_meta_conf_path: /etc/beegfs/beegfs-meta.conf   # Default BeeGFS metadata service configuration file path.
+    beegfs_ha_beegfs_meta_conf_resource_group_options: {}           # Ansible resource group specific options. For BeeGFS metadata resource specific configuration.
+    beegfs_ha_beegfs_meta_conf_ha_group_options: {}                 # Ansible cluster group specific options. For all common or expected metadata configuration defaults.
+    beegfs_ha_beegfs_meta_conf_default_options:                     # Default metadata configuration options.
+      storeAllowFirstRunInit: "false"
+      tuneTargetChooser: randomized
+      connMaxInternodeNum: 128
+      connMetaPortTCP: 8005
+      connMetaPortUDP: 8005
+      connMgmtdPortTCP: 8008
+      connMgmtdPortUDP: 8008
+      tuneNumWorkers: 32
+
+    # BeeGFS storage service configuration
+    beegfs_ha_beegfs_storage_conf_path: /etc/beegfs/beegfs-storage.conf   # Default BeeGFS storage service configuration file path.
+    beegfs_ha_beegfs_storage_conf_resource_group_options: {}              # Ansible resource group specific options. For BeeGFS storage resource specific configuration.
+    beegfs_ha_beegfs_storage_conf_ha_group_options: {}                    # Ansible cluster group specific options. For all common or expected storage configuration defaults.
+    beegfs_ha_beegfs_storage_conf_default_options:                        # Default storage configuration options.
+      storeAllowFirstRunInit: "false"
+      connMaxInternodeNum: 128
+      connMgmtdPortTCP: 8008
+      connMgmtdPortUDP: 8008
+      connStoragePortTCP: 8003
+      connStoragePortUDP: 8003
+      tuneNumStreamListeners: 2
+      tuneNumWorkers: 14
+      tuneUseAggressiveStreamPoll: true
+      tuneFileReadSize: 2048k
+      tuneFileWriteSize: 2048k
 
     # NTP configuration defaults (see the `NTP` section below for more information) 
     beegfs_ha_ntp_configuration_file: /etc/ntp.conf             # Absolute file path for ntp.conf
@@ -105,29 +122,7 @@ This section gives a quick summary of the available variables to configure the B
     beegfs_ha_corosync_log_path: /var/log/corosync.log                    # Absolute path for the Corosync log file.
 
     # Pcs defaults
-    beegfs_ha_pcsd_pcsd_path: /var/lib/pcsd/                    # Absolute path for the pcsd directory.
-
-    # Performance tuning defaults for both metadata and storage service settings
-    beegfs_ha_numa:                                             # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be applied whenever and
-                                                                #   wherever the BeeGFS service resides. This can provide significant performance increases by avoiding the cache misses between NUMA nodes.
-
-    # Performance tuning defaults for metadata service settings
-    beegfs_ha_metadata_maximum_node_connections:                # beegfs_meta.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 32
-    beegfs_ha_metadata_worker_threads:                          # beegfs_meta.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel. On dedicated metadata
-                                                                #   servers, this is typically set to a value between four and eight times the number of CPU cores. Note: 0 means use twice the number of CPU cores (but at least 4). Default: 32
-    beegfs_ha_metadata_file_creation_target_algorithm:          # beegfs_meta.conf TuneTargetChooser value - The algorithm to choose storage targets for file creation.
-                                                                #   Choices: [randomized, roundrobin, randomrobin, randominternode, randomintranode] Default: roundrobin
-
-    # Performance tuning defaults for storage service settings
-    beegfs_ha_storage_maximum_node_connections:                 # beegfs_storage.conf connMaxInternodeNum value - maximum number of simultaneous connections to the same node. Default: 128
-    beegfs_ha_storage_incoming_data_event_threads:              # The number of threads waiting for incoming data events. Connections with incoming data will be handed over to the worker threads for actual message processing. Default: 2
-    beegfs_ha_storage_worker_threads:                           # beegfs_storage.conf tuneNumWorkers value - number of worker threads. Higher number of workers allows the server to handle more client requests in parallel. On dedicated metadata servers,
-                                                                #   this is typically set to a value between four and eight times the number of CPU cores. Note: 0 means use twice the number of CPU cores (but at least 4). Default: 14
-    beegfs_ha_storage_use_aggressive_stream_polling:            # If set to true, the StreamListener component, which waits for incoming requests, will keep actively polling for events instead of sleeping until an
-                                                                #   event occurs. Active polling will reduce latency for processing of incoming requests at the cost of higher CPU usage. Default: true
-    beegfs_ha_storage_maximum_write_chunk_size:                 # The maximum amount of data that the server should write to the underlying local file system in a single operation. Default: 2048k
-    beegfs_ha_storage_maximum_read_chunk_size:                  # The maximum amount of data that the server should read to the underlying local file system in a single operation. Default: 2048k
-
+    beegfs_ha_pcsd_path: /var/lib/pcsd/
 
     # Package version defaults (Warning! Only the patch version can change.)
     beegfs_ha_beegfs_version:                                   # BeeGFS package version.
@@ -166,12 +161,6 @@ This section gives a quick summary of the available variables to configure the B
         format_options: "-d su=VOLUME_SEGMENT_SIZE_KBk,sw=VOLUME_STRIPE_COUNT -l version=2,su=VOLUME_SEGMENT_SIZE_KBk"
         mount_options: "sync,noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k,nobarrier"
         mount_dir: /mnt/
-
-    # General path defaults
-    beegfs_ha_pcsd_tokens: /var/lib/pcsd/tokens                       # PCS daemon tokens absolute file path.
-    beegfs_ha_pacemaker_cib_xml: /var/lib/pacemaker/cib/cib.xml       # Pacemaker cib.xml absolute file path.
-    beegfs_ha_uninstall_pacemaker_cib_dir: /var/lib/pacemaker/cib/    # Pacemaker cib directory absolute path.
-    beegfs_ha_uninstall_pcsd_dir: /var/lib/pcsd/                      # PCS daemon directory absolute path.
 
     # Debian / Ubuntu repository defaults
     beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5

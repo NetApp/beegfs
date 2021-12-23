@@ -296,7 +296,19 @@
         {%- set resource = hostvars[inventory_hostname][group] -%}
         {%- set resource_group = group -%}
         {%- if scratch.update({"volume_index": 1, "group_index": group.split("_")[-1]}) -%}{%- endif -%}
-        {%- if resource.update({"resource_group": group, "preferred_node_order": resource_preferred_node_order[group]}) -%}{%- endif -%}
+
+        {#- Determine service configuration options -#}
+        {%- if resource["beegfs_service"] == "management" -%}
+          {%- if scratch.update({"service_configuration_options": beegfs_ha_beegfs_mgmtd_conf_default_options | combine(beegfs_ha_beegfs_mgmtd_conf_ha_group_options) | combine(beegfs_ha_beegfs_mgmtd_conf_resource_group_options)}) -%}{%- endif -%}
+        {%- elif resource["beegfs_service"] == "metadata" -%}
+          {%- if scratch.update({"service_configuration_options": beegfs_ha_beegfs_meta_conf_default_options | combine(beegfs_ha_beegfs_meta_conf_ha_group_options) | combine(resource["beegfs_ha_beegfs_meta_conf_resource_group_options"] | default({})) }) -%}{%- endif -%}
+        {%- elif resource["beegfs_service"] == "storage" -%}
+          {%- if scratch.update({"service_configuration_options": beegfs_ha_beegfs_storage_conf_default_options | combine(beegfs_ha_beegfs_storage_conf_ha_group_options) | combine(resource["beegfs_ha_beegfs_storage_conf_resource_group_options"] | default({})) }) -%}{%- endif -%}
+        {%- endif -%}
+
+        {%- if resource.update({"resource_group": group,
+                                "preferred_node_order": resource_preferred_node_order[group],
+                                "service_configuration_options": scratch["service_configuration_options"]}) -%}{%- endif -%}
 
         {#- Determine volume hostgroup mapping -#}
         {%- for name, hosts in (resource_host_groups.items() | list) -%}
@@ -370,7 +382,6 @@
       {%- endfor -%}
       {{- info -}}
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-
 
 # Determine resource group information
 - name: Determine resource group information.

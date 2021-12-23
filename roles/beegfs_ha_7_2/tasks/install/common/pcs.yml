@@ -9,14 +9,14 @@
 - name: Ensure pcs_user.conf file is correct on all cluster and remote nodes
   ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pcs_users_conf.j2') }}"
-    dest: "{{ beegfs_ha_pcsd_pcsd_path }}pcs_users.conf"
+    dest: "{{ beegfs_ha_pcsd_path }}pcs_users.conf"
   register: pcs_users_conf
   become: true
 
 - name: Create PCS known_hosts file is correct on all cluster and remote nodes
   ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pcs_known_hosts.j2') }}"
-    dest: "{{ beegfs_ha_pcsd_pcsd_path }}known-hosts"
+    dest: "{{ beegfs_ha_pcsd_path }}known-hosts"
   register: pcs_known_hosts
   become: true
 
@@ -47,7 +47,7 @@
 #  block:
 #    - name: Fetch pcs tokens file.
 #      fetch:
-#        src: "{{ beegfs_ha_pcsd_pcsd_path }}tokens"
+#        src: "{{ beegfs_ha_pcsd_path }}tokens"
 #        dest: "/tmp/~pcs_tokens_{{ item }}"
 #        flat: true
 #      register: fetched_pcs_tokens
@@ -100,7 +100,7 @@
 #    - name: Delete existing pcs tokens file.
 #      ansible.builtin.file:
 #        state: absent
-#        path: "{{ beegfs_ha_pcsd_pcsd_path }}tokens"
+#        path: "{{ beegfs_ha_pcsd_path }}tokens"
 #
 #    - name: Ensure pcs cluster has been authenticated.
 #      ansible.builtin.command:
