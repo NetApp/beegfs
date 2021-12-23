@@ -82,9 +82,7 @@
     directories: |-
       {%- set directories = [] -%}
       {%- for service in node_info['storage'] if inventory_hostname == service['preferred_node_order'][0] -%}
-        {%- for volume in service["volumes"] -%}
-          {%- if directories.append(volume["metadata"]["mount_dir"] ~ volume["name"] ~ "/storage_config") -%}{%- endif -%}
-        {%- endfor -%}
+        {%- if directories.append(service["volumes"][0]["metadata"]["mount_dir"] ~ service["volumes"][0]["name"] ~ "/storage_config") -%}{%- endif -%}
       {%- endfor -%}
       {{- directories -}}
 
