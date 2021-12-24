@@ -7,6 +7,13 @@
 : ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
 . ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
 
+
+# Fail when commands errors are unhandled, variables undefined, and increases the niceness (priority) of this scripts process - Great idea Joe!
+#set -eu  # Unfortunately the dependent library, heartbeat/ocf-shellfuncs, causes this to fail for ocf_log.
+          #      error output [ /usr/lib/ocf/lib/heartbeat/ocf-shellfuncs: line 179: HA_LOGTAG: unbound variable ]
+renice -n -10 -p $$ > /dev/null   # A niceness of -10 gives the beegfs-monitor process a higher priority than BeeGFS itself but the monitoring process will
+                                  #  only occupy a single cpu core. ***Note that sleep commands give up scheduling time slices.
+
 ###############################################################################
 # Helper functions
 
@@ -240,6 +247,31 @@ check_filesystem_mounts() {
   return 0
 }
 
+# Test the provide command. usage: retry_command_until_success [command] [error_message] [retry count] [retry delay]
+retry_command_until_success() {
+  command=$1
+  error_message=$2
+  declare -i retries=$3
+  delay=$4
+
+  while true; do
+    if eval "$command"; then
+      echo 0
+      return
+    fi
+
+    retries=$retries-1
+    if [ "$retries" -eq "0" ]; then
+      ocf_log error "$group $error_message!"
+      echo 1
+      return
+    fi
+
+    sleep $delay
+    ocf_log warn "$error_message Retrying..."
+  done
+}
+
 ###############################################################################
 
 # Output the usage information
@@ -299,17 +331,23 @@ END
 }
 
 beegfs_monitor_start() {
-  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
+  mkdir -p $shm_group_path/devices
+  mkdir $shm_group_path/status
 
   # Wait for BeeGFS service to start.
   while true; do
-    if [ -f $conf_path ] && check_resource_service; then
+    if ! [ -f $conf_path ]; then
+      ocf_log info "Waiting for $conf_path..."
+      sleep 0.1
+    elif ! check_resource_service; then
+      ocf_log info "Waiting for $service service to start..."
+      sleep 1
+    else
+      ocf_log info "Initializing shared memory..."
 
-      # Ensure shared memory directory exists
-      if ! [ -d $shm_group_path/devices ]; then
-        mkdir -p $shm_group_path/devices
-      fi
-
+      echo 0 > $shm_group_path/status/storage
+      echo 0 > $shm_group_path/status/network
+      echo 0 > $shm_group_path/status/service
       get_mgmt_ip > $shm_group_path/mgmt_ip
       get_subnet_ips > $shm_group_path/filter_ips
 
@@ -348,15 +386,17 @@ beegfs_monitor_start() {
         echo $neighbors > $interfaces_path/$interface
       done
 
-      return $OCF_SUCCESS
+      break
     fi
-    sleep 0.1
   done
+
+  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
+  return $OCF_SUCCESS
 }
 
 beegfs_monitor_stop() {
-  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
   rm -rf $shm_group_path
+  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
 }
 
 # Validate BeeGFS service is running.
@@ -369,41 +409,15 @@ beegfs_monitor_monitor() {
     return $ha_pseudo_resource_status
   fi
 
-  # Evaluate whether monitored resource has started systemd service (management, metadata or storage).
-  declare -i retries=20
-  declare -i filesystem_check=1
-  declare -i network_check=1
-  declare -i service_check=1
-  while [ $retries -gt 0 ]; do
-    retries=$retries-1
+  retry_command_until_success "check_filesystem_mounts" "Target(s) are not accessible!" 5 2 > $shm_group_path/status/storage &  # Max 10+ seconds
+  retry_command_until_success "check_network_connectivity" "Network is not reachable!" 3 1 > $shm_group_path/status/network &   # Ping tests has a timeout of 2 seconds. Max time 9+ seconds
+  retry_command_until_success "check_resource_service" "BeeGFS service is not active!" 1 0 > $shm_group_path/status/service &   # No delay is needed since only tested once.
+  wait
 
-    if [ $filesystem_check -eq 1 ] && check_filesystem_mounts; then
-      filesystem_check=0
-    fi
-    if [ $network_check -eq 1 ] && check_network_connectivity; then
-      network_check=0
-    fi
-    if [ $service_check -eq 1 ] && check_resource_service; then
-      service_check=0
-    fi
-
-    if [ $filesystem_check -eq 0 ] && [ $network_check -eq 0 ] && [ $service_check -eq 0 ]; then
-      return $OCF_SUCCESS
-    fi
-
-    sleep 0.1
-  done
-
-  # Determine what failure occurred.
-  if [ $filesystem_check -eq 1 ]; then
-    ocf_exit_reason "Filesystem mount(s) are not active!"
-  elif [ $network_check -eq 1 ]; then
-    ocf_exit_reason "Network is not reachable!"
-  elif [ $service_check -eq 1 ]; then
-    ocf_exit_reason "Service is not active!"
+  if [ "$(cat $shm_group_path/status/storage)" -ne "0" ] || [ "$(cat $shm_group_path/status/network)" -ne "0" ] || [ "$(cat $shm_group_path/status/service)" -ne "0" ]; then
+    return $OCF_ERR_GENERIC
   fi
-
-  return $OCF_ERR_GENERIC
+  return $OCF_SUCCESS
 }
 
 # Validate beegfs-monitor requirements
