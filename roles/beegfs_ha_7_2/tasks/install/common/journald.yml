@@ -1,21 +1,21 @@
 - name: Ensure configuration destination directory exists.
   ansible.builtin.file:
     state: directory
-    path: "{{ beegfs_ha_journald_conf_dest_dir_path }}"
+    path: /etc/systemd/journald.conf.d/
     mode: "0644"
   become: true
 
 - name: Ensure journald log destination directory exists.
   ansible.builtin.file:
     state: directory
-    path: "{{ beegfs_ha_journald_log_dir_path }}"
+    path: /var/log/journal/
     mode: "0644"
   become: true
 
 - name: Ensure journald configuration options are configured.
   netapp_eseries.beegfs.update_conf:
-    src: "{{ beegfs_ha_journald_conf_src_path }}"
-    dest: "{{ beegfs_ha_journald_conf_dest_dir_path }}eseries_beegfs_ha.conf"
+    src: /etc/systemd/journald.conf
+    dest: /etc/systemd/journald.conf.d/eseries_beegfs_ha.conf
     options: "{{ beegfs_ha_journald_options }}"
     pattern: "^#?([A-Za-z0-9_-]+)( *= *)(.*)$"
     padding: false

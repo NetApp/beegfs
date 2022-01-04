@@ -55,7 +55,7 @@
 
 - name: Remove journald configuration.
   ansible.builtin.file:
-    path: "{{ beegfs_ha_journald_conf_dest_dir_path }}"
+    path: /etc/systemd/journald.conf.d/eseries_beegfs_ha.conf
     state: absent
   become: true
 

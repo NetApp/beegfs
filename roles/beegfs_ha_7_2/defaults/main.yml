@@ -144,9 +144,6 @@ beegfs_ha_beegfs_storage_conf_default_options:                        # Default 
 
 # Journald logging defaults
 beegfs_ha_journald_allow_changes: true                    # Allows changes to be made to journald configuration changes.
-beegfs_ha_journald_conf_src_path: /etc/systemd/journald.conf  # journald.conf path
-beegfs_ha_journald_conf_dest_dir_path: /etc/systemd/journald.conf.d/  #eseries_beegfs_ha.conf
-beegfs_ha_journald_log_dir_path: /var/log/journal/
 beegfs_ha_journald_options:                               # Default journald configuration options. These key-value pairs will be applied to the journal.conf file.
   Storage: persistent
   Compress: "true"
