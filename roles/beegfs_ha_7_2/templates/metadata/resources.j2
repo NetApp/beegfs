@@ -17,7 +17,7 @@
   </instance_attributes>
   <operations>
     <op id="{{ group }}-monitor-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_monitor_start_timeout }}"/>
-    <op id="{{ group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
+    <op id="{{ group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_monitor_timeout }}" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
     <op id="{{ group }}-monitor-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_monitor_stop_timeout }}"/>
   </operations>
   <meta_attributes id="{{ group }}-monitor-meta_attributes">
@@ -32,11 +32,13 @@
       <nvpair id="{{ group }}-FS1-instance_attributes-directory" name="directory" value="{{ mount_dir }}{{ volume }}"/>
       <nvpair id="{{ group }}-FS1-instance_attributes-fstype" name="fstype" value="{{ format_type }}"/>
       <nvpair id="{{ group }}-FS1-instance_attributes-options" name="options" value="{{ mount_options }}"/>
+      <nvpair id="{{ group }}-FS1-instance_attributes-fast_stop" name="fast_stop" value="false"/>
+      <nvpair id="{{ group }}-FS1-instance_attributes-force_unmount" name="force_unmount" value="true"/>
     </instance_attributes>
     <operations>
       <op id="{{ group }}-FS1-start" interval="0s" name="start"/>
       <op id="{{ group }}-FS1-monitor" interval="{{ beegfs_ha_resource_filesystem_monitor_interval }}" name="monitor" on-fail="restart"/>
-      <op id="{{ group }}-FS1-stop" interval="0s" name="stop"/>
+      <op id="{{ group }}-FS1-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_filesystem_stop_timeout }}"/>
     </operations>
   </primitive>
 

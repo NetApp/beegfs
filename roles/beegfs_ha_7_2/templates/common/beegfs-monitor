@@ -10,6 +10,8 @@
 ###############################################################################
 # Helper functions
 
+shm_root=/dev/shm/eseries_beegfs_ha
+
 convert_ipv4_address_to_int() {
   echo "$1" | awk '''
   {
@@ -97,72 +99,141 @@ get_subnet_ips() {
   echo "$filter_ips"
 }
 
+# Retrieves the volume path devices (slaves) for the BeeGFS service target.
+get_parent_slaves() {
+  parent_path=$1
+  parent_name=$2
+  parent_slaves="$(ls -A /sys/class/block/$parent_name/slaves)"
+
+  # Check whether the slaves directory was populated which means multipath is used. If not then
+  #   attempt to discover block devices with wwids matching the parent device (nvme native).
+  if [ -z "$parent_slaves" ] && [ -f /sys/class/block/$parent_name/wwid ]; then
+    parent_wwid=$(cat /sys/class/block/$parent_name/wwid)
+    for device_path in /sys/class/block/*; do
+      if ! [ -f $device_path/wwid ]; then
+        continue
+      fi
+
+      # Find child devices wwids matching the parent device.
+      name=$(basename $device_path)
+      wwid=$(cat $device_path/wwid)
+      if [ "$name" != "$parent_name" ] && [ "$wwid" == "$parent_wwid" ]; then
+        parent_slaves="$parent_slaves $name"
+      fi
+    done
+  fi
+
+  echo $parent_slaves
+}
+
 # Ping specified IP address from select interface until successful or retries are exhausted.
 ping_interface() {
-  test_interface=$1
-  test_address=$2
+  interface=$1
+  address=$2
 
-  for _ in $(seq 1 "$ping_count"); do
-    if ping -I "$test_interface" -W "$ping_timeout" -c 1 "$test_address" > /dev/null 2>&1 ; then
-      echo 0
-    fi
-  done
+  if ping -I "$interface" -W 2 -c 1 "$address" > /dev/null 2>&1 ; then
+      echo -n "$address "
+  fi
 }
 
 # Returns whether at least one of the BeeGFS resource group's communication interface(s) are able to communicate on the network.
 check_network_connectivity() {
 
-  # Test network interfaces by pinging previously used IP addresses per interface
-  interfaces=$(get_interfaces)
-  filter_ips=$(get_subnet_ips)
+  # Issue all pings to known neighbors in parallel
+  pids=
+  mgmt_ip=$(cat $shm_group_path/mgmt_ip)
+  for interfaces_path in $shm_group_path/interfaces/*; do
+    interface=$(basename $interfaces_path)
+    addresses="$(ip neigh show dev $interface | grep -E "(REACHABLE|STALE)" | sort -k 4 | cut -f 1 -d ' ' | head -n 10)"
+    if [ -z "$addresses" ]; then
+      addresses=$(cat $interfaces_path)
+    fi
 
-  # Ping each interface using ip neighbors in the background
-  true > /tmp/~beegfs-monitor-$group-ping_interface_results
-  for interface in $interfaces; do
-    neighbor_entries=$(ip neigh show dev $interface | grep -E "(REACHABLE|STALE)" | sort '-t ' -k 4 | cut -d ' ' -f 1 | head -n "$ping_max_count")
-    neighbor_entries="$neighbor_entries $(get_mgmt_ip)"
-    for neighbor_entry in $neighbor_entries; do
-      if [ -n "$filter_ips" ]; then
-        for filter_ip in $filter_ips; do
-          if [ "$neighbor_entry" = "$filter_ip" ]; then
-            ping_interface "$interface" "$neighbor_entry" >> "/tmp/~beegfs-monitor-$group-ping_interface_results" &
-          fi
-        done
-      else
-        ping_interface "$interface" "$neighbor_entry" >> "/tmp/~beegfs-monitor-$group-ping_interface_results" &
-      fi
+    true > $interfaces_path
+    for address in $addresses $mgmt_ip; do
+      ping_interface $interface $address >> $interfaces_path &
+      pids="$pids $!"
     done
   done
 
-  # Evaluate ping results once pings are complete
-  wait
-  if [ -s "/tmp/~beegfs-monitor-$group-ping_interface_results" ]; then
-    return 0
-  fi
+  # Wait until connectivity is verified
+  while true; do
+    for interfaces_path in $shm_group_path/interfaces/*; do
+      if [ -s $interfaces_path ]; then
+        return 0
+      fi
+    done
+
+    # Check for whether ping processes have completed.
+    pings_complete=0
+    for pid in $pids; do
+      if ps -p $pid > /dev/null 2>&1; then
+        pings_complete=1
+        break
+      fi
+    done
+
+    # Fail if all ping processes have completed.
+    if [ "$pings_complete" -eq "0" ]; then
+      break
+    fi
+  done
 
   return 1
 }
 
-# Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
+# Check whether block device is actively completing I/O.
+is_device_active() {
+  shm_device_path=$1
+
+  rc=1
+  for stat_path in $shm_device_path/stats/*; do
+    current=$(awk '{reads=$1; writes=$5; print reads+writes}' $stat_path/current)
+
+    # Determine whether there are new completed I/O requests.
+    previous=$(cat $stat_path/previous)
+    echo $current > $stat_path/previous
+    if [ "$current" != "$previous" ]; then
+      rc=0
+    fi
+  done
+
+  return $rc
+}
+
+# Check whether the block device is accessible.
+is_device_accessible() {
+  device_path=$1
+  dd if=$device_path iflag=direct bs=4k count=1 > /dev/null 2>&1
+  rc=$?
+
+  return $rc
+}
+
+# Check file system mounts are indeed mounted and accessible.
 check_filesystem_mounts() {
-  mounts=$(grep "^store.*Directory" "$conf_path" 2> /dev/null | cut -f 2 -d "=" | sed 's/\/data//g' | sed 's/,/ /g')
+  for shm_device_path in $shm_group_path/devices/*; do
+    parent_name=$(cat $shm_device_path/name)
+    parent_path=$(cat $shm_device_path/path)
+    mount=$(cat $shm_device_path/mount)
 
-  # Check mount information
-  if [ -z "$mounts" ]; then
-    return 1
-  fi
+    # Check for new device links
+    parent_slaves="$(get_parent_slaves $parent_path $parent_name)"
+    stats_path=$shm_device_path/stats
+    for device_name in $parent_slaves; do
+      if [ -d $stats_path/$device_name ]; then
+        continue
+      fi
+      device_path="/sys/class/block/$device_name"
+      mkdir $stats_path/$device_name
+      ln -s $device_path/stat $stats_path/$device_name/current
+      awk '{reads=$1; writes=$5; print reads+writes}' $device_path/stat > $stats_path/$device_name/previous
+    done
 
-  # Test mount information
-  for mount in $mounts; do
-    mount_device_path=$(mount | grep "$mount" | cut -f 1 -d ' ')
-
-    # Check whether device is mounted.
-    if [ -z "$mount_device_path" ]; then
-      return 2
-
-    # Check whether device is readable.
-    elif ! (dd if=$mount_device_path iflag=direct bs=4k count=1 > /dev/null 2>&1); then
-      return 3
+    if ! mountpoint -q $mount; then
+      return 1
+    elif ! is_device_active $shm_device_path && ! is_device_accessible $parent_path; then
+        return 2
     fi
   done
 
@@ -178,12 +249,10 @@ Usage: $0 (start|stop|monitor|meta-data|validate-all)
 
 Requires: ping, ip
 Parameters:
+  service_group                 (Required) BeeGFS resource group name
   service_type                  (Required) Beegfs service (Choices: management, metadata, storage)
   service_name                  (Required) BeeGFS service name
   service_configuration_mount   (Required) BeeGFS service configuration mount path
-  ping_count                    Number of times attempt to ping IP address (Default 1)
-  ping_timeout_sec              Individual ping timeout measured in seconds (Default 1)
-
 END
 }
 
@@ -217,21 +286,6 @@ beegfs_monitor_meta_data() {
       <shortdesc lang="en">BeeGFS service configuration file</shortdesc>
       <content type="string"/>
     </parameter>
-    <parameter name="ping_count" unique="0" required="1">
-      <longdesc lang="en">Number of ping attempts before considering the IP address unreachable from the interface.</longdesc>
-      <shortdesc lang="en">Ping count</shortdesc>
-      <content type="integer" default="1"/>
-    </parameter>
-    <parameter name="ping_timeout_sec" unique="0" required="1">
-      <longdesc lang="en">Timeout for individual ping requests.</longdesc>
-      <shortdesc lang="en">Ping timeout</shortdesc>
-      <content type="integer" default="1"/>
-    </parameter>
-    <parameter name="ping_max_count" unique="0" required="1">
-      <longdesc lang="en">Maximum number of addresses to test. These tests will continue until either a ping is successful or the maximum ping count is reached.</longdesc>
-      <shortdesc lang="en">Maximum ping tests.</shortdesc>
-      <content type="integer" default="10"/>
-    </parameter>
   </parameters>
   <actions>
     <action name="start"/>
@@ -247,16 +301,62 @@ END
 beegfs_monitor_start() {
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
 
+  # Wait for BeeGFS service to start.
   while true; do
-    if check_resource_service; then
+    if [ -f $conf_path ] && check_resource_service; then
+
+      # Ensure shared memory directory exists
+      if ! [ -d $shm_group_path/devices ]; then
+        mkdir -p $shm_group_path/devices
+      fi
+
+      get_mgmt_ip > $shm_group_path/mgmt_ip
+      get_subnet_ips > $shm_group_path/filter_ips
+
+      # Load file system information into memory
+      mounts=$(grep "^store.*Directory" "$conf_path" | cut -f 2 -d "=" | sed 's/\/data//g' | sed 's/,/ /g')
+      for mount in $mounts; do
+        parent_path=$(mount | grep -w "$mount" | cut -f 1 -d ' ')
+        parent_name=$(lsblk -n -o "KNAME" $parent_path) # grab the kernel name of the device
+
+        # Populate the /dev/shm/eseries_beegfs_ha/<group>/devices/nvmeXnX
+        parent_device_path=$shm_group_path/devices/$parent_name
+        stats_path=$parent_device_path/stats
+        mkdir $parent_device_path
+        mkdir $stats_path
+        echo "$parent_name" > $parent_device_path/name
+        echo "$parent_path" > $parent_device_path/path
+        echo "$mount" > $parent_device_path/mount
+
+        # Populate the /dev/shm/eseries_beegfs_ha/<group>/devices/nvmeXnX/stats
+        parent_slaves="$(get_parent_slaves $parent_path $parent_name)"
+        for device_name in $parent_slaves; do
+          device_path="/sys/class/block/$device_name"
+          mkdir $stats_path/$device_name
+          ln -s $device_path/stat $stats_path/$device_name/current
+          awk '{reads=$1; writes=$5; print reads+writes}' $device_path/stat > $stats_path/$device_name/previous
+        done
+      done
+
+      # Load initial neighbors into memory
+      interfaces_path=$shm_group_path/interfaces
+      mkdir $interfaces_path
+      for interface in $(get_interfaces); do
+        neighbors=$(ip neigh show dev $interface | grep REACHABLE | cut -d ' ' -f 1)
+
+        #TODO: Filter neighbors
+        echo $neighbors > $interfaces_path/$interface
+      done
+
       return $OCF_SUCCESS
     fi
-    sleep 0.5
+    sleep 0.1
   done
 }
 
 beegfs_monitor_stop() {
   ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
+  rm -rf $shm_group_path
 }
 
 # Validate BeeGFS service is running.
@@ -291,7 +391,7 @@ beegfs_monitor_monitor() {
       return $OCF_SUCCESS
     fi
 
-    sleep 0.5
+    sleep 0.1
   done
 
   # Determine what failure occurred.
@@ -325,16 +425,13 @@ case $__OCF_ACTION in
     ;;
 esac
 
-
 # Set argument variables
-ping_count=${OCF_RESKEY_ping_count:-1}
-ping_timeout=${OCF_RESKEY_ping_timeout_sec:-1}
-ping_max_count=${OCF_RESKEY_ping_max_count:-10}
 group=${OCF_RESKEY_service_group:-""}
 type=${OCF_RESKEY_service_type:-""}
 service=${OCF_RESKEY_service_name:-""}
 configuration_mount=${OCF_RESKEY_service_configuration_mount:-""}
 configuration_mount=${configuration_mount%%/}
+shm_group_path=$shm_root/$group
 
 case $type in
   management)
