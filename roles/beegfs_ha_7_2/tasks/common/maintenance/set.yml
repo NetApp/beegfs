@@ -8,7 +8,7 @@
 - name: Ensure cluster nodes are in maintenance mode.
   block:
     - name: Determine whether corosync and pacemaker services exist.
-      service_facts:
+      ansible.builtin.service_facts:
       delegate_to: "{{ item }}"
       loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
 
