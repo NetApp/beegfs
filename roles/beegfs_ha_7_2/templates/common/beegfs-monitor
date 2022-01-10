@@ -9,10 +9,11 @@
 
 
 # Fail when commands errors are unhandled, variables undefined, and increases the niceness (priority) of this scripts process - Great idea Joe!
-#set -eu  # Unfortunately the dependent library, heartbeat/ocf-shellfuncs, causes this to fail for ocf_log.
-          #      error output [ /usr/lib/ocf/lib/heartbeat/ocf-shellfuncs: line 179: HA_LOGTAG: unbound variable ]
-renice -n -10 -p $$ > /dev/null   # A niceness of -10 gives the beegfs-monitor process a higher priority than BeeGFS itself but the monitoring process will
-                                  #  only occupy a single cpu core. ***Note that sleep commands give up scheduling time slices.
+#set -eu  # Unfortunately the dependent library, heartbeat/ocf-shellfuncs, causes this to fail for ocf_log. error output [ /usr/lib/ocf/lib/heartbeat/ocf-shellfuncs: line 179: HA_LOGTAG: unbound variable ]
+          #   TODO: To make this work either use our own logging or addresss the issues found in dependent libraries.
+
+# A niceness of -10 gives the beegfs-monitor process a higher priority than BeeGFS itself which prevents the monitor from being starved under heavy BeeGFS workloads.
+renice -n -10 -p $$ > /dev/null
 
 ###############################################################################
 # Helper functions
@@ -247,7 +248,7 @@ check_filesystem_mounts() {
   return 0
 }
 
-# Test the provide command. usage: retry_command_until_success [command] [error_message] [retry count] [retry delay]
+# Test the provided command. usage: retry_command_until_success [command] [error message] [retry count] [retry delay]
 retry_command_until_success() {
   command=$1
   error_message=$2
