@@ -148,7 +148,6 @@ ping_interface() {
 check_network_connectivity() {
 
   # Issue all pings to known neighbors in parallel
-  pids=
   mgmt_ip=$(cat $shm_group_path/mgmt_ip)
   for interfaces_path in $shm_group_path/interfaces/*; do
     interface=$(basename $interfaces_path)
@@ -160,7 +159,6 @@ check_network_connectivity() {
     true > $interfaces_path
     for address in $addresses $mgmt_ip; do
       ping_interface $interface $address >> $interfaces_path &
-      pids="$pids $!"
     done
   done
 
@@ -171,23 +169,7 @@ check_network_connectivity() {
         return 0
       fi
     done
-
-    # Check for whether ping processes have completed.
-    pings_complete=0
-    for pid in $pids; do
-      if ps -p $pid > /dev/null 2>&1; then
-        pings_complete=1
-        break
-      fi
-    done
-
-    # Fail if all ping processes have completed.
-    if [ "$pings_complete" -eq "0" ]; then
-      break
-    fi
   done
-
-  return 1
 }
 
 # Check whether block device is actively completing I/O.
@@ -239,37 +221,62 @@ check_filesystem_mounts() {
     done
 
     if ! mountpoint -q $mount; then
-      return 1
+      return $?
     elif ! is_device_active $shm_device_path && ! is_device_accessible $parent_path; then
-        return 2
+      return $?
     fi
   done
 
   return 0
 }
 
-# Test the provided command. usage: retry_command_until_success [command] [error message] [retry count] [retry delay]
+# Test the provided command. usage: retry_command_until_success [command] [error message] [attempts] [timeout]
 retry_command_until_success() {
   command=$1
   error_message=$2
-  declare -i retries=$3
-  delay=$4
+  declare -i attempts=$3
+  timeout=$4
 
   while true; do
-    if eval "$command"; then
+    start=$(date +%s%N)
+    eval "$command" > /dev/null 2>&1 &
+    command_pid=$!
+
+    # Start a background tasks to kill the $command if it exceeds the $timeout
+    { sleep $timeout
+      if ps -p $command_pid > /dev/null 2>&1; then
+        kill -9 $command_pid > /dev/null 2>&1
+      fi
+    } &
+    timeout_pid=$!
+
+    # Wait for $command to complete and get it's return code.
+    wait $command_pid
+    rc=$?
+
+    # Ensure background timeout tasks are stopped.
+    if ps -p $timeout_pid > /dev/null 2>&1; then
+      kill -9 $timeout_pid > /dev/null 2>&1
+    fi
+
+    # Check whether the command was successful
+    if [ "$rc" -eq "0" ]; then
       echo 0
       return
     fi
 
-    retries=$retries-1
-    if [ "$retries" -eq "0" ]; then
-      ocf_log error "$group $error_message!"
+    # Check whether there are anymore attempts
+    attempts=$attempts-1
+    if [ "$attempts" -le "0" ]; then
+      ocf_log error "$group rc=$rc, msg=$error_message!"
       echo 1
       return
     fi
 
+    stop=$(date +%s%N)
+    delay=$(echo "scale=2; duration=($stop-$start)/1000000000; timeout=$timeout; delay=$timeout-duration; if (duration > timeout) { print 0 } else { print delay }" | bc)
     sleep $delay
-    ocf_log warn "$error_message Retrying..."
+    ocf_log warn "$group rc=$rc, msg=$error_message! Retrying..."
   done
 }
 
@@ -410,9 +417,11 @@ beegfs_monitor_monitor() {
     return $ha_pseudo_resource_status
   fi
 
-  retry_command_until_success "check_filesystem_mounts" "Target(s) are not accessible!" 5 2 > $shm_group_path/status/storage &  # Max 10+ seconds
-  retry_command_until_success "check_network_connectivity" "Network is not reachable!" 3 1 > $shm_group_path/status/network &   # Ping tests has a timeout of 2 seconds. Max time 9+ seconds
-  retry_command_until_success "check_resource_service" "BeeGFS service is not active!" 1 0 > $shm_group_path/status/service &   # No delay is needed since only tested once.
+  # Check services and force a failure after 10 seconds
+                             # Calling function             Error message                     Attempts  Delay   Status file
+  retry_command_until_success "check_filesystem_mounts"     "Target(s) are not accessible!"   3         {{ "%0.2f" % (beegfs_ha_resource_monitor_monitor_timeout | regex_replace("[A-Za-z]*", "") | float / 3) | float }}    > $shm_group_path/status/storage &
+  retry_command_until_success "check_network_connectivity"  "Network is not reachable!"       3         {{ "%0.2f" % (beegfs_ha_resource_monitor_monitor_timeout | regex_replace("[A-Za-z]*", "") | float / 3) | float }}    > $shm_group_path/status/network &
+  retry_command_until_success "check_resource_service"      "BeeGFS service is not active!"   1         {{ "%0.2f" % (beegfs_ha_resource_monitor_monitor_timeout | regex_replace("[A-Za-z]*", "") | float / 1) | float }}    > $shm_group_path/status/service &
   wait
 
   if [ "$(cat $shm_group_path/status/storage)" -ne "0" ] || [ "$(cat $shm_group_path/status/network)" -ne "0" ] || [ "$(cat $shm_group_path/status/service)" -ne "0" ]; then
