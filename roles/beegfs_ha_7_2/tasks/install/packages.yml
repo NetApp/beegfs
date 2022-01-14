@@ -14,14 +14,14 @@
   when: node_info["services"] | length > 0
   become: true
 
-- name: Ensure expected BeeGFS packages are installed (Always).
+- name: Ensure expected BeeGFS packages are installed.
   include_tasks: "packages/{{ ansible_os_family | lower }}.yml"
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
 
-- name: Ensure expected high-availability packages are installed on Pacemaker cluster node (Always).
+- name: Ensure expected high-availability packages are installed on Pacemaker cluster node.
   include_tasks: "packages/{{ ansible_os_family | lower }}_cluster_node.yml"
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and beegfs_ha_pacemaker_cluster_node == True
 
-- name: Ensure expected high-availability packages are installed on Pacemaker remote node (Always).
+- name: Ensure expected high-availability packages are installed on Pacemaker remote node.
   include_tasks: "packages/{{ ansible_os_family | lower }}_remote_node.yml"
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and beegfs_ha_pacemaker_cluster_node == False

@@ -47,7 +47,7 @@
         - name: Ensure multipath and protocol are setup.
           include_role:
             name: netapp_eseries.host.storage_setup
-          when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+          when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
           vars:
             eseries_common_force_skip_uninstall: true
       tags:
@@ -59,7 +59,7 @@
         - name: Ensure volumes are formatted but not mounted.
           include_role:
             name: netapp_eseries.host.mount
-          when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+          when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
           vars:
             eseries_mount_volumes: []   # This ensures that no volumes get mounted
             eseries_mount_skip_unmount: true
@@ -105,9 +105,9 @@
         - beegfs_ha
         - beegfs_ha_performance_tuning
 
-    - name: Ensure common BeeGFS HA tasks are applied to BeeGFS service nodes (Management/Metadata/Storage).
+    - name: Ensure common BeeGFS HA tasks are applied to all cluster nodes.
       block:
-        - name: Ensure common BeeGFS HA tasks are applied to BeeGFS service nodes (Management/Metadata/Storage).
+        - name: Ensure common BeeGFS HA tasks are applied to all cluster nodes.
           ansible.builtin.include_tasks: common.yml
       when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       tags:
@@ -115,8 +115,12 @@
         - beegfs_ha_configure
         - beegfs_ha
 
-    - name: Ensure BeeGFS HA cluster is configured.
+    - name: Ensure BeeGFS services are configured on cluster nodes.
       block:
+        - name: Ensure common BeeGFS HA service tasks are configured.
+          ansible.builtin.include_tasks: services/common.yml
+          when: node_info["services"] | length > 0
+
         - name: Ensure BeeGFS HA management resource group is configured.
           ansible.builtin.include_tasks: services/management.yml
           when: '"management" in node_info["services"]'
