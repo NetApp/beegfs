@@ -75,9 +75,9 @@
         - beegfs_ha_configure
         - beegfs_ha
 
-    - name: Setup and configure BeeGFS on hosts.
+    - name: Ensure expected BeeGFS and HA packages are installed
       block:
-        - name: Ensure expected BeeGFS packages are installed.
+        - name: Ensure expected BeeGFS and HA packages are installed
           ansible.builtin.include_tasks: packages.yml
       when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       tags:
