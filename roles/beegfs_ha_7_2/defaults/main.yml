@@ -144,6 +144,16 @@ beegfs_ha_beegfs_storage_conf_default_options:                        # Default 
   tuneFileWriteSize: 2048k
   connUseRDMA: "true"
 
+# Journald logging defaults
+beegfs_ha_journald_allow_changes: true                    # Allows changes to be made to journald configuration changes.
+beegfs_ha_journald_options:                               # Default journald configuration options. These key-value pairs will be applied to the journal.conf file.
+  Storage: persistent
+  Compress: "true"
+  SystemMaxUse: 50G
+  SystemKeepFree: 10G
+  SystemMaxFileSize: 256M
+  SystemMaxFiles: 2000
+
 # NTP configuration defaults
 beegfs_ha_ntp_configuration_file: /etc/ntp.conf
 beegfs_ha_chrony_configuration_file: /etc/chrony.conf

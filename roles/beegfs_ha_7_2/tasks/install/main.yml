@@ -68,6 +68,15 @@
         - storage_format
         - storage
 
+    - name: Ensure journald configuration options are configured.
+      block:
+        - name: Ensure journald configuration options are configured.
+          include_tasks: common/journald.yml
+      when: beegfs_ha_journald_allow_changes and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+      become: true
+      tags:
+        - journald
+
     - name: Update volume path information.
       import_tasks: ../update_facts.yml
       tags:

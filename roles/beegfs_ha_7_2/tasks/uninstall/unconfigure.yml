@@ -53,6 +53,13 @@
     state: absent
   become: true
 
+- name: Remove journald configuration.
+  ansible.builtin.file:
+    path: /etc/systemd/journald.conf.d/eseries_beegfs_ha.conf
+    state: absent
+  become: true
+  when: beegfs_ha_journald_allow_changes
+
 - name: Remove BeeGFS required sysctl.conf entries.
   sysctl:
     name: "{{ item['key'] }}"
