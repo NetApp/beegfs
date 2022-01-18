@@ -1,11 +1,18 @@
 # Role Tags
 The BeeGFS HA Role has a set of tags that can be used to perform a subset of tasks instead of running an entire playbook. Running with tags can save a substantial amount to time when executing a playbook. Below is a list of all the tags supported by the BeeGFS HA Role. Tags run all ansible tasks that are associated with the tag.
+
+<br>
+
 ## Table of Contents
+----------------
 1. [Role Tags](#role-tags)
+
+
+<br>
 
 <a name="role-tags"></a>
 ## All Role Tags
----------
+-----------------
 Use the following tags when executing your BeeGFS HA playbook to only execute select tasks:
 
         example: `ansible-playbook -i inventory.yml playbook.yml --tags beegfs_ha_configure`
