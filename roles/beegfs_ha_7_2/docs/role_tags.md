@@ -17,7 +17,7 @@ Use the following tags when executing you BeeGFS HA playbook to only execute sel
     - beegfs_ha_package                          # All BeeGFS HA package tasks.
     - beegfs_ha_configure                        # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
     - beegfs_ha_configure_resource               # All BeeGFS HA pacemaker resource tasks.
-    - beegfs_ha_move_resource_to_preferred_node  # Restore all resources to their preferred nodes.
+    - beegfs_ha_move_all_to_preferred            # Restore all resources to their preferred nodes.
     - beegfs_ha_performance_tuning               # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
     - beegfs_ha_backup                           # Backup Pacemaker and Corosync configuration files.
     - beegfs_ha_client                           # Configures BeeGFS clients (Ensure BeeGFS is configured and running).

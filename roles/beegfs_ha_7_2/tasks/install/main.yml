@@ -171,7 +171,7 @@
       when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       become: true
       tags:
-        - beegfs_ha_move_resource_to_preferred_node
+        - beegfs_ha_move_all_to_preferred
         - beegfs_ha_configure_resource
         - beegfs_ha_configure
         - beegfs_ha
@@ -236,7 +236,7 @@
       when: inventory_hostname == preferred_management_node
       become: true
       tags:
-        - beegfs_ha_move_resource_to_preferred_node
+        - beegfs_ha_move_all_to_preferred
         - beegfs_ha_configure_resource
         - beegfs_ha_configure
         - beegfs_ha
