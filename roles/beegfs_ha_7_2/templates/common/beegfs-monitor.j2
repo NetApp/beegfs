@@ -231,6 +231,13 @@ check_filesystem_mounts() {
 }
 
 # Test the provided command. usage: retry_command_until_success [command] [error message] [attempts] [timeout]
+#   retry_command_until_success() provides a predictable timeout for each attempt and excludes the commands execution time from the total sleep delay.
+#   Note that the timeout command will not work in this situation since it is placed in the background and the monitor's functions have not been exported.
+#
+#   [command]       The test function or command that needs to be evaluated.
+#   [error message] Error message to be reported when a failed attempt occurs. Each failed attempt will issue warning messages with the final attempt issuing the error message.
+#   [attempts]      Number of failed attempts before reporting the error message.
+#   [timeout]       The full amount of time all failed attempts will take with the exception of the final attempt. The final attempt will immediately fail.
 retry_command_until_success() {
   command=$1
   error_message=$2
@@ -273,6 +280,7 @@ retry_command_until_success() {
       return
     fi
 
+    # Sleep the remainder of the timeout. This ensures each failed attempt only uses the timeout duration.
     stop=$(date +%s%N)
     delay=$(echo "scale=2; duration=($stop-$start)/1000000000; timeout=$timeout; delay=$timeout-duration; if (duration > timeout) { print 0 } else { print delay }" | bc)
     sleep $delay
@@ -417,11 +425,13 @@ beegfs_monitor_monitor() {
     return $ha_pseudo_resource_status
   fi
 
-  # Check services and force a failure after 10 seconds
-                             # Calling function             Error message                     Attempts  Delay   Status file
-  retry_command_until_success "check_filesystem_mounts"     "Target(s) are not accessible!"   3         {{ "%0.2f" % (beegfs_ha_resource_monitor_monitor_timeout | regex_replace("[A-Za-z]*", "") | float / 3) | float }}    > $shm_group_path/status/storage &
-  retry_command_until_success "check_network_connectivity"  "Network is not reachable!"       3         {{ "%0.2f" % (beegfs_ha_resource_monitor_monitor_timeout | regex_replace("[A-Za-z]*", "") | float / 3) | float }}    > $shm_group_path/status/network &
-  retry_command_until_success "check_resource_service"      "BeeGFS service is not active!"   1         {{ "%0.2f" % (beegfs_ha_resource_monitor_monitor_timeout | regex_replace("[A-Za-z]*", "") | float / 1) | float }}    > $shm_group_path/status/service &
+  # Check services.
+  #   ** beegfs-monitor.j2 templating node: The hardcoded attempts must correspond to the divisor in the timeout with an added 10% to ensure the monitor fails prior to the
+  #        pacemaker's monitoring timeout. For example, 3 attempts should result in a divisor of 3.3 which ensures all attempts will fail in about 54 seconds.
+                             # Calling function             Error message                     Attempts  Timeout   Status file
+  retry_command_until_success "check_filesystem_mounts"     "Target(s) are not accessible!"   3         {{ "%0.2f" % (beegfs_ha_resource_monitor_monitor_timeout | regex_replace("[A-Za-z]*", "") | float / 3.3) | float }}    > $shm_group_path/status/storage &
+  retry_command_until_success "check_network_connectivity"  "Network is not reachable!"       3         {{ "%0.2f" % (beegfs_ha_resource_monitor_monitor_timeout | regex_replace("[A-Za-z]*", "") | float / 3.3) | float }}    > $shm_group_path/status/network &
+  retry_command_until_success "check_resource_service"      "BeeGFS service is not active!"   1         {{ "%0.2f" % (beegfs_ha_resource_monitor_monitor_timeout | regex_replace("[A-Za-z]*", "") | float / 1.1) | float }}    > $shm_group_path/status/service &
   wait
 
   if [ "$(cat $shm_group_path/status/storage)" -ne "0" ] || [ "$(cat $shm_group_path/status/network)" -ne "0" ] || [ "$(cat $shm_group_path/status/service)" -ne "0" ]; then

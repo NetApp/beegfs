@@ -28,6 +28,8 @@ beegfs_ha_cluster_crm_config_defaults: # WARNING! These defaults are required fo
   symmetric-cluster: false  # Opt-in architecture
   fence-reaction: stop  # Allows cluster nodes with a fence resource to fence itself.
   concurrent-fencing: true # Allows cluster nodes to be fenced concurrently.
+  migration-limit: 24
+  batch-limit: 24
 
 beegfs_ha_cluster_resource_defaults:
   resource-stickiness: 15000
