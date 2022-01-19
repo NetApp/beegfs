@@ -41,7 +41,7 @@
   run_once: true
 
 # Determine management information.
-- name: Determine management group information.
+- name: Determine management information.
   set_fact:
     management_info: |-
       {%- set mgmt_group_info = {} -%}
