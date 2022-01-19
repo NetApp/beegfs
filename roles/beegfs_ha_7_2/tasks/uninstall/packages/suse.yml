@@ -31,18 +31,15 @@
       community.general.zypper:
         state: absent
         name: pacemaker
-      when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
 
     - name: Ensure ha-cluster-bootstrap is installed.
       community.general.zypper:
         state: absent
         name: corosync
-      when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
 
     - name: Ensure ha-cluster-bootstrap is uninstalled.
       community.general.zypper:
         state: absent
         name: ha-cluster-bootstrap
-      when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   become: true

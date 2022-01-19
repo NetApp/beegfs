@@ -139,10 +139,15 @@
 # Ensure pacemaker cib.xml has all theBeeGFS HA cluster nodes.
 - name: Ensure pacemaker cib.xml has only the expected BeeGFS HA cluster nodes.
   block:
+
+    # Adding a retry since sometimes the cluster isn't quite ready to provide node information.
     - name: Collect cluster node information.
       ansible.builtin.command: "crm_node --list"
       changed_when: false
       register: nodes_query
+      retries: 10
+      delay: 1
+      until: nodes_query["rc"] == 0
 
     - name: Determine the current cluster nodes.
       set_fact:

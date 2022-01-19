@@ -35,5 +35,4 @@
       - pcs
       - fence-agents-all
     autoremove: true
-  when: '"management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"]'
   become: true
