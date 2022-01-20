@@ -48,6 +48,13 @@ options:
             - When not specified, the file permissions will be determined by the operating system defaults.
         type: str
         required: false
+    block_message:
+        description: The message on the begin and end marker lines within the configuration file for options that were not found.
+        type: str
+        required: false
+        default: E-SERIES ANSIBLE MANAGED BLOCK
+notes:
+    - Configuration file with options that are not found will be placed at the end of the file within a comment block and a warning will be issued.
 """
 
 EXAMPLES = """
@@ -82,7 +89,8 @@ class CreateConfFile(object):
             options=dict(type="dict", required=False, default={}),
             pattern=dict(type="str", required=False, default="^([A-Za-z0-9_-]+)( *= *)(.*)$"),
             padding=dict(type="bool", required=False, default=True),
-            mode=dict(type="str", required=False)
+            mode=dict(type="str", required=False),
+            block_message=dict(type="str", required=False, default="E-SERIES ANSIBLE MANAGED BLOCK")
         )
         self.module = AnsibleModule(argument_spec=ansible_options,
                                     mutually_exclusive=[["path", "src"]],
@@ -100,6 +108,7 @@ class CreateConfFile(object):
         self.pattern = args["pattern"]
         self.padding = args["padding"]
         self.mode = args["mode"]
+        self.block_message = args["block_message"]
 
         self.copy_lines_cached = None
         self.update_required_cached = None
@@ -124,8 +133,18 @@ class CreateConfFile(object):
                         else:
                             self.copy_lines_cached[index] = "%s%s%s\n" % (option, equivalence, str(self.options.pop(option)))
             
+            # Check for whether any options were not used. If so, insert them into a comment block and issue a warning.
             if self.options:
-                self.module.warn("Warning! Option(s) were not used. Options: [%s]" % ", ".join(self.options))
+                self.copy_lines_cached.append("\n")
+                self.copy_lines_cached.append("# BEGIN %s\n" % self.block_message)
+                for option, value in self.options.items():
+                    if self.padding:
+                        self.copy_lines_cached.append("%s = %s\n" % (option, value))
+                    else:
+                        self.copy_lines_cached.append("%s=%s\n" % (option, value))
+                self.copy_lines_cached.append("# END %s\n" % self.block_message)
+                self.copy_lines_cached.append("\n")
+                self.module.warn("Warning! Option(s) were not found and have been placed within a comment block at the end of the configuration file. Option(s) not found: [%s]" % ", ".join(self.options))
         
         return self.copy_lines_cached
 
