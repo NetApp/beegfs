@@ -194,14 +194,14 @@ beegfs_ha_uninstall_reboot: false                                   # Whether to
 
 
 
-# Package version defaults
-beegfs_ha_beegfs_version:                    # beegfs-* 7.2 (Control BeeGFS versioning with the installed repository)
-beegfs_ha_corosync_version:                  # Tested with corosync 3.1.5
-beegfs_ha_pacemaker_version:                 # Tested with pacemaker 2.1.0
-beegfs_ha_pcs_version:                       # Tested with pcs 0.10.8
-beegfs_ha_pacemaker_remote_version:          # Tested with pacemaker_remote 2.1.0
-beegfs_ha_resource_agent_version:            # Tested with 4.1.1
-beegfs_ha_fence_agents_all_version:          # Tested with 4.2.1
+# Package version defaults *Note that the following versions were used in testing.
+#beegfs_ha_beegfs_version: 7.2.5 (Control BeeGFS versioning with the installed repository)
+#beegfs_ha_corosync_version: 3.1.5
+#beegfs_ha_pacemaker_version: 2.1.0
+#beegfs_ha_pcs_version: 0.10.8
+#beegfs_ha_pacemaker_remote_version: 2.1.0
+#beegfs_ha_resource_agent_version: 4.1.1
+#beegfs_ha_fence_agents_all_version: 4.2.1
 beegfs_ha_force_beegfs_patch_upgrade: false  # Major and master versions must not change; however the patch versions can and this flag will ensure that its the latest version.
 
 # Volume formatting and mounting defaults
