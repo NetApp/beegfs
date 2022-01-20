@@ -68,7 +68,7 @@
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/connInterfacesFile.conf"
     mode: "0644"
   loop: "{{ node_info['metadata'] }}"
-  register: connInterfacesFile_conf
+  register: metadata_interface_conf
   when: inventory_hostname == item['preferred_node_order'][0]
   become: true
 
@@ -78,7 +78,7 @@
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/connNetFilterFile.conf"
     mode: "0644"
   loop: "{{ node_info['metadata'] }}"
-  register: connNetFilterFile_conf
+  register: metadata_filter_conf
   when: inventory_hostname == item['preferred_node_order'][0]
   become: true
 
@@ -98,7 +98,39 @@
       {{- item["service_configuration_options"] | combine(required_options) -}}
     mode: "0644"
   loop: "{{ node_info['metadata'] }}"
+  register: metadata_service_conf
   when: inventory_hostname == item['preferred_node_order'][0]
+  become: true
+
+- name: Determine BeeGFS metadata services that need to be restarted.
+  ansible.builtin.set_fact:
+    restart_metadata_services: |-
+      {%- set services = [] -%}
+      {%- for result in metadata_interface_conf["results"] if result["changed"] -%}
+        {%- set service = "beegfs-meta@" ~ result["item"]["volumes"][0]["name"] ~ ".service" -%}
+        {%- if ansible_facts.services[service]['state'] == 'running' -%}
+          {%- if services.append(service) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- for result in metadata_filter_conf["results"] if result["changed"] -%}
+        {%- set service = "beegfs-meta@" ~ result["item"]["volumes"][0]["name"] ~ ".service" -%}
+        {%- if service not in services and ansible_facts.services[service]['state'] == 'running' -%}
+          {%- if services.append(service) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- for result in metadata_service_conf["results"] if result["changed"] -%}
+        {%- set service = "beegfs-meta@" ~ result["item"]["volumes"][0]["name"] ~ ".service" -%}
+        {%- if service not in services and ansible_facts.services[service]['state'] == 'running' -%}
+          {%- if services.append(service) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- services -}}
+
+- name: Restart BeeGFS metadata services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: restarted
+  loop: "{{ restart_metadata_services }}"
   become: true
 
 - name: Initialize management storage directory for beegfs-meta server daemon and update the beegfs-meta config file.

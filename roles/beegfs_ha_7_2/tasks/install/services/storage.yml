@@ -91,7 +91,7 @@
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/connInterfacesFile_conf.j2') }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config/connInterfacesFile.conf"
   loop: "{{ node_info['storage'] }}"
-  register: connInterfacesFile_conf
+  register: storage_interface_conf
   when: inventory_hostname == item['preferred_node_order'][0]
   become: true
 
@@ -100,7 +100,7 @@
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/connNetFilterFile_conf.j2') }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config/connNetFilterFile.conf"
   loop: "{{ node_info['storage'] }}"
-  register: connNetFilterFile_conf
+  register: storage_filter_conf
   when: inventory_hostname == item['preferred_node_order'][0]
   become: true
 
@@ -123,7 +123,39 @@
       {{- item["service_configuration_options"] | combine(required_options) -}}
     mode: "0644"
   loop: "{{ node_info['storage'] }}"
+  register: storage_service_conf
   when: inventory_hostname == item['preferred_node_order'][0]
+  become: true
+
+- name: Determine BeeGFS storage services that need to be restarted.
+  ansible.builtin.set_fact:
+    restart_storage_services: |-
+      {%- set services = [] -%}
+      {%- for result in storage_interface_conf["results"] if result["changed"] -%}
+        {%- set service = "beegfs-storage@" ~ result["item"]["volumes"][0]["name"] ~ ".service" -%}
+        {%- if ansible_facts.services[service]['state'] == 'running' -%}
+          {%- if services.append(service) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- for result in storage_filter_conf["results"] if result["changed"] -%}
+        {%- set service = "beegfs-storage@" ~ result["item"]["volumes"][0]["name"] ~ ".service" -%}
+        {%- if service not in services and ansible_facts.services[service]['state'] == 'running' -%}
+          {%- if services.append(service) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- for result in storage_service_conf["results"] if result["changed"] -%}
+        {%- set service = "beegfs-storage@" ~ result["item"]["volumes"][0]["name"] ~ ".service" -%}
+        {%- if service not in services and ansible_facts.services[service]['state'] == 'running' -%}
+          {%- if services.append(service) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- services -}}
+
+- name: Restart BeeGFS storage services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: restarted
+  loop: "{{ restart_storage_services }}"
   become: true
 
 - name: Initialize storage directory for beegfs-storage server daemon and update beegfs-storage config file.
