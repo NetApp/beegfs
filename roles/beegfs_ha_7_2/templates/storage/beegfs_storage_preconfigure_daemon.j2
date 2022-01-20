@@ -1,6 +1,0 @@
-{% set numa_num = item['beegfs_numa '] | default('') %}
-{% if numa_num != "" %}
-
-exec /usr/bin/numactl --cpunodebind={{ numa_num }} --membind={{ numa_num }} /opt/beegfs/sbin/beegfs-storage cfgFile=/etc/beegfs/%I.d/beegfs-storage.conf runDaemonized=false
-
-{% endif %}
