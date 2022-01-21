@@ -134,6 +134,59 @@ get_parent_slaves() {
   echo $parent_slaves
 }
 
+# Dump a log of the current state of BeeGFS HA resource running on the cluster node.
+dump_cluster_node_state() {
+  for resource_path in /dev/shm/eseries_beegfs_ha/*; do
+    echo "=== $resource_path ===";
+
+    for resource_file in $resource_path; do
+      if [ -f $resource_file ]; then
+        echo "${resource_file}: $(cat $resource_file)"
+      fi
+    done
+
+    # Log status information.
+    if [ -d $resource_path/status ]; then
+      for status_path in $resource_path/status/*; do
+        if [ -f $status_path ]; then
+          echo "${status_path}: $(cat $status_path)"
+        fi
+      done
+    fi
+
+    # Log interface information.
+    if [ -d $resource_path/interfaces ]; then
+      for interface_path in $resource_path/interfaces/*; do
+        if [ -f $interface_path ]; then
+          echo "${interface_path}: $(cat $interface_path)"
+          interface=$(basename $interface_path)
+          ip addr show dev $interface
+          ip neigh show dev $interface
+        fi
+      done
+    fi
+
+    # Log storage device information.
+    if [ -d $resource_path/devices ]; then
+      for device_path in $resource_path/devices/*; do
+        if [ -f $device_path ]; then
+          echo "${device_path}: $(cat $device_path)"
+        fi
+
+        if [ -d $device_path/stats ]; then
+          for stat_file in $device_path/stats/*/*; do
+            if [ -f $stat_file ] || [ -h $stat_file ]; then
+              echo "${stat_file}: $(cat $stat_file)"
+            fi
+          done
+        fi
+      done
+    fi
+
+    echo
+  done > /var/log/beegfs_ha_${group}_dump.log
+}
+
 # Ping specified IP address from select interface until successful or retries are exhausted.
 ping_interface() {
   interface=$1
@@ -148,6 +201,7 @@ ping_interface() {
 check_network_connectivity() {
 
   # Issue all pings to known neighbors in parallel
+  pids=
   mgmt_ip=$(cat $shm_group_path/mgmt_ip)
   for interfaces_path in $shm_group_path/interfaces/*; do
     interface=$(basename $interfaces_path)
@@ -159,6 +213,7 @@ check_network_connectivity() {
     true > $interfaces_path
     for address in $addresses $mgmt_ip; do
       ping_interface $interface $address >> $interfaces_path &
+      pids="$pids $!"
     done
   done
 
@@ -169,7 +224,23 @@ check_network_connectivity() {
         return 0
       fi
     done
+
+    # Check for whether ping processes have completed.
+    pings_complete=0
+    for pid in $pids; do
+      if ps -p $pid > /dev/null 2>&1; then
+        pings_complete=1
+        break
+      fi
+    done
+
+    # Fail if all ping processes have completed.
+    if [ "$pings_complete" -eq "0" ]; then
+      break
+    fi
   done
+
+  return 1
 }
 
 # Check whether block device is actively completing I/O.
@@ -275,7 +346,9 @@ retry_command_until_success() {
     # Check whether there are anymore attempts
     attempts=$attempts-1
     if [ "$attempts" -le "0" ]; then
+      dump_cluster_node_state
       ocf_log error "$group rc=$rc, msg=$error_message!"
+      ocf_exit_reason "$error_message"
       echo 1
       return
     fi
