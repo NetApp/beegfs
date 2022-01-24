@@ -161,7 +161,6 @@ dump_cluster_node_state() {
           echo "${interface_path}: $(cat $interface_path)"
           interface=$(basename $interface_path)
           ip addr show dev $interface
-          ip neigh show dev $interface
         fi
       done
     fi
@@ -184,64 +183,57 @@ dump_cluster_node_state() {
     fi
 
     echo
-  done > /var/log/beegfs_ha_${group}_dump.log
+  done > /var/log/netapp/beegfs_ha_${group}_dump.log-$(date +%s)
 }
 
-# Ping specified IP address from select interface until successful or retries are exhausted.
-ping_interface() {
+# Determine the interface's link state
+interface_state() {
   interface=$1
-  address=$2
-
-  if ping -I "$interface" -W 2 -c 1 "$address" > /dev/null 2>&1 ; then
-      echo -n "$address "
+  if ip -oneline link show dev $interface | grep "state UP" > /dev/null 2>&1; then
+    echo "up"
+  else
+    echo "down"
   fi
 }
 
-# Returns whether at least one of the BeeGFS resource group's communication interface(s) are able to communicate on the network.
 check_network_connectivity() {
 
-  # Issue all pings to known neighbors in parallel
+  # Determine whether the service links are up. This is done in parallel in the case interface_state hangs for one of the interfaces.
   pids=
-  mgmt_ip=$(cat $shm_group_path/mgmt_ip)
-  for interfaces_path in $shm_group_path/interfaces/*; do
-    interface=$(basename $interfaces_path)
-    addresses="$(ip neigh show dev $interface | grep -E "(REACHABLE|STALE)" | sort -k 4 | cut -f 1 -d ' ' | head -n 10)"
-    if [ -z "$addresses" ]; then
-      addresses=$(cat $interfaces_path)
-    fi
+  for interface_path in $shm_group_path/interfaces/*; do
+    interface=$(basename $interface_path)
 
-    true > $interfaces_path
-    for address in $addresses $mgmt_ip; do
-      ping_interface $interface $address >> $interfaces_path &
-      pids="$pids $!"
-    done
+    true > $interface_path
+    interface_state $interface > $interface_path &
+    pids="$pids $!"
   done
 
-  # Wait until connectivity is verified
+  # Wait for an 'up' interface or for status checks to complete with 'down' states.
   while true; do
-    for interfaces_path in $shm_group_path/interfaces/*; do
-      if [ -s $interfaces_path ]; then
+
+    for interface_path in $shm_group_path/interfaces/*; do
+      if [ -s $interfaces_path ] && [ "$(cat $interface_path)" = "up" ]; then
         return 0
       fi
     done
 
-    # Check for whether ping processes have completed.
-    pings_complete=0
+    # Check for whether background processes have completed.
+    check_complete=0
     for pid in $pids; do
       if ps -p $pid > /dev/null 2>&1; then
-        pings_complete=1
+        check_complete=1
         break
       fi
     done
 
-    # Fail if all ping processes have completed.
-    if [ "$pings_complete" -eq "0" ]; then
+    if [ "$check_complete" -eq "0" ]; then
       break
     fi
   done
 
   return 1
 }
+
 
 # Check whether block device is actively completing I/O.
 is_device_active() {
@@ -420,6 +412,7 @@ END
 }
 
 beegfs_monitor_start() {
+  mkdir -p /var/log/netapp
   mkdir -p $shm_group_path/devices
   mkdir $shm_group_path/status
 
