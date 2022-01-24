@@ -95,7 +95,7 @@
       ansible.builtin.systemd:
         name: beegfs-mgmtd.service
         state: restarted
-      when: ansible_facts.services['beegfs-mgmtd.service']['state'] == 'running' and (mgmtd_interface_conf['changed'] or mgmtd_filter_conf['changed'] or mgmtd_service_conf['changed'])
+      when: ansible_facts.services['beegfs-mgmtd.service']['state'] | default('') == 'running' and (mgmtd_interface_conf['changed'] or mgmtd_filter_conf['changed'] or mgmtd_service_conf['changed'])
 
     - name: Initialize management storage directory for beegfs-mgmtd server daemon and update the beegfs-mgmtd config file.
       ansible.builtin.command:

@@ -133,19 +133,19 @@
       {%- set services = [] -%}
       {%- for result in storage_interface_conf["results"] if result["changed"] -%}
         {%- set service = "beegfs-storage@" ~ result["item"]["volumes"][0]["name"] ~ ".service" -%}
-        {%- if ansible_facts.services[service]['state'] == 'running' -%}
+        {%- if ansible_facts.services[service]['state'] | default('') == 'running' -%}
           {%- if services.append(service) -%}{%- endif -%}
         {%- endif -%}
       {%- endfor -%}
       {%- for result in storage_filter_conf["results"] if result["changed"] -%}
         {%- set service = "beegfs-storage@" ~ result["item"]["volumes"][0]["name"] ~ ".service" -%}
-        {%- if service not in services and ansible_facts.services[service]['state'] == 'running' -%}
+        {%- if service not in services and ansible_facts.services[service]['state'] | default('') == 'running' -%}
           {%- if services.append(service) -%}{%- endif -%}
         {%- endif -%}
       {%- endfor -%}
       {%- for result in storage_service_conf["results"] if result["changed"] -%}
         {%- set service = "beegfs-storage@" ~ result["item"]["volumes"][0]["name"] ~ ".service" -%}
-        {%- if service not in services and ansible_facts.services[service]['state'] == 'running' -%}
+        {%- if service not in services and ansible_facts.services[service]['state'] | default('') == 'running' -%}
           {%- if services.append(service) -%}{%- endif -%}
         {%- endif -%}
       {%- endfor -%}
