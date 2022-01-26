@@ -211,18 +211,18 @@ check_network_connectivity() {
   # Wait for an 'up' interface or for status checks to complete with 'down' states.
   while true; do
 
-    for interface_path in $shm_group_path/interfaces/*; do
-      if [ -s $interfaces_path ] && [ "$(cat $interface_path)" = "up" ]; then
-        return 0
-      fi
-    done
-
     # Check for whether background processes have completed.
     check_complete=0
     for pid in $pids; do
       if ps -p $pid > /dev/null 2>&1; then
         check_complete=1
         break
+      else
+        for interface_path in $shm_group_path/interfaces/*; do
+          if [ "$(cat $interface_path)" = "up" ]; then
+            return 0
+          fi
+        done
       fi
     done
 
