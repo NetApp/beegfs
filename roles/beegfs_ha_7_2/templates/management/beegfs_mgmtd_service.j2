@@ -12,7 +12,9 @@ Type=simple
 
 # If the sysTargetOfflineTimeoutSecs in beegfs-mgmtd.conf is set over 240, this value needs to be
 # adjusted accordingly. Recommendation: sysTargetOfflineTimeoutSecs + 60
-TimeoutStopSec=300
+# BeeGFS Default: 300. For BeeGFS HA adjusting to be sysTargetOfflineTimeoutSecs (180) + 60.
+# IMPORTANT: If this is changed adjust beegfs_ha_resource_systemd_mgmt_stop_timeout to avoid Pacemaker stop failures.
+TimeoutStopSec=240
 
 [Install]
 WantedBy=default.target
