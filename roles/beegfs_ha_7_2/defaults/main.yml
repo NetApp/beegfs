@@ -48,6 +48,7 @@ beegfs_ha_resource_monitor_start_timeout: 120s       # The monitored BeeGFS ipad
 beegfs_ha_resource_monitor_stop_timeout: 30s         # This is only the timeout for beegfs_monitor_stop() to complete (not the BeeGFS resource group).
 beegfs_ha_resource_monitor_migration_threshold: 1    # BeeGFS monitoring service failures before migrating away from failed node.
 beegfs_ha_resource_filesystem_monitor_interval: 17s  # ocf:heartbeat:Filesystem resource monitor operation interval
+beegfs_ha_resource_filesystem_stor_start_timeout: 60s # After an unclean unmount it make take 35s+ to run XFS journal recovery on a busy system.
 beegfs_ha_resource_filesystem_stop_timeout: 30s      # ocf:heartbeat:Filesystem resource stop operation interval
 
 beegfs_ha_resource_ipaddr_monitor_interval: 17s      # ocf:eseries:beegfs-ipaddr2 resource monitor operation interval
