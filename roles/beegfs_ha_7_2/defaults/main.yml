@@ -28,12 +28,12 @@ beegfs_ha_cluster_crm_config_defaults: # WARNING! These defaults are required fo
   symmetric-cluster: false  # Opt-in architecture
   fence-reaction: stop  # Allows cluster nodes with a fence resource to fence itself.
   concurrent-fencing: true # Allows cluster nodes to be fenced concurrently.
-  migration-limit: 24
-  batch-limit: 24
+  migration-limit: 12
+  batch-limit: 12
+  cluster-ipc-limit: 5500
 
 beegfs_ha_cluster_resource_defaults:
   resource-stickiness: 15000
-  cluster-ipc-limit: 500
 beegfs_ha_fencing_agents: {}
 beegfs_ha_backup: true
 beegfs_ha_backup_path: /tmp/
@@ -44,7 +44,7 @@ beegfs_ha_force_resource_move: true   # Forces node and resource changes to migr
 beegfs_ha_resource_agent_path: /usr/lib/ocf/resource.d/
 beegfs_ha_resource_monitor_monitor_interval: 10s     # BeeGFS monitoring service monitor interval - Time interval from end of monitor action call to the start of another monitor action call.
 beegfs_ha_resource_monitor_monitor_timeout: 60s      # BeeGFS monitoring service monitor timeout - Maximum time allowed for the monitor action call before failing.
-beegfs_ha_resource_monitor_start_timeout: 120s       # The monitored BeeGFS ipaddr, filesystem, and systemd service must start within this timeframe.
+beegfs_ha_resource_monitor_start_timeout: 180s       # The monitored BeeGFS ipaddr, filesystem, and systemd service must start within this timeframe.
 beegfs_ha_resource_monitor_stop_timeout: 30s         # This is only the timeout for beegfs_monitor_stop() to complete (not the BeeGFS resource group).
 beegfs_ha_resource_monitor_migration_threshold: 1    # BeeGFS monitoring service failures before migrating away from failed node.
 beegfs_ha_resource_filesystem_monitor_interval: 17s  # ocf:heartbeat:Filesystem resource monitor operation interval
