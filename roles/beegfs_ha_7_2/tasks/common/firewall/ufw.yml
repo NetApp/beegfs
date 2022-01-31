@@ -29,7 +29,8 @@
       {%- endfor -%}
       {{- ports -}}
 
-- name: "Ensure the required firewall ports are allowed"
+# This block is for the install code path.
+- name: Ensure the required firewall ports are allowed
   block:
     - name: Enable ufw.
       community.general.ufw:
@@ -41,13 +42,13 @@
         rule: allow
         port: "{{ item[0] }}"
         proto: "{{ item[1]] }}"
-      register: ufw_allow_ports
       loop: "{{ ports }}"
       when: beegfs_ha_firewall_allow_required_ports
   when: allow_ports
   become: true
 
-- name: "Remove all required firewall ports for each BeeGFS cluster service."
+# This block is for the uninstall code path and will only be executed beegfs_ha_firewall_allow_required_ports==True
+- name: Remove all required firewall ports rules for each BeeGFS cluster service.
   block:
     - name: Remove all required firewall ports for each BeeGFS cluster service.
       community.general.ufw:
@@ -55,8 +56,6 @@
         rule: allow
         port: "{{ item[0] }}"
         proto: "{{ item[1]] }}"
-      register: ufw_allow_ports
       loop: "{{ ports }}"
-      when: beegfs_ha_firewall_allow_required_ports
-  when: not allow_ports
+  when: not allow_ports and beegfs_ha_firewall_allow_required_ports
   become: true

@@ -29,7 +29,8 @@
       {%- endfor -%}
       {{- ports -}}
 
-- name: "Ensure the required firewalld ports are enabled."
+# This block is for the install code path.
+- name: Ensure the required firewalld ports are enabled.
   block:
     - name: Start and enable the firewalld service
       ansible.builtin.systemd:
@@ -50,7 +51,8 @@
   when: allow_ports
   become: true
 
-- name: "Ensure the required firewalld ports are disabled."
+# This block is for the uninstall code path and will only be executed beegfs_ha_firewall_allow_required_ports==True
+- name: Ensure the required firewalld ports are disabled.
   block:
     - name: Disable required firewalld ports for each BeeGFS cluster service.
       ansible.posix.firewalld:
@@ -60,7 +62,5 @@
         immediate: true
         offline: true
       loop: "{{ ports }}"
-      when: beegfs_ha_firewall_allow_required_ports
-      vars:
-  when: not allow_ports
+  when: not allow_ports and beegfs_ha_firewall_allow_required_ports
   become: true
