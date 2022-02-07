@@ -39,7 +39,7 @@
       <nvpair id="{{ group }}-FS{{ loop["index"] }}-instance_attributes-force_unmount" name="force_unmount" value="true"/>
     </instance_attributes>
     <operations>
-      <op id="{{ group }}-FS{{ loop["index"] }}-start" interval="0s" name="start"/>
+      <op id="{{ group }}-FS{{ loop["index"] }}-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_filesystem_stor_start_timeout }}"/>
       <op id="{{ group }}-FS{{ loop["index"] }}-monitor" interval="{{ beegfs_ha_resource_filesystem_monitor_interval }}" name="monitor" on-fail="restart"/>
       <op id="{{ group }}-FS{{ loop["index"] }}-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_filesystem_stop_timeout }}"/>
     </operations>
@@ -92,7 +92,7 @@
     <operations>
       <op id="{{ group }}-service-start" interval="0s" name="start"/>
       <op id="{{ group }}-service-monitor" interval="{{ beegfs_ha_resource_systemd_monitor_interval }}" name="monitor" on-fail="restart"/>
-      <op id="{{ group }}-service-stop" interval="0s" name="stop"/>
+      <op id="{{ group }}-service-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_systemd_stor_stop_timeout }}"/>
     </operations>
   </primitive>
 </group>
