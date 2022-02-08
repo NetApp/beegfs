@@ -1,35 +1,59 @@
 # Uninstall
+Uninstall will have the BeeGFS and HA applications, configuration, performance tunings, and mount points removed at 
+the minimum.
+
+<br>
 
 ## Table of Contents
+------------
 1. [How to Uninstall](#how-to-uninstall)
-## How to Uninstall (`beegfs_ha_uninstall: False`)
-----------------------------------------
-Uninstall your BeeGFS HA instance by setting `beegfs_ha_uninstall: True`. At minimum, BeeGFS and HA applications, configuration, performance tunings, and mount points will be removed. The uninstallation process requires the original inventory files so just modify the `beegfs_ha_uninstall_x` variables at the group level.
+2. [General Notes](#general-notes)
 
-The following variables are used to control the uninstallation:
+<br>
 
-- beegfs_ha_uninstall_unmap_volumes: false                              # Whether to unmap the volumes from the host only. This will not effect the data.
-- beegfs_ha_uninstall_wipe_format_volumes: false                        # Whether to wipe format signatures from volumes on the host. **WARNING! This action is unrecoverable.**
-- beegfs_ha_uninstall_delete_volumes: false                             # Whether to delete the volumes from the storage. **WARNING! This action is unrecoverable.**
-- beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false     # Whether to delete all storage pools/volume groups and host/host group mappings created for BeeGFS HA solution.
-                                                                        #   Be aware that removing storage pools/volume groups and host/host group mappings will effect any volumes or
-                                                                        #   host mappings dependent on them.  **WARNING! This action is unrecoverable.**
-- beegfs_ha_uninstall_storage_setup: false                              # Whether to remove configuration that allows storage to be accessible to the BeeGFS HA node (i.e. multipath,
-                                                                        #   communications protocols (iSCSI, IB iSER)).
-- beegfs_ha_uninstall_reboot: false                                     # Whether to reboot after uninstallation.
+<a name="how-to-uninstall"></a>
+## How to Uninstall
+------------
+The uninstall process requires the original inventory files used during the installation. Create an uninstall playbook 
+if not already has one from the same directory as the install playbook and set `beegfs_ha_uninstall: true`.
 
-Note that not setting `beegfs_ha_uninstall_wipe_format_volumes: true` when deleting and, subsequently, creating new volumes of the same size may result in recovering the original volume. While this is helpful if you unintentionally deleted the volumes, it can create mounting issues for the host.
+By default, the `beegfs_ha_uninstall` variable is set to false. When it is set to true, the uninstall tasks will be 
+executed. 
 
-#### Implied actions:
+There are other additional `beegfs_ha_uninstall_x` variables that can be set to perform more vigourous clean-up of the 
+systems. Please see the list of additional variables and their description at: 
+[BeeGFS HA Defaults](../defaults/main.yml)
 
-The following are an explicit list of implied actions.
+<br>
 
-- `beegfs_ha_uninstall_unmap_volumes: true`
-- `beegfs_ha_uninstall_storage_setup: true`
-    - `beegfs_ha_uninstall_unmap_volumes: true`
-- `eseries_unmount_delete: true`:
-    - `beegfs_ha_uninstall_unmap_volumes: true`
-- `beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: true`
-    - `beegfs_ha_uninstall_unmap_volumes: true`
-    - `eseries_unmount_delete: true`
+### Example Uninstall Playbook
+This playbook performs an uninstall of a BeeGFS HA instance where the BeeGFS HA services are unconfigured while the
+provisioned storage is retained. This file would typically be created as `uninstall_playbook.yml`:
 
+    - hosts: all
+      collections:
+        - netapp_eseries.beegfs
+      tasks:
+        - name: Ensure BeeGFS HA cluster is uninstalled.
+          import_role:
+            name: beegfs_ha_7_2
+          vars:
+            beegfs_ha_uninstall: true
+            beegfs_ha_uninstall_unmap_volumes: false
+            beegfs_ha_uninstall_wipe_format_volumes: false  # **WARNING: If set to true, this action is 
+                                                            #   unrecoverable.**
+            beegfs_ha_uninstall_delete_volumes: false       # **WARNING: If set to true, this action is 
+                                                            #   unrecoverable.**
+            beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false # **WARNING: If set to true, 
+                                                            #   this action is unrecoverable.**
+            beegfs_ha_uninstall_storage_setup: false
+            beegfs_ha_uninstall_reboot: false
+
+<br>
+
+<a name="general-notes"></a>
+## General Notes
+------------
+If `beegfs_ha_uninstall_wipe_format_volumes: true` is not set, then when user performs a volumes delete and, 
+subsequently, creates new volumes of the same size may result in recovering the original volume. While this is helpful 
+if the volumes were unintentionally deleted, it can create mounting issues for the BeeGFS HA cluster nodes.

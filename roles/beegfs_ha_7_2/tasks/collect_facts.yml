@@ -413,7 +413,7 @@
   run_once: true
 
 # Determine inventory preferred nodes for each resource group.
-- name: Determine resource group node preferrences.
+- name: Determine resource group node preferences.
   set_fact:
     resource_group_node_preference: |-
       {%- set group_info = {} -%}
