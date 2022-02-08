@@ -402,28 +402,18 @@
       {{- resource_group_info -}}
   run_once: true
 
-# Determine management information.
-- name: Determine management group information.
-  set_fact:
-    management_group_info: |-
-      {%- set mgmt_group_info = {} -%}
-
-      {%- for host in ansible_play_hosts_all -%}
-        {%- if "node_info" in (hostvars[host].keys() | list) and "management" in (hostvars[host]["node_info"].keys() | list) -%}
-          {%- if mgmt_group_info.update(hostvars[host]["node_info"]) -%}{%- endif -%}
-        {%- endif -%}
-      {%- endfor -%}
-      {{- mgmt_group_info -}}
-  run_once: true
-
 - name: Determine preferred management node.
   set_fact:
-    management_info: "{{ management_group_info['management'][0] }}"
-    preferred_management_node: "{{ management_group_info['management'][0]['preferred_node_order'][0] }}"
+    preferred_management_node: |-
+      {%- set nodes = [] -%}
+      {%- for group, info in resource_group_info.items() if not nodes -%}
+        {%- if nodes.extend(info["preferred_node_order"]) -%}{%- endif -%}
+      {%- endfor -%}
+      {{ nodes[0] }}
   run_once: true
 
 # Determine inventory preferred nodes for each resource group.
-- name: Determine resource group node preferrences.
+- name: Determine resource group node preferences.
   set_fact:
     resource_group_node_preference: |-
       {%- set group_info = {} -%}

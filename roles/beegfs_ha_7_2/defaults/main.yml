@@ -5,6 +5,8 @@ beegfs_ha_cluster_name: hacluster                          # Pacemaker cluster g
 beegfs_ha_cluster_username: hacluster                      # Cluster group's username
 beegfs_ha_cluster_password: hapassword                     # Cluster group's password
 beegfs_ha_cluster_password_sha512_salt: randomSalt         # Cluster group's password salt
+beegfs_ha_mgmtd_group: mgmt                                # BeeGFS HA managment resource group
+# beegfs_ha_mgmtd_floating_ip:                             # BeeGFS HA management resource floating IP address.
 # beegfs_ha_cluster_node_ips: []                           # Defines an order list of IP addresses or hostnames with the first having the highest priority. When
                                                            #    there are no listed IPs then node name will be used. Node names are defined in /etc/hosts.
 beegfs_ha_allow_firewall_high_availability_service: true   # Allow high-availability firewall services.
@@ -194,14 +196,14 @@ beegfs_ha_uninstall_reboot: false                                   # Whether to
 
 
 
-# Package version defaults
-beegfs_ha_beegfs_version:                    # beegfs-* 7.2 (Control BeeGFS versioning with the installed repository)
-beegfs_ha_corosync_version:                  # Tested with corosync 3.1.5
-beegfs_ha_pacemaker_version:                 # Tested with pacemaker 2.1.0
-beegfs_ha_pcs_version:                       # Tested with pcs 0.10.8
-beegfs_ha_pacemaker_remote_version:          # Tested with pacemaker_remote 2.1.0
-beegfs_ha_resource_agent_version:            # Tested with 4.1.1
-beegfs_ha_fence_agents_all_version:          # Tested with 4.2.1
+# Package version defaults *Note that the following versions were used in testing.
+#beegfs_ha_beegfs_version: 7.2.5 (Control BeeGFS versioning with the installed repository)
+#beegfs_ha_corosync_version: 3.1.5
+#beegfs_ha_pacemaker_version: 2.1.0
+#beegfs_ha_pcs_version: 0.10.8
+#beegfs_ha_pacemaker_remote_version: 2.1.0
+#beegfs_ha_resource_agent_version: 4.1.1
+#beegfs_ha_fence_agents_all_version: 4.2.1
 beegfs_ha_force_beegfs_patch_upgrade: false  # Major and master versions must not change; however the patch versions can and this flag will ensure that its the latest version.
 
 # Volume formatting and mounting defaults

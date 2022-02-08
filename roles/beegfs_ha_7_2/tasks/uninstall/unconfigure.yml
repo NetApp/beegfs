@@ -1,3 +1,6 @@
+- name: Stop cluster.
+  ansible.builtin.include_tasks: stop_cluster.yml
+
 - name: Ensure InfiniBand IPoIB is unconfigured.
   ansible.builtin.include_role:
     name: netapp_eseries.host.ipoib
