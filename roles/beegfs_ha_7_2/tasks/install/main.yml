@@ -172,7 +172,7 @@
             name: "{{ item }}"
           when: beegfs_ha_pacemaker_cluster_node
           loop: ["corosync", "pacemaker"]
-      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]`
+      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
       become: true
       tags:
         - beegfs_ha_move_resource_to_preferred_node
