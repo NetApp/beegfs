@@ -22,6 +22,10 @@
   include_vars: "{{ ansible_os_family | lower }}.yml"
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
+- name: Set facts for firewall configurations.
+  ansible.builtin.set_fact:
+    eseries_common_firewall_zone: "{{ beegfs_ha_firewall_zone }}"
+
 # Include all distribution-version variables that are prefixed with default_
 - name: Include all distribution-version variables that are prefixed with default_
   block:

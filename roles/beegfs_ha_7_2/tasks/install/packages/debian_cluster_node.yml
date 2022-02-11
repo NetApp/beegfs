@@ -57,9 +57,9 @@
       become: true
   when: beegfs_ha_chrony_enabled
 
-- name: Ensure the ufw is installed (Debian/Ubuntu - Cluster Nodes).
-  ansible.builtin.apt:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
-    name: ufw
-  when: beegfs_ha_firewall_start_and_enable
-  become: true
+# - name: Ensure the ufw is installed (Debian/Ubuntu - Cluster Nodes).
+#   ansible.builtin.apt:
+#     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+#     name: ufw
+#   when: beegfs_ha_firewall_start_and_enable
+#   become: true

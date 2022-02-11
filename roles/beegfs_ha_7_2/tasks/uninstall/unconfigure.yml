@@ -94,7 +94,7 @@
   become: true
 
 - name: Ensure the required firewall ports are closed.
-  include_tasks: ../common/firewall/unconfigure.yml
+  include_tasks: ../common/firewall/uninstall.yml
 
 - name: Reboot nodes
   reboot:

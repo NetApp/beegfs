@@ -9,9 +9,9 @@
       vars:
         allow_ports: false
 
-    - name: Unconfigure ufw service.
-      ansible.builtin.include_tasks: ufw.yml
-      when: ansible_facts["services"]["ufw.service"] is defined
-      vars:
-        allow_ports: false
+    # - name: Unconfigure ufw service.
+    #   ansible.builtin.include_tasks: ufw.yml
+    #   when: ansible_facts["services"]["ufw.service"] is defined
+    #   vars:
+    #     allow_ports: false
   become: true

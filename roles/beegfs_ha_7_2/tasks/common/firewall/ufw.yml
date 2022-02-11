@@ -1,61 +1,67 @@
-- name: Determine required ports.
-  ansible.builtin.set_fact:
-    ports: |-
-      {%- set ports = [] -%}
-      {%- for port in beegfs_ha_firewall_ufw_required_ports | default([]) if port | length == 2  -%}
-        {%- if ports.append(port[0] ~ "/" ~ port[1]) -%}{%- endif -%}
-      {%- endfor -%}
-      {%- for service_type in node_info["services"] | default([]) -%}
-        {%- for service in node_info[service_type] -%}
-          {%- if service["service_configuration_options"]["connMgmtdPortTCP"] is defined -%}
-            {%- if ports.append([service["service_configuration_options"]["connMgmtdPortTCP"], "/tcp"]) -%}{%- endif -%}
-          {%- endif -%}
-          {%- if service["service_configuration_options"]["connMgmtdPortUDP"] is defined -%}
-            {%- if ports.append([service["service_configuration_options"]["connMgmtdPortUDP"], "/udp"]) -%}{%- endif -%}
-          {%- endif -%}
-          {%- if service["service_configuration_options"]["connMetaPortTCP"] is defined -%}
-            {%- if ports.append([service["service_configuration_options"]["connMetaPortTCP"], "/tcp"]) -%}{%- endif -%}
-          {%- endif -%}
-          {%- if service["service_configuration_options"]["connMetaPortUDP"] is defined -%}
-            {%- if ports.append([service["service_configuration_options"]["connMetaPortUDP"], "/udp"]) -%}{%- endif -%}
-          {%- endif -%}
-          {%- if service["service_configuration_options"]["connStoragePortTCP"] is defined -%}
-            {%- if ports.append([service["service_configuration_options"]["connStoragePortTCP"], "/tcp"]) -%}{%- endif -%}
-          {%- endif -%}
-          {%- if service["service_configuration_options"]["connStoragePortUDP"] is defined -%}
-            {%- if ports.append([service["service_configuration_options"]["connStoragePortUDP"], "/udp"]) -%}{%- endif -%}
-          {%- endif -%}
-        {%- endfor -%}
-      {%- endfor -%}
-      {{- ports -}}
+# TODO: If Ubuntu wants to be implemented this will need to completed to match the functionality in firewalld.yml
+#   1) Create a beegfs profile (zone) specific for all required BeeGFS communications interfaces
+#   2) Allow require BeeGFS ports to be opened on the beegfs profile.
+#   3) Allow required HA ports to be opened on any profiles that have interfaces using IPs specified in
+#         beegfs_ha_cluster_node_ips defaulting to the beegfs profile.
 
-# This block is for the install code path.
-- name: Ensure the required firewall ports are allowed
-  block:
-    - name: Enable ufw.
-      community.general.ufw:
-        state: enabled
-      when: beegfs_ha_firewall_start_and_enable
+# - name: Determine required ports.
+#   ansible.builtin.set_fact:
+#     ports: |-
+#       {%- set ports = [] -%}
+#       {%- for port in beegfs_ha_firewall_required_ha_ports | default([]) if port | length == 2  -%}
+#         {%- if ports.append(port[0] ~ "/" ~ port[1]) -%}{%- endif -%}
+#       {%- endfor -%}
+#       {%- for service_type in node_info["services"] | default([]) -%}
+#         {%- for service in node_info[service_type] -%}
+#           {%- if service["service_configuration_options"]["connMgmtdPortTCP"] is defined -%}
+#             {%- if ports.append([service["service_configuration_options"]["connMgmtdPortTCP"], "/tcp"]) -%}{%- endif -%}
+#           {%- endif -%}
+#           {%- if service["service_configuration_options"]["connMgmtdPortUDP"] is defined -%}
+#             {%- if ports.append([service["service_configuration_options"]["connMgmtdPortUDP"], "/udp"]) -%}{%- endif -%}
+#           {%- endif -%}
+#           {%- if service["service_configuration_options"]["connMetaPortTCP"] is defined -%}
+#             {%- if ports.append([service["service_configuration_options"]["connMetaPortTCP"], "/tcp"]) -%}{%- endif -%}
+#           {%- endif -%}
+#           {%- if service["service_configuration_options"]["connMetaPortUDP"] is defined -%}
+#             {%- if ports.append([service["service_configuration_options"]["connMetaPortUDP"], "/udp"]) -%}{%- endif -%}
+#           {%- endif -%}
+#           {%- if service["service_configuration_options"]["connStoragePortTCP"] is defined -%}
+#             {%- if ports.append([service["service_configuration_options"]["connStoragePortTCP"], "/tcp"]) -%}{%- endif -%}
+#           {%- endif -%}
+#           {%- if service["service_configuration_options"]["connStoragePortUDP"] is defined -%}
+#             {%- if ports.append([service["service_configuration_options"]["connStoragePortUDP"], "/udp"]) -%}{%- endif -%}
+#           {%- endif -%}
+#         {%- endfor -%}
+#       {%- endfor -%}
+#       {{- ports -}}
 
-    - name: Allow all required firewall ports for each BeeGFS cluster service.
-      community.general.ufw:
-        rule: allow
-        port: "{{ item[0] }}"
-        proto: "{{ item[1]] }}"
-      loop: "{{ ports }}"
-      when: beegfs_ha_firewall_allow_required_ports
-  when: allow_ports
-  become: true
+# # This block is for the install code path.
+# - name: Ensure the required firewall ports are allowed
+#   block:
+#     - name: Enable ufw.
+#       community.general.ufw:
+#         state: enabled
+#       when: beegfs_ha_firewall_start_and_enable
 
-# This block is for the uninstall code path and will only be executed beegfs_ha_firewall_allow_required_ports==True
-- name: Remove all required firewall ports rules for each BeeGFS cluster service.
-  block:
-    - name: Remove all required firewall ports for each BeeGFS cluster service.
-      community.general.ufw:
-        delete: true
-        rule: allow
-        port: "{{ item[0] }}"
-        proto: "{{ item[1]] }}"
-      loop: "{{ ports }}"
-  when: not allow_ports and beegfs_ha_firewall_allow_required_ports
-  become: true
+#     - name: Allow all required firewall ports for each BeeGFS cluster service.
+#       community.general.ufw:
+#         rule: allow
+#         port: "{{ item[0] }}"
+#         proto: "{{ item[1]] }}"
+#       loop: "{{ ports }}"
+#       when: beegfs_ha_firewall_allow_required_ports
+#   when: allow_ports
+#   become: true
+
+# # This block is for the uninstall code path and will only be executed beegfs_ha_firewall_allow_required_ports==True
+# - name: Remove all required firewall ports rules for each BeeGFS cluster service.
+#   block:
+#     - name: Remove all required firewall ports for each BeeGFS cluster service.
+#       community.general.ufw:
+#         delete: true
+#         rule: allow
+#         port: "{{ item[0] }}"
+#         proto: "{{ item[1]] }}"
+#       loop: "{{ ports }}"
+#   when: not allow_ports and beegfs_ha_firewall_allow_required_ports
+#   become: true
