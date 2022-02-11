@@ -13,7 +13,7 @@
           #   TODO: To make this work either use our own logging or addresss the issues found in dependent libraries.
 
 # A niceness of -10 gives the beegfs-monitor process a higher priority than BeeGFS itself which prevents the monitor from being starved under heavy BeeGFS workloads.
-renice -n -10 -p $$ > /dev/null
+renice -n {{ beegfs_ha_beegfs_monitor_niceness }} -p $$ > /dev/null
 
 ###############################################################################
 # Helper functions

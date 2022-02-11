@@ -5,7 +5,7 @@ Requires=network-online.target
 After=network-online.target beegfs-mgmtd.service beegfs-storage.service openibd.service openib.service rdma.service opensmd.service opensm.service zfs.target
 
 [Service]
-ExecStart=/etc/beegfs/beegfs_ha_service_daemon.sh /opt/beegfs/sbin/beegfs-meta /mnt/%I/metadata_config/beegfs-meta.conf
+ExecStart=nice -n {{ beegfs_ha_beegfs_meta_service_niceness }} /etc/beegfs/beegfs_ha_service_daemon.sh /opt/beegfs/sbin/beegfs-meta /mnt/%I/metadata_config/beegfs-meta.conf
 Type=simple
 
 [Install]

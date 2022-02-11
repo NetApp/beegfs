@@ -60,6 +60,13 @@ beegfs_ha_resource_systemd_mgmt_stop_timeout: 245s   # These should be at least 
 beegfs_ha_resource_systemd_meta_stop_timeout: 95s      # Note TimeoutStopUSec can be overridden in the systemd unit files using TimeoutStopSec.
 beegfs_ha_resource_systemd_stor_stop_timeout: 95s      # Currently meta/storage services have the same TimeoutStopUSec, but it could change.
 
+# Niceness configuration defaults
+beegfs_ha_pacemaker_service_niceness: -12
+beegfs_ha_beegfs_mgmtd_service_niceness: -3
+beegfs_ha_beegfs_meta_service_niceness: -2
+beegfs_ha_beegfs_storage_service_niceness: -1
+beegfs_ha_beegfs_monitor_niceness: -10
+
 # Performance tuning defaults
 beegfs_ha_enable_performance_tuning: false
 beegfs_ha_eseries_nvme_attributes:
