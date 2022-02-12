@@ -413,6 +413,7 @@ END
 
 beegfs_monitor_start() {
   mkdir -p /var/log/netapp
+  rm -rf $shm_group_path
   mkdir -p $shm_group_path/devices
   mkdir $shm_group_path/status
 
