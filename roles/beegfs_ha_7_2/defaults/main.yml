@@ -197,6 +197,17 @@ beegfs_ha_ntp_restricts:
   - 127.0.0.1
   - ::1
 
+# Alerts (Postfix) service defaults
+beegfs_ha_alert_conf: /etc/postfix/main.cf
+beegfs_ha_alert_conf_options: {}
+beegfs_ha_alert_conf_ha_group_options: {}
+beegfs_ha_alert_conf_default_options:
+  myorigin: $mydomain
+  inet_interfaces: all
+  inet_protocols: all
+  mydestination: $myhostname, localhost.$mydomain, localhost, $mydomain
+  home_mailbox: Maildir/
+
 # Pacemaker defaults
 beegfs_ha_pacemaker_path: /etc/pacemaker/
 beegfs_ha_pacemaker_authkey_path: /etc/pacemaker/authkey

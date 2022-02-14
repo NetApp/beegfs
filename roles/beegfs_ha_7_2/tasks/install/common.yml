@@ -5,7 +5,7 @@
   include_tasks: common/ntp.yml
   when: beegfs_ha_ntp_enabled == true or beegfs_ha_chrony_enabled == true
 
-- name: Configure common cluster nodes configures
+- name: Configure common cluster node configurations.
   include_tasks: common/nodes.yml
 
 - name: Ensure the cluster is built (Cluster nodes only).

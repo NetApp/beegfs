@@ -17,11 +17,12 @@
   when: beegfs_ha_management_tool is defined and beegfs_ha_management_tool
   become: true
 
-- name: Ensure mailx is installed for alerts (RedHat/CentOS - Cluster Node).
+- name: Ensure mail packages are installed for alerts (RedHat/CentOS - Cluster Node).
   ansible.builtin.yum:
     state: present
-    name: mailx
-  when: beegfs_ha_enable_alerts
+    name: "{{ item }}"
+  when: beegfs_ha_enable_alerts == True
+  loop: ["postfix", "mailx"]
   become: true
 
 - name: Ensure NTP is installed (RedHat/CentOS - Cluster Node).
