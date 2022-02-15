@@ -1,0 +1,903 @@
+
+#!/bin/sh
+#
+# Support:      users@clusterlabs.org
+# License:      GNU General Public License (GPL)
+#
+# Filesystem
+#      Description: Manages a Filesystem on a shared storage medium.
+#  Original Author: Eric Z. Ayers (eric.ayers@compgen.com)
+# Original Release: 25 Oct 2000
+#
+# usage: ./Filesystem {start|stop|status|monitor|validate-all|meta-data}
+#
+#       OCF parameters are as below:
+#               OCF_RESKEY_device
+#               OCF_RESKEY_directory
+#               OCF_RESKEY_fstype
+#               OCF_RESKEY_options
+#               OCF_RESKEY_statusfile_prefix
+#               OCF_RESKEY_run_fsck
+#               OCF_RESKEY_fast_stop
+#               OCF_RESKEY_force_clones
+#
+#OCF_RESKEY_device    : name of block device for the filesystem. e.g. /dev/sda1, /dev/md0
+#                       Or a -U or -L option for mount, or an NFS mount specification
+#OCF_RESKEY_directory : the mount point for the filesystem
+#OCF_RESKEY_fstype    : optional name of the filesystem type. e.g. ext2
+#OCF_RESKEY_options   : options to be given to the mount command via -o
+#OCF_RESKEY_statusfile_prefix : the prefix used for a status file for monitoring
+#OCF_RESKEY_run_fsck  : fsck execution mode: auto(default)/force/no
+#OCF_RESKEY_fast_stop : fast stop: yes(default)/no
+#OCF_RESKEY_force_clones : allow running the resource as clone. e.g. local xfs mounts
+#                         for each brick in a glusterfs setup
+#OCF_RESKEY_niceness : niceness value for resource operations.
+#
+#
+# This assumes you want to manage a filesystem on a shared (SCSI) bus,
+# on a replicated device (such as DRBD), or a network filesystem (such
+# as NFS or Samba).
+#
+# Do not put this filesystem in /etc/fstab.  This script manages all of
+# that for you.
+#
+# NOTE: If 2 or more nodes mount the same file system read-write, and
+#       that file system is not designed for that specific purpose
+#       (such as GFS or OCFS2), and is not a network file system like
+#       NFS or Samba, then the filesystem is going to become
+#       corrupted.
+#
+#       As a result, you should use this together with the stonith
+#       option and redundant, independent communications paths.
+#
+#       If you don't do this, don't blame us when you scramble your
+#       disk.
+
+#######################################################################
+# Initialization:
+
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+
+# Defaults
+DFLT_STATUSDIR=".Filesystem_status/"
+
+# Variables used by multiple methods
+HOSTOS=`uname`
+
+# The status file is going to an extra directory, by default
+#
+prefix=${OCF_RESKEY_statusfile_prefix}
+: ${prefix:=$DFLT_STATUSDIR}
+suffix="${OCF_RESOURCE_INSTANCE}"
+[ "$OCF_RESKEY_CRM_meta_clone" ] &&
+        suffix="${suffix}_$OCF_RESKEY_CRM_meta_clone"
+suffix="${suffix}_`uname -n`"
+STATUSFILE=${OCF_RESKEY_directory}/$prefix$suffix
+
+#######################################################################
+
+usage() {
+        cat <<EOT
+usage: $0 {start|stop|status|monitor|validate-all|meta-data}
+EOT
+}
+
+meta_data() {
+        cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="Filesystem">
+<version>1.1</version>
+
+<longdesc lang="en">
+Resource script for Filesystem. It manages a Filesystem on a
+shared storage medium.
+
+The standard monitor operation of depth 0 (also known as probe)
+checks if the filesystem is mounted. If you want deeper tests,
+set OCF_CHECK_LEVEL to one of the following values:
+
+10: read first 16 blocks of the device (raw read)
+
+This doesn't exercise the filesystem at all, but the device on
+which the filesystem lives. This is noop for non-block devices
+such as NFS, SMBFS, or bind mounts.
+
+20: test if a status file can be written and read
+
+The status file must be writable by root. This is not always the
+case with an NFS mount, as NFS exports usually have the
+"root_squash" option set. In such a setup, you must either use
+read-only monitoring (depth=10), export with "no_root_squash" on
+your NFS server, or grant world write permissions on the
+directory where the status file is to be placed.
+</longdesc>
+<shortdesc lang="en">Manages filesystem mounts</shortdesc>
+
+<parameters>
+<parameter name="device" required="1">
+<longdesc lang="en">
+The name of block device for the filesystem, or -U, -L options for mount, or NFS mount specification.
+</longdesc>
+<shortdesc lang="en">block device</shortdesc>
+<content type="string" default="" />
+</parameter>
+
+<parameter name="directory" required="1">
+<longdesc lang="en">
+The mount point for the filesystem.
+</longdesc>
+<shortdesc lang="en">mount point</shortdesc>
+<content type="string" default="" />
+</parameter>
+
+<parameter name="fstype" required="1">
+<longdesc lang="en">
+The type of filesystem to be mounted.
+</longdesc>
+<shortdesc lang="en">filesystem type</shortdesc>
+<content type="string" default="" />
+</parameter>
+
+<parameter name="options">
+<longdesc lang="en">
+Any extra options to be given as -o options to mount.
+
+For bind mounts, add "bind" here and set fstype to "none".
+We will do the right thing for options such as "bind,ro".
+</longdesc>
+<shortdesc lang="en">options</shortdesc>
+<content type="string" default="" />
+</parameter>
+
+<parameter name="statusfile_prefix">
+<longdesc lang="en">
+The prefix to be used for a status file for resource monitoring
+with depth 20. If you don't specify this parameter, all status
+files will be created in a separate directory.
+</longdesc>
+<shortdesc lang="en">status file prefix</shortdesc>
+<content type="string" default="$DFLT_STATUSDIR" />
+</parameter>
+
+<parameter name="run_fsck">
+<longdesc lang="en">
+Specify how to decide whether to run fsck or not.
+
+"auto"  : decide to run fsck depending on the fstype(default)
+"force" : always run fsck regardless of the fstype
+"no"    : do not run fsck ever.
+</longdesc>
+<shortdesc lang="en">run_fsck</shortdesc>
+<content type="string" default="auto" />
+</parameter>
+
+<parameter name="fast_stop">
+<longdesc lang="en">
+Normally, we expect no users of the filesystem and the stop
+operation to finish quickly. If you cannot control the filesystem
+users easily and want to prevent the stop action from failing,
+then set this parameter to "no" and add an appropriate timeout
+for the stop operation.
+</longdesc>
+<shortdesc lang="en">fast stop</shortdesc>
+<content type="boolean" default="yes" />
+</parameter>
+
+<parameter name="force_clones">
+<longdesc lang="en">
+The use of a clone setup for local filesystems is forbidden
+by default. For special setups like glusterfs, cloning a mount
+of a local device with a filesystem like ext4 or xfs independently
+on several nodes is a valid use case.
+
+Only set this to "true" if you know what you are doing!
+</longdesc>
+<shortdesc lang="en">allow running as a clone, regardless of filesystem type</shortdesc>
+<content type="boolean" default="false" />
+</parameter>
+
+<parameter name="force_unmount">
+<longdesc lang="en">
+This option allows specifying how to handle processes that are
+currently accessing the mount directory.
+
+"true"  : Default value, kill processes accessing mount point
+"safe"  : Kill processes accessing mount point using methods that
+          avoid functions that could potentially block during process
+          detection
+"false" : Do not kill any processes.
+
+The 'safe' option uses shell logic to walk the /procs/ directory
+for pids using the mount point while the default option uses the
+fuser cli tool. fuser is known to perform operations that can potentially
+block if unresponsive nfs mounts are in use on the system.
+</longdesc>
+<shortdesc lang="en">Kill processes before unmount</shortdesc>
+<content type="boolean" default="true" />
+</parameter>
+
+<parameter name="niceness">
+<longdesc lang="en">
+When any of the actions are called its running process will be given this nicesness value.
+</longdesc>
+<shortdesc lang="en">Niceness value</shortdesc>
+<content type="integer" default=0 />
+</parameter>
+
+</parameters>
+
+<actions>
+<action name="start" timeout="60s" />
+<action name="stop" timeout="60s" />
+<action name="monitor" depth="0" timeout="40s" interval="20s" />
+<action name="validate-all" timeout="5s" />
+<action name="meta-data" timeout="5s" />
+</actions>
+</resource-agent>
+END
+}
+
+#
+#       Make sure the kernel does the right thing with the FS buffers
+#       This function should be called after unmounting and before mounting
+#       It may not be necessary in 2.4 and later kernels, but it shouldn't hurt
+#       anything either...
+#
+#       It's really a bug that you have to do this at all...
+#
+flushbufs() {
+        if have_binary $BLOCKDEV ; then
+                if [ "$blockdevice" = "yes" ] ; then
+                        $BLOCKDEV --flushbufs $1
+                        return $?
+                fi
+        fi
+        return 0
+}
+
+# Take advantage of /etc/mtab if present, use portable mount command
+# otherwise. Normalize format to "dev mountpoint fstype".
+is_bind_mount() {
+        echo "$options" | grep -w bind >/dev/null 2>&1
+}
+list_mounts() {
+        local inpf=""
+        if [ -e "/proc/mounts" ] && ! is_bind_mount; then
+                inpf=/proc/mounts
+        elif [ -f "/etc/mtab" -a -r "/etc/mtab" ]; then
+                inpf=/etc/mtab
+        fi
+        if [ "$inpf" ]; then
+                cut -d' ' -f1,2,3 < $inpf
+        else
+                $MOUNT | cut -d' ' -f1,3,5
+        fi
+}
+
+determine_blockdevice() {
+        if [ $blockdevice = "yes" ]; then
+                return
+        fi
+
+        # Get the current real device name, if possible.
+        # (specified devname could be -L or -U...)
+        case "$FSTYPE" in
+        nfs4|nfs|smbfs|cifs|glusterfs|ceph|tmpfs|overlay|overlayfs|rozofs|zfs|cvfs|none)
+                : ;;
+        *)
+                DEVICE=`list_mounts | grep " $MOUNTPOINT " | cut -d' ' -f1`
+                if [ -b "$DEVICE" ]; then
+                        blockdevice=yes
+                fi
+                ;;
+        esac
+}
+
+# Lists all filesystems potentially mounted under a given path,
+# excluding the path itself.
+list_submounts() {
+        list_mounts | grep " $1/" | cut -d' ' -f2 | sort -r
+}
+
+# kernels < 2.6.26 can't handle bind remounts
+bind_kernel_check() {
+        echo "$options" | grep -w ro >/dev/null 2>&1 ||
+                return
+        uname -r | awk -F. '
+        $1==2 && $2==6 {
+                sub("[^0-9].*","",$3);
+                if ($3<26)
+                        exit(1);
+        }'
+        [ $? -ne 0 ] &&
+                ocf_log warn "kernel `uname -r` cannot handle read only bind mounts"
+}
+bind_mount() {
+        if is_bind_mount && [ "$options" != "-o bind" ]
+        then
+                bind_kernel_check
+                bind_opts=`echo $options | sed 's/bind/remount/'`
+                $MOUNT $bind_opts $MOUNTPOINT
+        else
+                true # make sure to return OK
+        fi
+}
+
+is_option() {
+        echo $OCF_RESKEY_options | grep -w "$1" >/dev/null 2>&1
+}
+
+is_fsck_needed() {
+        case $OCF_RESKEY_run_fsck in
+                force) true;;
+                no)    false;;
+                ""|auto)
+                case $FSTYPE in
+                        ext4|ext4dev|ext3|reiserfs|reiser4|nss|xfs|jfs|vfat|fat|nfs4|nfs|cifs|smbfs|ocfs2|gfs2|none|lustre|glusterfs|ceph|tmpfs|overlay|overlayfs|rozofs|zfs|cvfs)
+                        false;;
+                        *)
+                        true;;
+                esac;;
+                *)
+                ocf_log warn "Invalid parameter value for fsck: '$OCF_RESKEY_run_fsck'; setting to 'auto'"
+                OCF_RESKEY_run_fsck="auto"
+                is_fsck_needed;;
+        esac
+}
+
+fstype_supported()
+{
+        local support="$FSTYPE"
+        local rc
+
+        if [ "X${HOSTOS}" != "XOpenBSD" ];then
+                # skip checking /proc/filesystems for obsd
+                return $OCF_SUCCESS
+        fi
+
+        if [ -z "$FSTYPE" -o "$FSTYPE" = none ]; then
+                : No FSTYPE specified, rely on the system has the right file-system support already
+                return $OCF_SUCCESS
+        fi
+
+        # support fuse-filesystems (e.g. GlusterFS)
+        case $FSTYPE in
+                fuse.*|glusterfs|rozofs) support="fuse";;
+        esac
+
+        grep -w "$support"'$' /proc/filesystems >/dev/null
+        if [ $? -eq 0 ]; then
+                # found the fs type
+                return $OCF_SUCCESS
+        fi
+
+        # if here, we should attempt to load the module and then
+        # check the if the filesystem support exists again.
+        $MODPROBE $support >/dev/null
+        if [ $? -ne 0 ]; then
+                ocf_exit_reason "Couldn't find filesystem $FSTYPE in /proc/filesystems and failed to load kernel module"
+                return $OCF_ERR_INSTALLED
+        fi
+
+        # It is possible for the module to load and not be complete initialized
+        # before we check /proc/filesystems again. Give this a few trys before
+        # giving up entirely.
+        for try in $(seq 5); do
+                grep -w "$support"'$' /proc/filesystems >/dev/null
+                if [ $? -eq 0 ] ; then
+                        # yes. found the filesystem after doing the modprobe
+                        return $OCF_SUCCESS
+                fi
+                ocf_log debug "Unable to find support for $FSTYPE in /proc/filesystems after modprobe, trying again"
+                sleep 1
+        done
+
+        ocf_exit_reason "Couldn't find filesystem $FSTYPE in /proc/filesystems"
+        return $OCF_ERR_INSTALLED
+}
+
+
+#
+# START: Start up the filesystem
+#
+Filesystem_start()
+{
+        # Check if there are any mounts mounted under the mountpoint
+        if list_mounts | grep -q -E " $MOUNTPOINT/\w+" >/dev/null 2>&1; then
+                ocf_log err "There is one or more mounts mounted under $MOUNTPOINT."
+                return $OCF_ERR_CONFIGURED
+        fi
+
+        # See if the device is already mounted.
+        if Filesystem_status >/dev/null 2>&1 ; then
+                ocf_log info "Filesystem $MOUNTPOINT is already mounted."
+                return $OCF_SUCCESS
+        fi
+
+        fstype_supported || exit $OCF_ERR_INSTALLED
+
+        # Check the filesystem & auto repair.
+        # NOTE: Some filesystem types don't need this step...  Please modify
+        #       accordingly
+
+        if [ $blockdevice = "yes" ]; then
+                if [ "$DEVICE" != "/dev/null" -a ! -b "$DEVICE" ] ; then
+                        ocf_exit_reason "Couldn't find device [$DEVICE]. Expected /dev/??? to exist"
+                        exit $OCF_ERR_INSTALLED
+                fi
+
+                if is_fsck_needed; then
+                        ocf_log info  "Starting filesystem check on $DEVICE"
+                        if [ -z "$FSTYPE" ]; then
+                                $FSCK -p $DEVICE
+                        else
+                                $FSCK -t $FSTYPE -p $DEVICE
+                        fi
+
+                        # NOTE: if any errors at all are detected, it returns non-zero
+                        # if the error is >= 4 then there is a big problem
+                        if [ $? -ge 4 ]; then
+                                ocf_exit_reason "Couldn't successfully fsck filesystem for $DEVICE"
+                                return $OCF_ERR_GENERIC
+                        fi
+                fi
+        fi
+
+        [ -d "$MOUNTPOINT" ] ||
+                ocf_run mkdir -p $MOUNTPOINT
+        if [ ! -d "$MOUNTPOINT" ] ; then
+                ocf_exit_reason "Couldn't find directory  [$MOUNTPOINT] to use as a mount point"
+                exit $OCF_ERR_INSTALLED
+        fi
+
+        flushbufs $DEVICE
+        # Mount the filesystem.
+        case "$FSTYPE" in
+                none) $MOUNT $options $DEVICE $MOUNTPOINT &&
+                        bind_mount
+                        ;;
+                "") $MOUNT $options $DEVICE $MOUNTPOINT ;;
+                *) $MOUNT -t $FSTYPE $options $DEVICE $MOUNTPOINT ;;
+        esac
+
+        if [ $? -ne 0 ]; then
+                ocf_exit_reason "Couldn't mount device [$DEVICE] as $MOUNTPOINT"
+                return $OCF_ERR_GENERIC
+        fi
+        return $OCF_SUCCESS
+}
+# end of Filesystem_start
+
+get_pids()
+{
+        local dir=$1
+        local procs
+        local mmap_procs
+
+        if ocf_is_true  "$FORCE_UNMOUNT"; then
+                if [ "X${HOSTOS}" = "XOpenBSD" ];then
+                        fstat | grep $dir | awk '{print $3}'
+                else
+                        $FUSER -m $dir 2>/dev/null
+                fi
+        elif [ "$FORCE_UNMOUNT" = "safe" ]; then
+                procs=$(find /proc/[0-9]*/ -type l -lname "${dir}/*" -or -lname "${dir}" 2>/dev/null | awk -F/ '{print $3}')
+                mmap_procs=$(grep " ${dir}" /proc/[0-9]*/maps | awk -F/ '{print $3}')
+                printf "${procs}\n${mmap_procs}" | sort | uniq
+        fi
+}
+
+signal_processes() {
+        local dir=$1
+        local sig=$2
+        local pids pid
+        # fuser returns a non-zero return code if none of the
+        # specified files is accessed or in case of a fatal
+        # error.
+        pids=$(get_pids "$dir")
+        if [ -z "$pids" ]; then
+                ocf_log info "No processes on $dir were signalled. force_unmount is set to '$FORCE_UNMOUNT'"
+                return
+        fi
+        for pid in $pids; do
+                ocf_log info "sending signal $sig to: `ps -f $pid | tail -1`"
+                kill -s $sig $pid
+        done
+}
+try_umount() {
+        local SUB=$1
+        $UMOUNT $umount_force $SUB
+        list_mounts | grep -q " $SUB " >/dev/null 2>&1 || {
+                ocf_log info "unmounted $SUB successfully"
+                return $OCF_SUCCESS
+        }
+        return $OCF_ERR_GENERIC
+}
+fs_stop() {
+        local SUB=$1 timeout=$2 sig cnt
+        for sig in TERM KILL; do
+                cnt=$((timeout/2)) # try half time with TERM
+                while [ $cnt -gt 0 ]; do
+                        try_umount $SUB &&
+                                return $OCF_SUCCESS
+                        ocf_exit_reason "Couldn't unmount $SUB; trying cleanup with $sig"
+                        signal_processes $SUB $sig
+                        cnt=$((cnt-1))
+                        sleep 1
+                done
+        done
+        return $OCF_ERR_GENERIC
+}
+
+#
+# STOP: Unmount the filesystem
+#
+Filesystem_stop()
+{
+        # See if the device is currently mounted
+        Filesystem_status >/dev/null 2>&1
+        if [ $? -eq $OCF_NOT_RUNNING ]; then
+                # Already unmounted, wonderful.
+                rc=$OCF_SUCCESS
+        else
+                # Wipe the status file, but continue with a warning if
+                # removal fails -- the file system might be read only
+                if [ $OCF_CHECK_LEVEL -eq 20 ]; then
+                        rm -f ${STATUSFILE}
+                        if [ $? -ne 0 ]; then
+                                ocf_log warn "Failed to remove status file ${STATUSFILE}."
+                        fi
+                fi
+
+                # Determine the real blockdevice this is mounted on (if
+                # possible) prior to unmounting.
+                determine_blockdevice
+
+                # For networked filesystems, there's merit in trying -f:
+                case "$FSTYPE" in
+                nfs4|nfs|cifs|smbfs) umount_force="-f" ;;
+                esac
+
+                # Umount all sub-filesystems mounted under $MOUNTPOINT/ too.
+                local timeout
+                for SUB in `list_submounts $MOUNTPOINT` $MOUNTPOINT; do
+                        ocf_log info "Trying to unmount $SUB"
+                        if ocf_is_true "$FAST_STOP"; then
+                                timeout=6
+                        else
+                                timeout=${OCF_RESKEY_CRM_meta_timeout:="20000"}
+                                timeout=$((timeout/1000))
+                        fi
+                        fs_stop $SUB $timeout
+                        rc=$?
+                        if [ $rc -ne $OCF_SUCCESS ]; then
+                                ocf_exit_reason "Couldn't unmount $SUB, giving up!"
+                        fi
+                done
+        fi
+
+        flushbufs $DEVICE
+
+        return $rc
+}
+# end of Filesystem_stop
+
+#
+# STATUS: is the filesystem mounted or not?
+#
+Filesystem_status()
+{
+        if list_mounts | grep -q " $MOUNTPOINT " >/dev/null 2>&1; then
+                rc=$OCF_SUCCESS
+                msg="$MOUNTPOINT is mounted (running)"
+        else
+                rc=$OCF_NOT_RUNNING
+                msg="$MOUNTPOINT is unmounted (stopped)"
+        fi
+
+        # Special case "monitor" to check whether the UUID cached and
+        # on-disk still match?
+        case "$OP" in
+                status) ocf_log info "$msg";;
+        esac
+
+        return $rc
+}
+# end of Filesystem_status
+
+
+# Note: the read/write tests below will stall in case the
+# underlying block device (or in the case of a NAS mount, the
+# NAS server) has gone away. In that case, if I/O does not
+# return to normal in time, the operation hits its timeout
+# and it is up to the CRM to initiate appropriate recovery
+# actions (such as fencing the node).
+#
+# MONITOR 10: read the device
+#
+Filesystem_monitor_10()
+{
+        if [ "$blockdevice" = "no" ] ; then
+                ocf_log warn "$DEVICE is not a block device, monitor 10 is noop"
+                return $OCF_SUCCESS
+        fi
+        dd_opts="iflag=direct bs=4k count=1"
+        err_output=`dd if=$DEVICE $dd_opts 2>&1 >/dev/null`
+        if [ $? -ne 0 ]; then
+                ocf_exit_reason "Failed to read device $DEVICE"
+                ocf_log err "dd said: $err_output"
+                return $OCF_ERR_GENERIC
+        fi
+        return $OCF_SUCCESS
+}
+#
+# MONITOR 20: write and read a status file
+#
+Filesystem_monitor_20()
+{
+        if [ "$blockdevice" = "no" ] ; then
+                # O_DIRECT not supported on cifs/smbfs
+                dd_opts="oflag=sync bs=4k conv=fsync,sync"
+        else
+                # Writing to the device in O_DIRECT mode is imperative
+                # to bypass caches.
+                dd_opts="oflag=direct,sync bs=4k conv=fsync,sync"
+        fi
+        status_dir=`dirname $STATUSFILE`
+        [ -d "$status_dir" ] || mkdir -p "$status_dir"
+        err_output=`echo "${OCF_RESOURCE_INSTANCE}" | dd of=${STATUSFILE} $dd_opts 2>&1`
+        if [ $? -ne 0 ]; then
+                ocf_exit_reason "Failed to write status file ${STATUSFILE}"
+                ocf_log err "dd said: $err_output"
+                return $OCF_ERR_GENERIC
+        fi
+        test -f ${STATUSFILE}
+        if [ $? -ne 0 ]; then
+                ocf_exit_reason "Cannot stat the status file ${STATUSFILE}"
+                return $OCF_ERR_GENERIC
+        fi
+        cat ${STATUSFILE} > /dev/null
+        if [ $? -ne 0 ]; then
+                ocf_exit_reason "Cannot read the status file ${STATUSFILE}"
+                return $OCF_ERR_GENERIC
+        fi
+        return $OCF_SUCCESS
+}
+Filesystem_monitor()
+{
+        Filesystem_status
+        rc=$?
+        if [ $rc -ne $OCF_SUCCESS ]; then
+                return $rc
+        fi
+
+        if [ $rc -eq $OCF_SUCCESS -a $OCF_CHECK_LEVEL -gt 0 ]; then
+                case "$OCF_CHECK_LEVEL" in
+                10) Filesystem_monitor_10; rc=$?;;
+                20) Filesystem_monitor_20; rc=$?;;
+                *)
+                        ocf_exit_reason "unsupported monitor level $OCF_CHECK_LEVEL"
+                        rc=$OCF_ERR_CONFIGURED
+                ;;
+                esac
+        fi
+        return $rc
+}
+# end of Filesystem_monitor
+
+
+#
+#       VALIDATE_ALL: Are the instance parameters valid?
+#       FIXME!!  The only part that's useful is the return code.
+#       This code always returns $OCF_SUCCESS (!)
+#
+Filesystem_validate_all()
+{
+        if [ -n "$MOUNTPOINT" ] && [ ! -d "$MOUNTPOINT" ]; then
+                ocf_log warn "Mountpoint $MOUNTPOINT does not exist"
+        fi
+
+        # Check if the $FSTYPE is workable
+        # NOTE: Without inserting the $FSTYPE module, this step may be imprecise
+        # TODO: This is Linux specific crap.
+        if [ ! -z "$FSTYPE" -a "$FSTYPE" != none ]; then
+                cut -f2 /proc/filesystems |grep -q ^$FSTYPE$
+                if [ $? -ne 0 ]; then
+                        modpath=/lib/modules/`uname -r`
+                        moddep=$modpath/modules.dep
+                        # Do we have $FSTYPE in modules.dep?
+                        cut -d' ' -f1 $moddep |grep -q "^$modpath.*$FSTYPE\.k\?o:$"
+                        if [ $? -ne 0 ]; then
+                                ocf_log info "It seems we do not have $FSTYPE support"
+                        fi
+                fi
+        fi
+
+        # If we are supposed to do monitoring with status files, then
+        # we need a utility to write in O_DIRECT mode.
+        if [ $OCF_CHECK_LEVEL -gt 0 ]; then
+                check_binary dd
+                # Note: really old coreutils version do not support
+                # the "oflag" option for dd. We don't check for that
+                # here. In case dd does not support oflag, monitor is
+                # bound to fail, with dd spewing an error message to
+                # the logs. On such systems, we must do without status
+                # file monitoring.
+        fi
+
+        #TODO: How to check the $options ?
+        return $OCF_SUCCESS
+}
+
+#
+# set the blockdevice variable to "no" or "yes"
+#
+set_blockdevice_var() {
+        blockdevice=no
+
+        # these are definitely not block devices
+        case $FSTYPE in
+        nfs4|nfs|smbfs|cifs|none|glusterfs|ceph|tmpfs|overlay|overlayfs|rozofs|zfs|cvfs) return;;
+        esac
+
+        if `is_option "loop"`; then
+                return
+        fi
+
+        case $DEVICE in
+        -*) # Oh... An option to mount instead...  Typically -U or -L
+                ;;
+        /dev/null) # Special case for BSC
+                blockdevice=yes
+                ;;
+        *)
+                if [ ! -b "$DEVICE"  -a ! -d "$DEVICE" -a "X$OP" != Xstart ] ; then
+                        ocf_log warn "Couldn't find device [$DEVICE]. Expected /dev/??? to exist"
+                fi
+                if [ ! -d "$DEVICE" ]; then
+                        blockdevice=yes
+                fi
+                ;;
+        esac
+}
+
+# Check the arguments passed to this script
+if [ $# -ne 1 ]; then
+        usage
+        exit $OCF_ERR_ARGS
+fi
+
+# Check the OCF_RESKEY_ environment variables...
+FORCE_UNMOUNT="yes"
+if [ -n "${OCF_RESKEY_force_unmount}" ]; then
+        FORCE_UNMOUNT=$OCF_RESKEY_force_unmount
+fi
+
+# Adjust the niceness
+niceness=${OCF_RESKEY_niceness:-0}
+if [ $niceness -gt 19 ] || [ $niceness -lt -20 ]; then
+  niceness=0
+fi
+renice -n $niceness -p $$ > /dev/null
+
+DEVICE=$OCF_RESKEY_device
+FSTYPE=$OCF_RESKEY_fstype
+if [ ! -z "$OCF_RESKEY_options" ]; then
+        options="-o $OCF_RESKEY_options"
+fi
+FAST_STOP=${OCF_RESKEY_fast_stop:="yes"}
+
+OP=$1
+
+# These operations do not require instance parameters
+case $OP in
+        meta-data) meta_data
+                exit $OCF_SUCCESS
+                ;;
+        usage) usage
+                exit $OCF_SUCCESS
+                ;;
+esac
+
+if [ x = x"$DEVICE" ]; then
+        ocf_exit_reason "Please set OCF_RESKEY_device to the device to be managed"
+        exit $OCF_ERR_CONFIGURED
+fi
+
+set_blockdevice_var
+
+# Normalize instance parameters:
+
+# It is possible that OCF_RESKEY_directory has one or even multiple trailing "/".
+# But the output of `mount` and /proc/mounts do not.
+if [ -z "$OCF_RESKEY_directory" ]; then
+        if [ X$OP = "Xstart" -o $blockdevice = "no" ]; then
+                ocf_exit_reason "Please specify the directory"
+                exit $OCF_ERR_CONFIGURED
+        fi
+else
+        MOUNTPOINT=$(echo $OCF_RESKEY_directory | sed 's/\/*$//')
+        : ${MOUNTPOINT:=/}
+        # At this stage, $MOUNTPOINT does not contain trailing "/" unless it is "/"
+        # TODO: / mounted via Filesystem sounds dangerous. On stop, we'll
+        # kill the whole system. Is that a good idea?
+fi
+
+# Check to make sure the utilites are found
+if [ "X${HOSTOS}" != "XOpenBSD" ];then
+check_binary $MODPROBE
+check_binary $FUSER
+fi
+check_binary $FSCK
+check_binary $MOUNT
+check_binary $UMOUNT
+
+if [ "$OP" != "monitor" ]; then
+        ocf_log info "Running $OP for $DEVICE on $MOUNTPOINT"
+fi
+
+case $OP in
+        status) Filesystem_status
+                exit $?
+                ;;
+        monitor) Filesystem_monitor
+                exit $?
+                ;;
+        validate-all) Filesystem_validate_all
+                exit $?
+                ;;
+        stop) Filesystem_stop
+                exit $?
+                ;;
+esac
+
+CLUSTERSAFE=0
+is_option "ro" &&
+        CLUSTERSAFE=2
+
+case $FSTYPE in
+nfs4|nfs|smbfs|cifs|none|gfs2|glusterfs|ceph|ocfs2|overlay|overlayfs|tmpfs|cvfs)
+        CLUSTERSAFE=1 # this is kind of safe too
+        ;;
+# add here CLUSTERSAFE=0 for all filesystems which are not
+# cluster aware and which, even if when mounted read-only,
+# could still modify parts of it such as journal/metadata
+ext4|ext4dev|ext3|reiserfs|reiser4|xfs|jfs)
+        if ocf_is_true "$OCF_RESKEY_force_clones"; then
+                CLUSTERSAFE=2
+        else
+                CLUSTERSAFE=0 # these are not allowed
+        fi
+        ;;
+esac
+
+if ocf_is_clone; then
+        case $CLUSTERSAFE in
+        0)
+                ocf_exit_reason "DANGER! $FSTYPE on $DEVICE is NOT cluster-aware!"
+                ocf_log err "DO NOT RUN IT AS A CLONE!"
+                ocf_log err "Politely refusing to proceed to avoid data corruption."
+                exit $OCF_ERR_CONFIGURED
+                ;;
+        2)
+                ocf_log warn "$FSTYPE on $DEVICE is NOT cluster-aware!"
+                if ocf_is_true "$OCF_RESKEY_force_clones"; then
+                        ocf_log warn "But we'll let it run because we trust _YOU_ verified it's safe to do so."
+                else
+                        ocf_log warn "But we'll let it run because it is mounted read-only."
+                        ocf_log warn "Please make sure that it's meta data is read-only too!"
+                fi
+                ;;
+        esac
+fi
+
+case $OP in
+        start) Filesystem_start
+                ;;
+        *) usage
+                exit $OCF_ERR_UNIMPLEMENTED
+                ;;
+        esac
+exit $?

@@ -12,9 +12,16 @@
     mode: 0755
   become: true
 
-- name: Install E-Series BeeGFS HA resource agent for monitoring individual resources.
+- name: Install E-Series BeeGFS HA resource agent for managing floating IP resources.
   ansible.builtin.copy:
     src: common/beegfs-ipaddr2
     dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-ipaddr2"
+    mode: 0755
+  become: true
+
+- name: Install E-Series BeeGFS HA resource agent for managing filesystem resources.
+  ansible.builtin.copy:
+    src: common/beegfs-filesystem
+    dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-filesystem"
     mode: 0755
   become: true

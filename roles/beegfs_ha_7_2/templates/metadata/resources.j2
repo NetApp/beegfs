@@ -26,7 +26,7 @@
 </primitive>
 
 <group id="{{ group }}-group">
-  <primitive class="ocf" id="{{ group }}-FS1" provider="heartbeat" type="Filesystem">
+  <primitive class="ocf" id="{{ group }}-FS1" provider="eseries" type="beegfs-filesystem">
     <instance_attributes id="{{ group }}-FS1-instance_attributes">
       <nvpair id="{{ group }}-FS1-instance_attributes-device" name="device" value="{{ path }}"/>
       <nvpair id="{{ group }}-FS1-instance_attributes-directory" name="directory" value="{{ mount_dir }}{{ volume }}"/>
@@ -34,6 +34,7 @@
       <nvpair id="{{ group }}-FS1-instance_attributes-options" name="options" value="{{ mount_options }}"/>
       <nvpair id="{{ group }}-FS1-instance_attributes-fast_stop" name="fast_stop" value="false"/>
       <nvpair id="{{ group }}-FS1-instance_attributes-force_unmount" name="force_unmount" value="true"/>
+      <nvpair id="{{ group }}-FS1-instance_attributes-niceness" name="niceness" value="{{ beegfs_ha_beegfs_filesystem_niceness }}"/>
     </instance_attributes>
     <operations>
       <op id="{{ group }}-FS1-start" interval="0s" name="start"/>
