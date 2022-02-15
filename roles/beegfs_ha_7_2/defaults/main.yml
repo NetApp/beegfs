@@ -22,13 +22,9 @@ beegfs_ha_firewall_required_ha_ports:
 #  - [9929, udp]  # Required to be open on all cluster nodes and booth arbitrator nodes to connections from any of those same nodes when the Booth ticket manager is used to establish a multi-site cluster.
 #  - [21064, tcp] # DLM resources - Required on all nodes if the cluster contains any resources requiring DLM (such as clvm or GFS2)
 
-beegfs_ha_alert_email_subject: "ClusterNotification"
-beegfs_ha_alert_email_list: []  # List of emails to alert when changes occur.
-
 # THESE CONFIGURATION OPTIONS ARE IN THE COROSYNC.CONF FILE
 #beegfs_ha_enable_auto_tie_breaker: true
 #beegfs_ha_enable_auto_tie_breaker_force_update: false
-beegfs_ha_enable_alerts: true
 beegfs_ha_enable_quota: false
 beegfs_ha_enable_fence: true  # Fencing agents should be used to ensure failed nodes are definitely down.  WARNING! If beegfs_ha_enable_fence is set to false then a fencing agent will not be configured!
 beegfs_ha_enable_fence_action: "off"  # Fence agent will by default shutdown when stoned. Options: off, reboot
@@ -38,7 +34,21 @@ beegfs_ha_pacemaker_enabled: false  # Whether pacemaker and corosync should be s
 beegfs_ha_filter_ip_ranges: []
 beegfs_ha_node_preference_scope_step: 200
 
-beegfs_ha_cluster_crm_config_defaults: # WARNING! These defaults are required for high-availability.
+# Alerts (Postfix) service defaults
+beegfs_ha_enable_alerts: true
+beegfs_ha_alert_email_subject: "ClusterNotification"
+beegfs_ha_alert_email_list: []  # List of emails to alert when changes occur.
+beegfs_ha_alert_conf: /etc/postfix/main.cf
+beegfs_ha_alert_conf_options: {}
+beegfs_ha_alert_conf_ha_group_options: {}
+beegfs_ha_alert_conf_default_options:
+  myorigin: $mydomain
+  inet_interfaces: all
+  inet_protocols: all
+  mydestination: $myhostname, localhost.$mydomain, localhost, $mydomain
+  home_mailbox: Maildir/
+
+beegfs_ha_cluster_crm_config_defaults: # WARNING! These defaults are required for high-avaiability.
   symmetric-cluster: false  # Opt-in architecture
   fence-reaction: panic     # Allows cluster nodes with a fence resource to fence itself by forcing a kernel panic.
   concurrent-fencing: true  # Allows cluster nodes to be fenced concurrently.
@@ -196,17 +206,6 @@ beegfs_ha_ntp_server_pools:
 beegfs_ha_ntp_restricts:
   - 127.0.0.1
   - ::1
-
-# Alerts (Postfix) service defaults
-beegfs_ha_alert_conf: /etc/postfix/main.cf
-beegfs_ha_alert_conf_options: {}
-beegfs_ha_alert_conf_ha_group_options: {}
-beegfs_ha_alert_conf_default_options:
-  myorigin: $mydomain
-  inet_interfaces: all
-  inet_protocols: all
-  mydestination: $myhostname, localhost.$mydomain, localhost, $mydomain
-  home_mailbox: Maildir/
 
 # Pacemaker defaults
 beegfs_ha_pacemaker_path: /etc/pacemaker/
