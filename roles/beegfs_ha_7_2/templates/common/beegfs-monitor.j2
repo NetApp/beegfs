@@ -413,6 +413,7 @@ END
 
 beegfs_monitor_start() {
   mkdir -p /var/log/netapp
+  rm -rf $shm_group_path
   mkdir -p $shm_group_path/devices
   mkdir $shm_group_path/status
 
@@ -426,6 +427,7 @@ beegfs_monitor_start() {
       sleep 1
     else
       ocf_log info "Initializing shared memory..."
+      echo $(stat -c %Z {{ beegfs_ha_resource_agent_path }}eseries/beegfs-monitor) > $shm_group_path/monitor_last_modified
 
       echo 0 > $shm_group_path/status/storage
       echo 0 > $shm_group_path/status/network
@@ -489,6 +491,11 @@ beegfs_monitor_monitor() {
   ha_pseudo_resource_status=$?
   if [ $ha_pseudo_resource_status -ne $OCF_SUCCESS ]; then
     return $ha_pseudo_resource_status
+  fi
+
+  # Check if beegfs-monitor has changed.
+  if [ "$(cat $shm_group_path/monitor_last_modified)" != "$(stat -c %Z {{ beegfs_ha_resource_agent_path }}eseries/beegfs-monitor)" ]; then
+    beegfs_monitor_start
   fi
 
   # Check services.
