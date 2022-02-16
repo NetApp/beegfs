@@ -123,14 +123,27 @@
   become: true
   run_once: true
 
+- name: Ensure pacemaker.service file with niceness specified.
+  netapp_eseries.beegfs.update_conf:
+    src: /usr/lib/systemd/system/pacemaker.service
+    dest: /etc/systemd/system/pacemaker.service
+    options:
+      ExecStart: nice -n {{ beegfs_ha_pacemaker_service_niceness }} /usr/sbin/pacemakerd -f
+    padding: false
+    mode: "0644"
+  register: pacemaker_niceness
+  become: true
+
 - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
   ansible.builtin.include_tasks: ../common/maintenance/set.yml
   when: inventory_hostname == preferred_management_node
 
 - name: Ensure pacemaker and corosync are enabled and started.
   ansible.builtin.systemd:
-    state: '{% if etc_hosts["changed"] or corosync_authkey["changed"] or corosync_config["changed"] or pacemaker_authkey["changed"] or pacemaker_config["changed"] %}restarted{% else %}started{% endif %}'
+    state: '{% if etc_hosts["changed"] or corosync_authkey["changed"] or corosync_config["changed"] or
+                  pacemaker_authkey["changed"] or pacemaker_config["changed"] or pacemaker_niceness["changed"] %}restarted{% else %}started{% endif %}'
     enabled: "{{ beegfs_ha_pacemaker_enabled }}"
+    daemon_reload: true
     name: "{{ item }}"
   loop: ["corosync", "pacemaker"]
   when: beegfs_ha_pacemaker_cluster_node
