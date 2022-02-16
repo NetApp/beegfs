@@ -29,7 +29,7 @@
       {%- set format_type = volume["metadata"]["format_type"] -%}
       {%- set mount_options = volume["metadata"]["mount_options"] %}
 
-  <primitive class="ocf" id="{{ group }}-FS{{ loop["index"] }}" provider="eseries" type="beegfs-filesystem">
+  <primitive class="ocf" id="{{ group }}-FS{{ loop["index"] }}" provider="eseries" type="beegfs-target">
     <instance_attributes id="{{ group }}-FS{{ loop["index"] }}-instance_attributes">
       <nvpair id="{{ group }}-FS{{ loop["index"] }}-instance_attributes-device" name="device" value="{{ volume_path }}"/>
       <nvpair id="{{ group }}-FS{{ loop["index"] }}-instance_attributes-directory" name="directory" value="{{ mount_dir }}{{ volume_name }}"/>

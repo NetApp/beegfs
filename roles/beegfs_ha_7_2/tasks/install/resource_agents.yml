@@ -21,7 +21,7 @@
 
 - name: Install E-Series BeeGFS HA resource agent for managing filesystem resources.
   ansible.builtin.copy:
-    src: common/beegfs-filesystem
-    dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-filesystem"
+    src: common/beegfs-target
+    dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-target"
     mode: 0755
   become: true

@@ -26,7 +26,7 @@
 </primitive>
 
 <group id="{{ resource_group }}-group">
-  <primitive class="ocf" id="{{ resource_group }}-FS1" provider="eseries" type="beegfs-filesystem">
+  <primitive class="ocf" id="{{ resource_group }}-FS1" provider="eseries" type="beegfs-target">
     <instance_attributes id="{{ resource_group }}-FS1-instance_attributes">
       <nvpair id="{{ resource_group }}-FS1-instance_attributes-device" name="device" value="{{ mgmt_volume_mount_device }}"/>
       <nvpair id="{{ resource_group }}-FS1-instance_attributes-directory" name="directory" value="{{ mgmt_volume_mount }}"/>
