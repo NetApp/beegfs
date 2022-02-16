@@ -1,12 +1,15 @@
 #!/bin/sh
 #
-# Support:      users@clusterlabs.org
 # License:      GNU General Public License (GPL)
 #
 # Filesystem
 #      Description: Manages a Filesystem on a shared storage medium.
 #  Original Author: Eric Z. Ayers (eric.ayers@compgen.com)
 # Original Release: 25 Oct 2000
+#
+# Modified by Nathan Swartz (NetApp)
+# Modified Date: 16 Feb 2022
+# Modifications: Added niceness parameter
 #
 # usage: ./Filesystem {start|stop|status|monitor|validate-all|meta-data}
 #
@@ -19,6 +22,7 @@
 #               OCF_RESKEY_run_fsck
 #               OCF_RESKEY_fast_stop
 #               OCF_RESKEY_force_clones
+#               OCF_RESKEY_niceness
 #
 #OCF_RESKEY_device    : name of block device for the filesystem. e.g. /dev/sda1, /dev/md0
 #                       Or a -U or -L option for mount, or an NFS mount specification
