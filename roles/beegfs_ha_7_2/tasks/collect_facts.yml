@@ -25,6 +25,7 @@
 - name: Set facts for firewall configurations.
   ansible.builtin.set_fact:
     eseries_common_firewall_zone: "{{ beegfs_ha_firewall_zone }}"
+  when: beegfs_ha_firewall_allow_required_ports
 
 # Include all distribution-version variables that are prefixed with default_
 - name: Include all distribution-version variables that are prefixed with default_
