@@ -9,9 +9,9 @@
         allow_ports: true
       when: ansible_facts["services"]["firewalld.service"] is defined
 
-    # - name: Configure ufw service.
-    #   ansible.builtin.include_tasks: ufw.yml
-    #   when: ansible_facts["services"]["ufw.service"] is defined
-    #   vars:
-    #     allow_ports: true
+    - name: Configure ufw service.
+      ansible.builtin.include_tasks: ufw.yml
+      when: ansible_facts["services"]["ufw.service"] is defined
+      vars:
+        allow_ports: true
   become: true
