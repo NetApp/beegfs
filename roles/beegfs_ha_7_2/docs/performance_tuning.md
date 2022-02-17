@@ -38,7 +38,7 @@ see the order of precedence for setting variables.
 
 To only run tasks related to BeeGFS performance tuning, use the tag `beegfs_ha_performance_tuning` in your Ansible
 playbook command (e.g. `ansible-playbook -i inventory.yml playbook.yml --tags beegfs_ha_performance_tuning`). For more
-information about all available tags check out [BeeGFS HA Role Tags](role_tags.md) This will greatly reduce playbook
+information about all available tags check out [BeeGFS HA Role Tags](role_tags.md). This will greatly reduce playbook
 runtime when you're making incremental adjustments to these parameters during benchmark testing.
 
 <br>
@@ -71,7 +71,7 @@ these settings persist in their environment, and rebuild the initramfs if needed
 <br>
 
 <a name="tuning-parameters-on-eseries-block-devices"></a>
-## Tuning parameters on E-Series block devices/paths using udev:
+## Tuning parameters on E-Series block devices/paths using udev
 -----------------------
 The following variables should be used to optimize performance for storage and metadata volumes:
 
