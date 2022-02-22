@@ -7,10 +7,22 @@
 
 - name: Determine port information for BeeGFS communications.
   ansible.builtin.set_fact:
-    beegfs_port_list: |-
+    beegfs_communication_info: |-
       {%- set ports = [] -%}
+      {%- set interfaces = [] -%}
+
       {%- for service_type in node_info["services"] | default([]) -%}
         {%- for service in node_info[service_type] -%}
+
+          {#- Determine interfaces required for BeeGFS communications -#}
+          {%- for floating_ip in service["floating_ips"] -%}
+            {%- set interface = floating_ip.split(":")[0] -%}
+            {%- if interface not in interfaces -%}
+              {%- if interfaces.append(interface) -%}{%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+
+          {#- Determine ports required for BeeGFS communications -#}
           {%- if service["service_configuration_options"]["connMgmtdPortTCP"] is defined -%}
             {%- if ports.append(service["service_configuration_options"]["connMgmtdPortTCP"] ~ "/tcp") -%}{%- endif -%}
           {%- endif -%}
@@ -31,7 +43,7 @@
           {%- endif -%}
         {%- endfor -%}
       {%- endfor -%}
-      {{- ports -}}
+      {{- [interfaces, ports] -}}
 
 - name: Get network configuration.
   ansible.builtin.command: "ip --oneline --brief addr"
@@ -54,28 +66,16 @@
     ha_ports_info: |-
       {%- set interfaces = [] -%}
       {%- set ports = [] -%}
-      {%- for node_ip in beegfs_ha_cluster_node_ips -%}
-        {%- for line in network_configuration["stdout_lines"] if line | regex_search(node_ip ~ "/") -%}
-          {{ line }}
-          {%- if interfaces.append(line.split( )[0]) -%}{%- endif -%}
-        {%- endfor -%}
-      {%- endfor -%}
-
-- name: Determine port information for HA communications.
-  ansible.builtin.set_fact:
-    ha_ports_info: |-
-      {%- set interfaces = [] -%}
-      {%- set ports = [] -%}
 
       {#- Determine the beegfs_ha_cluster_node_ips IP interfaces -#}
       {%- for node_ip in beegfs_ha_cluster_node_ips -%}
         {%- for line in network_configuration["stdout_lines"] if line | regex_search(node_ip ~ "/") -%}
-          {%- if interfaces.append(line.split( )[0]) -%}{%- endif -%}
+          {%- if interfaces.append(line.split(" ")[0]) -%}{%- endif -%}
         {%- endfor -%}
       {%- endfor -%}
 
       {#- Create required HA ports list -#}
-      {%- for port in beegfs_ha_firewall_required_ha_ports | default([]) if port | length == 2  -%}
+      {%- for port in beegfs_ha_firewall_required_ha_ports  -%}
         {%- if ports.append(port[0] ~ "/" ~ port[1]) -%}{%- endif -%}
       {%- endfor -%}
       {{- [interfaces, ports] -}}
@@ -113,6 +113,30 @@
 # Configure firewalld for BeeGFS communications.
 - name: Ensure the required firewalld ports are enabled for BeeGFS communications.
   block:
+    - name: Create "{{ beegfs_ha_firewall_zone }}" firewall zone.
+      ansible.posix.firewalld:
+        state: present
+        zone: "{{ beegfs_ha_firewall_zone }}"
+        permanent: true
+        offline: true
+      register: firewall_zone
+
+    - name: Reload firewall to recognize the newly created zones.
+      ansible.builtin.systemd:
+        state: reloaded
+        name: firewalld.service
+      when: 'firewall_zone["changed"] and ansible_facts["services"]["firewalld.service"]["state"] == "running"'
+
+    - name: Add all interfaces to "{{ beegfs_ha_firewall_zone }} zone."
+      ansible.posix.firewalld:
+        state: enabled
+        zone: "{{ beegfs_ha_firewall_zone }}"
+        interface: "{{ item }}"
+        permanent: true
+        immediate: true
+        offline: true
+      loop: "{{ beegfs_communication_info[0] }}"
+
     - name: Allow required firewalld ports for each BeeGFS cluster service.
       ansible.posix.firewalld:
         state: enabled
@@ -121,7 +145,7 @@
         permanent: true
         immediate: true
         offline: true
-      loop: "{{ beegfs_port_list }}"
+      loop: "{{ beegfs_communication_info[1] }}"
 
     - name: Disallow required firewalld ports for each BeeGFS cluster service on unexpected zones.
       ansible.posix.firewalld:
@@ -139,7 +163,7 @@
 
             {#- Check for required beegfs communication ports on unexpected zones. -#}
             {%- for line in zone_info["stdout_lines"] if "ports:" in line -%}
-              {%- for port in beegfs_port_list if port in line -%}
+              {%- for port in beegfs_communication_info[1] if port in line -%}
                 {%- if remove_beegfs_port_list.append([zone_info["item"], port]) -%}{%- endif -%}
               {%- endfor -%}
             {%- endfor -%}
@@ -207,7 +231,7 @@
         immediate: true
         offline: true
       when: eseries_common_firewall_zone in zones["stdout"]
-      loop: "{{ beegfs_port_list }}"
+      loop: "{{ beegfs_communication_info[1] }}"
 
     - name: Disable required firewalld ports for each BeeGFS HA service.
       ansible.posix.firewalld:

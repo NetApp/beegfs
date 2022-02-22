@@ -5,9 +5,9 @@ beegfs_ha_cluster_name: hacluster                          # Pacemaker cluster g
 beegfs_ha_cluster_username: hacluster                      # Cluster group's username
 beegfs_ha_cluster_password: hapassword                     # Cluster group's password
 beegfs_ha_cluster_password_sha512_salt: randomSalt         # Cluster group's password salt
-beegfs_ha_mgmtd_group: mgmt                                # BeeGFS HA managment resource group
-# beegfs_ha_mgmtd_floating_ip:                             # BeeGFS HA management resource floating IP address.
-# beegfs_ha_cluster_node_ips: []                           # Defines an order list of IP addresses or hostnames with the first having the highest priority. When
+beegfs_ha_mgmtd_group: mgmt                                # BeeGFS HA management resource group
+# beegfs_ha_mgmtd_floating_ip:                             # (Required) BeeGFS HA management resource floating IP address.
+beegfs_ha_cluster_node_ips: []                             # Defines an order list of IP addresses or hostnames with the first having the highest priority. When
                                                            #    there are no listed IPs then node name will be used. Node names are defined in /etc/hosts.
 beegfs_ha_firewall_start_and_enable: true  # Allow firewalld to start. This is required to create persistent port allowances. If the service is not running then it will be started and stopped once the configuration is set or removed.
 beegfs_ha_firewall_allow_required_ports: true  # This allows all known and required ports.
