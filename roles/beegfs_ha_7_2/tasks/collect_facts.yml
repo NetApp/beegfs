@@ -446,8 +446,8 @@
                   {%- if existing_sp.update({"volumes": []}) -%}{%- endif -%}
                 {%- endif -%}
 
-                {%- for existing_volume in existing_sp["volumes"] -%}
-                  {%- for target_volume in target_sp["volumes"] if existing_volume["name"] == target_volume["name"] -%}
+                {%- for target_volume in target_sp["volumes"] -%}
+                  {%- for existing_volume in existing_sp["volumes"] if existing_volume["name"] == target_volume["name"] -%}
                   {%- else -%}
                     {%- if existing_sp["volumes"].append(target_volume) -%}{%- endif -%}
                   {%- endfor -%}
