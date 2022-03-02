@@ -106,8 +106,9 @@ To replace a node in the cluster, perform the following steps:
 
 When adding a building block to your cluster, you will need to create the `host_vars` files for each of the new hosts and 
 eseries arrays. The names of these hosts need to be added to the inventory, along with the new resources that are to be
-created. The cooresponding `group_vars` files will need to be created for each new resource. 
+created. The corresponding `group_vars` files will need to be created for each new resource. 
 
-After creating the correct files, all that is needed is to rerun the automation.
+After creating the correct files, all that is needed is to rerun the automation using the command 
+`ansible-playbook -i <inventory>.yml <playbook>.yml`.
 
 <br>
