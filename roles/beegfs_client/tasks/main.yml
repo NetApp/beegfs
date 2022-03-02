@@ -43,6 +43,7 @@
       - name: Force a rebuild of the client kernel module if requested or the source/configuration changed.
         command: "/etc/init.d/beegfs-client rebuild"
         when: beegfs_client_autobuild.changed or beegfs_client_force_rebuild == True or package_mgr_result.changed == True
+        notify: Restart BeeGFS Client
     when: not beegfs_client_dkms_install
     tags: beegfs_client_install
 
@@ -71,7 +72,9 @@
 
   - name: Flush handlers to restart the non-DKMS BeeGFS client on configuration changes.
     meta: flush_handlers
-    tags: beegfs_client_mount
+    tags: 
+      - beegfs_client_mount
+      - beegfs_client_install
 
   - name: Verify all expected BeeGFS mounts are present/unmounted when using the non-DKMS client.
     include_tasks: mount_check.yml
