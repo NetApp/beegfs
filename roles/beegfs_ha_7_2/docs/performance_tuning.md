@@ -99,7 +99,7 @@ Example:
 - `eseries_storage_pool_usable_drives: "99:0,99:23,99:1,99:22,99:2,99:21,99:3,99:20,99:4,99:19,99:5,99:18,99:6,99:17,`
 `99:7,99:16,99:8,99:15,99:9,99:14,99:10,99:13,99:11,99:12"`
 
-For enclosures multiple trays use the format `shelf_id:tray_id:drive_number`
+For enclosure with drawers, use the format `shelf_id:drawer_number:drive_number`.
 
 The `eseries_storage_pool_usable_drives` variable can be defined for each volume group under 
 `eseries_storage_pool_configuration` for each resource group.
