@@ -12,3 +12,27 @@
   ansible.builtin.service_facts:
   changed_when: false
   become: true
+
+- name: Ensure SELinux is configured to be disabled.
+  ansible.builtin.lineinfile:
+    path: /etc/selinux/config
+    regexp: '^SELINUX='
+    line: SELINUX=disabled
+  register: disable_selinux
+  become: true
+
+- name: Restart cluster nodes to apply SELinux configuration changes.
+  block:
+    - name: Shutdown cluster
+      ansible.builtin.systemd:
+        state: stopped
+        name: "{{ item }}"
+      loop: ["pacemaker", "corosync"]
+
+    - name: Reboot nodes to apply SELinux configuration changes.
+      reboot:
+
+    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+      ansible.builtin.include_tasks: ../common/maintenance/set.yml
+  when: disable_selinux["changed"]
+  become: true
