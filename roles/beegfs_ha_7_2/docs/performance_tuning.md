@@ -3,13 +3,16 @@ With the BeeGFS HA Role we provide access to many different tuning parameters th
 performance to suit their needs. Below we describe how to tune different aspects of the BeeGFS HA Role.
 
 <br>
+
 ## Table of Contents
+
 --------------------------------------------------------------
 1. [Performance Tuning](#performance-tuning)
 2. [Tuning Kernel Parameters Using sysctl](#tuning-kernel-parameters-using-sysctl)
 3. [Tuning parameters on E-Series block devices/paths using udev](#tuning-parameters-on-eseries-block-devices)
-4. [Advanced](#advanced)
-5. [Restrictions](#restrictions)
+4. [Using Mixed Drives](#using-mixed-drives)
+5. [Advanced](#advanced)
+6. [Restrictions](#restrictions)
 
 <br>
 
@@ -84,8 +87,27 @@ Note these will be applied to both the device mapper entry (e.g. dm-X) and under
 
 <br>
 
+<a name="using-mixed-drives"></a>
+## Using mixed drives
+-----------------------
+When deploying a system with mixed drive types or drive sizes, you may want to select certain drives for each volume
+group. This can be done by using the `eseries_storage_pool_usable_drives` variable. Note, you will have to supply 
+enough useable drives to be able to build the volume group. When defining the useable drives, the first digit is the 
+drive shelf number followed by the drive number such as `99:0`. 
+
+Example:
+- `eseries_storage_pool_usable_drives: "99:0,99:23,99:1,99:22,99:2,99:21,99:3,99:20,99:4,99:19,99:5,99:18,99:6,99:17,`
+`99:7,99:16,99:8,99:15,99:9,99:14,99:10,99:13,99:11,99:12"`
+
+For enclosure with drawers, use the format `shelf_id:drawer_number:drive_number`.
+
+The `eseries_storage_pool_usable_drives` variable can be defined for each volume group under 
+`eseries_storage_pool_configuration` for each resource group.
+
+<br>
+
 <a name="advanced"></a>
-## Advanced:
+## Advanced
 ------------
 - If it is desired to set additional parameters on E-Series devices using udev, the template for the rule is located at
 [BeeGFS HA udev Rule](../templates/common/eseries_beegfs_ha_udev_rule.j2). **Please note modifications to this file
@@ -95,7 +117,7 @@ require an understanding of Ansible, Jinja2, udev and bash scripting and are mad
 <br>
 
 <a name="restrictions"></a>
-## Restrictions:
+## Restrictions
 ---------------
 - If BeeGFS storage and metadata services are running on the same node, there is no way to set different sysctl entries 
 or udev rules to tune servers and LUNs used for metadata vs. storage differently.
