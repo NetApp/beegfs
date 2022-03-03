@@ -42,7 +42,7 @@
 # Ensure cluster resource defaults are configured.
 - name: Determine cluster resource defaults.
   ansible.builtin.command: "crm_attribute --type rsc_defaults --name {{ item['key'] }} --query --quiet"
-  loop: "{{ lookup('ansible.builtin.dict', beegfs_ha_cluster_resource_defaults) }}"
+  loop: "{{ lookup('ansible.builtin.dict', beegfs_ha_cluster_resource_defaults, wantlist=true) }}"
   changed_when: false
   failed_when: false
   register: resource_default_query

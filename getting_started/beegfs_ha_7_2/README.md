@@ -1,6 +1,10 @@
-netappeseries.beegfs.beegfs_ha_7_2 Role's Example Project
+Getting Started Project for netappeseries.beegfs.beegfs_ha_7_2 Role 
 =========================================================
-The files in this directory expedite getting started with the role by having users fill in a few details about their environment in the `beegfs_ha_inventory.yml` file. This is run against the `create_inventory_structure.yml` playbook which will ask for details about the desired deployment and generate a full skeleton inventory. Lastly users review the generated files filling in necessary details and changing default values where needed before running with the `beegfs_ha_playbook.yml` to deploy BeeGFS with HA.
+The files in this directory expedite getting started with the role by having users fill in a few details about their 
+environment in the `beegfs_ha_inventory.yml` file. This is run against the `create_inventory_structure.yml` playbook 
+which will ask for details about the desired deployment and generate a full skeleton inventory. Lastly users review the 
+generated files filling in necessary details and changing default values where needed before running with the 
+`beegfs_ha_playbook.yml` to deploy BeeGFS with HA.
 
 Requirements
 ------------
@@ -21,7 +25,8 @@ Step 1) Get the `beegfs_ha_7_2` example directory to you Ansible control node.
     cd <your_project_directory>
     git clone -b release-2.1.0 --single-branch https://github.com/netappeseries/beegfs.git && cp -r beegfs/examples/beegfs_ha_7_2/* . && rm -rf beegfs
 
-Step 2) Modify the `beegfs_ha_inventory.yml` file. In this step, you'll define BeeGFS HA cluster resource groups, and storage targets.
+Step 2) Modify the `beegfs_ha_inventory.yml` file. In this step, you'll define BeeGFS HA cluster resource groups, and 
+storage targets.
 - Read the comments in the `beegfs_ha_inventory.yml` file for modification details.
 
 Step 3) Setup a skeleton inventory structure based on the modified `beegfs_ha_inventory.yml` file from step 2.
@@ -29,13 +34,16 @@ Step 3) Setup a skeleton inventory structure based on the modified `beegfs_ha_in
 ```
 ansible-playbook -i beegfs_ha_inventory.yml create_inventory_structure.yml
 ```
-- Note that once the inventory files have been created, running the playbook again will only create new files that correspond to additions to the `beegfs_ha_inventory.yml` file (i.e. new resource groups, storage targets), no existing files will be modified.
+- Note that once the inventory files have been created, running the playbook again will only create new files that 
+  correspond to additions to the `beegfs_ha_inventory.yml` file (i.e. new resource groups, storage targets), no existing 
+  files will be modified.
 
 Step 4) Review and update the generated files found in `group_vars` directory.
 * The `group_vars` directory contains all group-level variable files. Be sure to carefully read the comments in each file.
 
 Step 5) Review and update the generated files found in `host_vars` directory.
-* The `host_vars` directory contains files for each BeeGFS HA node and E-Series storage. Carefully read the comments in each file.
+* The `host_vars` directory contains files for each BeeGFS HA node and E-Series storage. Carefully read the comments 
+  in each file.
 
 Step 6) Configure the BeeGFS HA services.
 ```
@@ -44,9 +52,15 @@ ansible-playbook -i beegfs_ha_inventory.yml beegfs_ha_playbook.yml
 
 Complete BeeGFS HA resource group beegfs_targets sub-structure - eseries_storage_pool_configuration
 ---------------------------------------------------------------------------------------------------
-This is a complete reference for the `eseries_storage_pool_configuration` variable used to specify the `beegfs_targets` for each resource group. You only need to specify the options you need, required options that must be included are outlined in the `group_var` file representing each resource group.
+This is a complete reference for the `eseries_storage_pool_configuration` variable used to specify the `beegfs_targets` 
+for each resource group. You only need to specify the options you need, required options that must be included are 
+outlined in the `group_var` file representing each resource group.
 
-Additional background: The `eseries_storage_pool_configuration` structure is a variable used in netappeseries.santricity.host role. This has been slightly modified since the complete structure is generated dynamically at runtime to combine all BeeGFS HA resource group beegfs_targets into a single definitions for each target defined. This allows the role to control volume naming convention and combine storage pools to better utilize E-Series storage for BeeGFS management and metadata services.
+Additional background: The `eseries_storage_pool_configuration` structure is a variable used in 
+netappeseries.santricity.host role. This has been slightly modified since the complete structure is generated 
+dynamically at runtime to combine all BeeGFS HA resource group beegfs_targets into a single definitions for each target 
+defined. This allows the role to control volume naming convention and combine storage pools to better utilize E-Series 
+storage for BeeGFS management and metadata services.
 
     eseries_storage_pool_configuration:
       - name:                                      # Name or name scheme (see above) for the storage pool.

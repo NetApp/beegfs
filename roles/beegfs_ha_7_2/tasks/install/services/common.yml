@@ -1,0 +1,14 @@
+- name: Add required BeeGFS sysctl.conf entries.
+  ansible.posix.sysctl:
+    name: "{{ item['key'] }}"
+    value: "{{ item['value'] }}"
+    state: present
+    reload: true
+    sysctl_file: "{{ sysctl_conf_path }}"
+  loop: "{{ lookup('dict', beegfs_ha_required_sysctl_entries) }}"
+  become: true
+
+- name: Determine all BeeGFS services.
+  ansible.builtin.service_facts:
+  changed_when: false
+  become: true

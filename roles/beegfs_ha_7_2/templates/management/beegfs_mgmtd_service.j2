@@ -7,12 +7,14 @@ Requires=network-online.target
 After=network-online.target openibd.service openib.service rdma.service opensmd.service opensm.service zfs.target
 
 [Service]
-ExecStart=/opt/beegfs/sbin/beegfs-mgmtd cfgFile={{ mgmt_config_path }}beegfs-mgmtd.conf runDaemonized=false
+ExecStart=nice -n {{ beegfs_ha_beegfs_mgmtd_service_niceness }} /opt/beegfs/sbin/beegfs-mgmtd cfgFile={{ mgmt_config_path }}beegfs-mgmtd.conf runDaemonized=false
 Type=simple
 
 # If the sysTargetOfflineTimeoutSecs in beegfs-mgmtd.conf is set over 240, this value needs to be
 # adjusted accordingly. Recommendation: sysTargetOfflineTimeoutSecs + 60
-TimeoutStopSec=300
+# BeeGFS Default: 300. For BeeGFS HA adjusting to be sysTargetOfflineTimeoutSecs (180) + 60.
+# IMPORTANT: If this is changed adjust beegfs_ha_resource_systemd_mgmt_stop_timeout to avoid Pacemaker stop failures.
+TimeoutStopSec=240
 
 [Install]
 WantedBy=default.target

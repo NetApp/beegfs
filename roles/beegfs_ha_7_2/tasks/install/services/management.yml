@@ -63,21 +63,24 @@
       ansible.builtin.file:
         state: directory
         path: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}/{{ item }}"
+        mode: "0751"
       loop: ["data", "mgmt_config"]
 
     - name: Generate management connInterfacesFile.conf file.
       ansible.builtin.template:
         src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/connInterfacesFile_conf.j2') }}"
         dest: "{{ mgmt_config_path }}connInterfacesFile.conf"
+        mode: "0644"
       loop: "{{ node_info['management'] }}"
-      register: connInterfacesFile_conf
+      register: mgmtd_interface_conf
 
     - name: Generate management connNetFilterFile.conf file.
       ansible.builtin.template:
         src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/connNetFilterFile_conf.j2') }}"
         dest: "{{ mgmt_config_path }}connNetFilterFile.conf"
+        mode: "0644"
       loop: "{{ node_info['management'] }}"
-      register: connNetFilterFile_conf
+      register: mgmtd_filter_conf
 
     - name: Ensure beegfs-mgmtd.conf file is configured.
       netapp_eseries.beegfs.update_conf:
@@ -86,7 +89,13 @@
         options: "{{ item['service_configuration_options'] | combine(beegfs_ha_beegfs_mgmtd_conf_required_options) }}"
         mode: "0644"
       loop: "{{ node_info['management'] }}"
-      register: beegfs_mgmtd_conf
+      register: mgmtd_service_conf
+
+    - name: Restart the BeeGFS management service when changes have been made.
+      ansible.builtin.systemd:
+        name: beegfs-mgmtd.service
+        state: restarted
+      when: ansible_facts.services['beegfs-mgmtd.service']['state'] | default('') == 'running' and (mgmtd_interface_conf['changed'] or mgmtd_filter_conf['changed'] or mgmtd_service_conf['changed'])
 
     - name: Initialize management storage directory for beegfs-mgmtd server daemon and update the beegfs-mgmtd config file.
       ansible.builtin.command:
@@ -96,10 +105,8 @@
       changed_when: "'ERROR: Storage directory is not empty.' not in beegfs_setup_mgmtd['stdout']"
 
     - name: Unmount management volume.
-      ansible.builtin.command:
-        cmd: "umount {{ mgmt_volume_mount }}"
-      when: management_volume_mount['changed'] == True
-      ignore_errors: true
+      ansible.builtin.command: "umount {{ mgmt_volume_mount }}"
+      when: management_volume_mount['changed']
   when: inventory_hostname == preferred_management_node
   become: true
 
@@ -108,6 +115,7 @@
   ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'management/beegfs_mgmtd_service.j2') }}"
     dest: /etc/systemd/system/beegfs-mgmtd.service
+    mode: "0644"
   register: beegfs_mgmtd_service_override
   become: true
 
