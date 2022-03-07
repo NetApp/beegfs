@@ -226,7 +226,7 @@ block if unresponsive nfs mounts are in use on the system.
 When any of the actions are called its running process will be given this nicesness value.
 </longdesc>
 <shortdesc lang="en">Niceness value</shortdesc>
-<content type="integer" default=0 />
+<content type="integer" default="0" />
 </parameter>
 
 </parameters>
