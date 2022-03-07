@@ -30,9 +30,11 @@
       loop: ["pacemaker", "corosync"]
 
     - name: Reboot nodes to apply SELinux configuration changes.
-      reboot:
+      ansible.builtin.reboot:
 
     - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
       ansible.builtin.include_tasks: ../common/maintenance/set.yml
+      when: inventory_hostname == preferred_management_node
   when: disable_selinux["changed"]
   become: true
+ 
