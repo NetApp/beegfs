@@ -5,11 +5,23 @@ beegfs_ha_cluster_name: hacluster                          # Pacemaker cluster g
 beegfs_ha_cluster_username: hacluster                      # Cluster group's username
 beegfs_ha_cluster_password: hapassword                     # Cluster group's password
 beegfs_ha_cluster_password_sha512_salt: randomSalt         # Cluster group's password salt
-beegfs_ha_mgmtd_group: mgmt                                # BeeGFS HA managment resource group
-# beegfs_ha_mgmtd_floating_ip:                             # BeeGFS HA management resource floating IP address.
-# beegfs_ha_cluster_node_ips: []                           # Defines an order list of IP addresses or hostnames with the first having the highest priority. When
+beegfs_ha_mgmtd_group: mgmt                                # BeeGFS HA management resource group
+# beegfs_ha_mgmtd_floating_ip:                             # (Required) BeeGFS HA management resource floating IP address.
+beegfs_ha_cluster_node_ips: []                             # Defines an order list of IP addresses or hostnames with the first having the highest priority. When
                                                            #    there are no listed IPs then node name will be used. Node names are defined in /etc/hosts.
-beegfs_ha_allow_firewall_high_availability_service: true   # Allow high-availability firewall services.
+beegfs_ha_firewall_start_and_enable: true  # Allow firewalld to start. This is required to create persistent port allowances. If the service is not running then it will be started and stopped once the configuration is set or removed.
+beegfs_ha_firewall_allow_required_ports: true  # This allows all known and required ports.
+beegfs_ha_firewall_zone: beegfs   # Default firewall zone for BeeGFS communications.
+beegfs_ha_firewall_required_ha_ports:
+ - [2224, tcp]  # pcs daemon
+ - [3121, tcp]  # Pacemaker Remote nodes
+ - [5405, udp]  # Corosync clustering - Required on all corosync nodes (needed by corosync)
+#  - [5403, udp]  # Corosync quorum - Required on the quorum device host when using a quorum device with corosync-qnetd. The default value can be changed with the -p option of the corosync-qnetd command.
+#  - [5404, udp]  # Corosync multicast - Required on corosync nodes if corosync is configured for multicast UDP
+#  - [9929, tcp]  # Required to be open on all cluster nodes and booth arbitrator nodes to connections from any of those same nodes when the Booth ticket manager is used to establish a multi-site cluster.
+#  - [9929, udp]  # Required to be open on all cluster nodes and booth arbitrator nodes to connections from any of those same nodes when the Booth ticket manager is used to establish a multi-site cluster.
+#  - [21064, tcp] # DLM resources - Required on all nodes if the cluster contains any resources requiring DLM (such as clvm or GFS2)
+
 beegfs_ha_alert_email_subject: "ClusterNotification"
 beegfs_ha_alert_email_list: []  # List of emails to alert when changes occur.
 
@@ -26,7 +38,7 @@ beegfs_ha_pacemaker_enabled: false  # Whether pacemaker and corosync should be s
 beegfs_ha_filter_ip_ranges: []
 beegfs_ha_node_preference_scope_step: 200
 
-beegfs_ha_cluster_crm_config_defaults: # WARNING! These defaults are required for high-avaiability.
+beegfs_ha_cluster_crm_config_defaults: # WARNING! These defaults are required for high-availability.
   symmetric-cluster: false  # Opt-in architecture
   fence-reaction: stop  # Allows cluster nodes with a fence resource to fence itself.
   concurrent-fencing: true # Allows cluster nodes to be fenced concurrently.

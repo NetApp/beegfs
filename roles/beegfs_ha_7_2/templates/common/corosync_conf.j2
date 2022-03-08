@@ -11,9 +11,13 @@ nodelist {
     node {
         name: {{ node }}
         nodeid: {{ loop["index"] }}
-{% for address in hostvars[node]["beegfs_ha_cluster_node_ips"] | default([node]) %}
+{% if hostvars[node]["beegfs_ha_cluster_node_ips"] == [] %}
+        ring{{ loop["index0"] }}_addr: {{ node }}
+{% else %}
+{% for address in hostvars[node]["beegfs_ha_cluster_node_ips"] %}
         ring{{ loop["index0"] }}_addr: {{ address }}
 {% endfor %}
+{% endif %}
     }
 {% endfor %}
 }

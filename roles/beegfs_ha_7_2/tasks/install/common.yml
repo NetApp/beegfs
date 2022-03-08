@@ -1,5 +1,5 @@
 - name: Ensure the required firewall ports are open.
-  include_tasks: common/firewall.yml
+  include_tasks: ../common/firewall/install.yml
 
 - name: Ensure the ntp is configured.
   include_tasks: common/ntp.yml

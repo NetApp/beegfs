@@ -1,0 +1,272 @@
+- name: Start and enable the firewalld service
+  ansible.builtin.systemd:
+    name: firewalld.service
+    state: started
+    enabled: true
+  register: firewalld_service
+  when: allow_ports and beegfs_ha_firewall_start_and_enable
+  become: true
+
+- name: Update list of all current systemd services.
+  ansible.builtin.service_facts:
+  when: firewalld_service
+  become: true
+
+- name: Determine port information for BeeGFS communications.
+  ansible.builtin.set_fact:
+    beegfs_communication_info: |-
+      {%- set ports = [] -%}
+      {%- set interfaces = [] -%}
+
+      {%- for service_type in node_info["services"] | default([]) -%}
+        {%- for service in node_info[service_type] -%}
+
+          {#- Determine interfaces required for BeeGFS communications -#}
+          {%- for floating_ip in service["floating_ips"] -%}
+            {%- set interface = floating_ip.split(":")[0] -%}
+            {%- if interface not in interfaces -%}
+              {%- if interfaces.append(interface) -%}{%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+
+          {#- Determine ports required for BeeGFS communications -#}
+          {%- if service_type == "management" -%}
+            {%- if service["service_configuration_options"]["connMgmtdPortTCP"] is defined -%}
+              {%- if ports.append(service["service_configuration_options"]["connMgmtdPortTCP"] ~ "/tcp") -%}{%- endif -%}
+            {%- endif -%}
+            {%- if service["service_configuration_options"]["connMgmtdPortUDP"] is defined -%}
+              {%- if ports.append(service["service_configuration_options"]["connMgmtdPortUDP"] ~ "/udp") -%}{%- endif -%}
+            {%- endif -%}
+          {%- elif service_type == "metadata" -%}
+            {%- if service["service_configuration_options"]["connMetaPortTCP"] is defined -%}
+              {%- if ports.append(service["service_configuration_options"]["connMetaPortTCP"] ~ "/tcp") -%}{%- endif -%}
+            {%- endif -%}
+            {%- if service["service_configuration_options"]["connMetaPortUDP"] is defined -%}
+              {%- if ports.append(service["service_configuration_options"]["connMetaPortUDP"] ~ "/udp") -%}{%- endif -%}
+            {%- endif -%}
+          {%- elif service_type == "storage" -%}
+            {%- if service["service_configuration_options"]["connStoragePortTCP"] is defined -%}
+              {%- if ports.append(service["service_configuration_options"]["connStoragePortTCP"] ~ "/tcp") -%}{%- endif -%}
+            {%- endif -%}
+            {%- if service["service_configuration_options"]["connStoragePortUDP"] is defined -%}
+              {%- if ports.append(service["service_configuration_options"]["connStoragePortUDP"] ~ "/udp") -%}{%- endif -%}
+            {%- endif -%}
+          {%- endif -%}
+
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- [interfaces, ports] -}}
+
+- name: Get network configuration.
+  ansible.builtin.command: "ip --oneline --brief addr"
+  changed_when: false
+  register: network_configuration
+
+- name: Get list of all firewall zones
+  ansible.builtin.command: "firewall-cmd --get-zones"
+  changed_when: false
+  register: zones
+
+- name: Get info for each zone
+  ansible.builtin.command: "firewall-cmd --info-zone={{ item }}"
+  changed_when: false
+  register: zones_info
+  loop: '{{ zones["stdout"].split(" ") }}'
+
+- name: Determine port information for HA communications.
+  ansible.builtin.set_fact:
+    ha_ports_info: |-
+      {%- set interfaces = [] -%}
+      {%- set ports = [] -%}
+
+      {#- Determine the beegfs_ha_cluster_node_ips IP interfaces -#}
+      {%- for node_ip in beegfs_ha_cluster_node_ips -%}
+        {%- for line in network_configuration["stdout_lines"] if line | regex_search(node_ip ~ "/") -%}
+          {%- if interfaces.append(line.split(" ")[0]) -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+
+      {#- Create required HA ports list -#}
+      {%- for port in beegfs_ha_firewall_required_ha_ports  -%}
+        {%- if ports.append(port[0] ~ "/" ~ port[1]) -%}{%- endif -%}
+      {%- endfor -%}
+      {{- [interfaces, ports] -}}
+
+- name: Determine which zones the HA ports should be allowed.
+  ansible.builtin.set_fact:
+    ha_port_info_list: |-
+      {%- set info = [] -%}
+
+      {%- if ha_ports_info[0] == [] -%}
+        {%- for port in ha_ports_info[1] -%}
+          {%- if info.append([beegfs, port]) -%}{%- endif -%}
+        {%- endfor -%}
+
+      {%- else -%}
+        {%- set zones = [] -%}
+        {%- for zone_info in zones_info["results"] -%}
+          {%- for line in zone_info["stdout_lines"] if "interfaces:" in line -%}
+            {%- for zone_interface in line.split(" ")[1:] if zone_interface in ha_ports_info[0] -%}
+
+              {#- Add an entry for each require ha_port for zone -#}
+              {%- set zone = zone_info["item"] -%}
+              {%- if zone not in zones -%}
+                {%- if zones.append(zone) -%}{%- endif -%}
+                {%- for port in ha_ports_info[1] -%}
+                  {%- if info.append([zone, port]) -%}{%- endif -%}
+                {%- endfor -%}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- endfor -%}
+        {%- endfor -%}
+      {%- endif -%}
+      {{- info -}}
+
+- name: Determine any ports that should be removed from firewall zones.
+  ansible.builtin.set_fact:
+    remove_beegfs_port_list: |-
+      {%- set remove_beegfs_port_list = [] -%}
+
+      {#- Determine HA ports that reside on BeeGFS communications firewall zone. -#}
+      {%- set beegfs_ha_ports = [] -%}
+      {%- for ha_port_info in ha_port_info_list if ha_port_info[0] == beegfs_ha_firewall_zone -%}
+        {%- if beegfs_ha_ports.append(ha_port_info[1]) -%}{%- endif -%}
+      {%- endfor -%}
+
+      {#- Determine ports that should be removed from BeeGFS communications firewall zone. -#}
+      {%- for zone_info in zones_info["results"] if zone_info["item"] == beegfs_ha_firewall_zone -%}
+
+        {#- Check for required beegfs communication ports on unexpected zones. -#}
+        {%- for line in zone_info["stdout_lines"] if "ports:" in line -%}
+          {%- set existing_ports = (line | regex_replace(".*ports: ", "")).split(" ") -%}
+          {%- for port in existing_ports if port and port not in beegfs_communication_info[1] and port not in beegfs_ha_ports -%}
+            {%- if remove_beegfs_port_list.append([zone_info["item"], port]) -%}{%- endif -%}
+          {%- endfor -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- remove_beegfs_port_list -}}
+
+    remove_ha_port_info: |-
+      {%- set remove_ha_port_info = [] -%}
+
+      {#- Determine zones with expected ports -#}
+      {%- set ports = {} -%}
+      {%- for ha_port_info in ha_port_info_list -%}
+        {%- if ha_port_info[1] not in (ports.keys() | list) -%}
+          {%- if ports.update({ha_port_info[1]: [ha_port_info[0]]}) -%}{%- endif -%}
+        {%- else -%}
+          {%- if ports[ha_port_info[1]].append(ha_port_info[0]) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+
+      {#- Determine required ha ports on unexpected zones -#}
+      {%- for zone_info in zones_info["results"] -%}
+        {%- set zone = zone_info["item"] -%}
+        {%- for line in zone_info["stdout_lines"] if "ports:" in line -%}
+          {%- set zone_ports = line.split(" ") -%}
+          {%- if zone_ports | length > 3 -%}
+            {%- for port in zone_ports[3:] if port in (ports.keys() | list) and zone not in ports[port] -%}
+              {%- if remove_ha_port_info.append([zone, port]) -%}{%- endif -%}
+            {%- endfor -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- remove_ha_port_info  }}
+
+- name: Ensure the required firewalld ports are enabled for BeeGFS and HA communications.
+  block:
+
+    # Configure firewalld for BeeGFS cluster communications.
+    - name: Create "{{ beegfs_ha_firewall_zone }}" firewall zone.
+      ansible.posix.firewalld:
+        state: present
+        zone: "{{ beegfs_ha_firewall_zone }}"
+        permanent: true
+        offline: true
+      register: firewall_zone
+
+    - name: Reload firewall to recognize the newly created zones.
+      ansible.builtin.systemd:
+        state: reloaded
+        name: firewalld.service
+      when: 'firewall_zone["changed"] and ansible_facts["services"]["firewalld.service"]["state"] == "running"'
+
+    - name: Add all interfaces to "{{ beegfs_ha_firewall_zone }} zone."
+      ansible.posix.firewalld:
+        state: enabled
+        zone: "{{ beegfs_ha_firewall_zone }}"
+        interface: "{{ item }}"
+        permanent: true
+        immediate: true
+        offline: true
+      loop: "{{ beegfs_communication_info[0] }}"
+
+    - name: Allow required firewalld ports for each BeeGFS cluster service.
+      ansible.posix.firewalld:
+        state: enabled
+        zone: "{{ beegfs_ha_firewall_zone }}"
+        port: "{{ item }}"
+        permanent: true
+        immediate: true
+        offline: true
+      loop: "{{ beegfs_communication_info[1] }}"
+
+    - name: Disallow required firewalld ports for each BeeGFS cluster service on unexpected zones.
+      ansible.posix.firewalld:
+        state: disabled
+        zone: "{{ item[0] }}"
+        port: "{{ item[1] }}"
+        permanent: true
+        immediate: true
+        offline: true
+      loop: "{{ remove_beegfs_port_list }}"
+
+    # Configure firewall ports for HA cluster communications.
+    - name: Allow required firewalld ports for each BeeGFS HA service.
+      ansible.posix.firewalld:
+        state: enabled
+        zone: "{{ item[0] }}"
+        port: "{{ item[1] }}"
+        permanent: true
+        immediate: true
+        offline: true
+      loop: "{{ ha_port_info_list }}"
+
+    - name: Disallow required firewalld ports for each BeeGFS HA service on unexpected zones.
+      ansible.posix.firewalld:
+        state: disabled
+        zone: "{{ item[0] }}"
+        port: "{{ item[1] }}"
+        permanent: true
+        immediate: true
+        offline: true
+      loop: "{{ remove_ha_port_info }}"
+  when: allow_ports and beegfs_ha_firewall_allow_required_ports
+  become: true
+
+# This block is for the uninstall code path and will only be executed beegfs_ha_firewall_allow_required_ports==True
+- name: Ensure the required firewalld ports are disabled.
+  block:
+    - name: Disable required firewalld ports for each BeeGFS cluster service.
+      ansible.posix.firewalld:
+        state: disabled
+        zone: "{{ beegfs_ha_firewall_zone }}"
+        port: "{{ item }}"
+        permanent: true
+        immediate: true
+        offline: true
+      when: beegfs_ha_firewall_zone in zones["stdout"]
+      loop: "{{ beegfs_communication_info[1] }}"
+
+    - name: Disable required firewalld ports for each BeeGFS HA service.
+      ansible.posix.firewalld:
+        state: disabled
+        zone: "{{ item[0] }}"
+        port: "{{ item[1] }}"
+        permanent: true
+        immediate: true
+        offline: true
+      when: item[0] in zones["stdout"]
+      loop: "{{ ha_port_info_list }}"
+  when: not allow_ports and beegfs_ha_firewall_allow_required_ports
+  become: true
