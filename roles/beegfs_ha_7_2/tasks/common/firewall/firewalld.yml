@@ -3,7 +3,14 @@
     name: firewalld.service
     state: started
     enabled: true
+  register: firewalld_service
   when: allow_ports and beegfs_ha_firewall_start_and_enable
+  become: true
+
+- name: Update list of all current systemd services.
+  ansible.builtin.service_facts:
+  when: firewalld_service
+  become: true
 
 - name: Determine port information for BeeGFS communications.
   ansible.builtin.set_fact:
