@@ -18,11 +18,12 @@
         path: "{{ beegfs_ha_alert_conf }}"
         options: "{{ beegfs_ha_alert_conf_default_options | combine(beegfs_ha_alert_conf_ha_group_options) | combine(beegfs_ha_alert_conf_options) | combine(beegfs_ha_alerts_conf_required_options) }}"
         mode: "0644"
+        pattern: "^#?([A-Za-z0-9_-]+)( *= *)(.*)$"
       register: postfix_config
       vars:
         beegfs_ha_alerts_conf_required_options:
           myhostname: "{{ alerts_configuration_options['myhostname'] | default(ansible_fqdn | default(ansible_hostname | default(inventory_hostname))) }}"
-          mydomain: "{{ alerts_configuration_options['mydomain'] | default(ansible_domain) }}"
+          mydomain: "{{ alerts_configuration_options['mydomain'] | default(beegfs_ha_alert_conf_ha_group_options['mydomain'] | default(ansible_domain)) }}"
 
     - name: Ensure postfix service is started and enabled.
       ansible.builtin.systemd:
