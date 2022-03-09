@@ -24,6 +24,12 @@ nodelist {
 
 quorum {
     provider: corosync_votequorum
+
+    # The options will allow a cluster with only 2 online nodes to be online and this mode will give the lowest
+    # node an extra vote. The two_node attribute enables the wait_for_all and only taken into affect when there
+    # are only two nodes in the cluster.
+    two_node: 1
+    auto_tie_breaker: 1
 }
 
 logging {
