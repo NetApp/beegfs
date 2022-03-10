@@ -1,25 +1,24 @@
 <constraints>
-{%- for service in ["management", "metadata", "storage"] -%}
-  {%- for group in (resource_group_node_preference.keys() | list) if resource_group_info[group]["beegfs_service"] == service -%}
-
-    {%- for node in resource_group_node_preference[group] | reverse -%}
-      {% set priority = loop["index0"] * (beegfs_ha_node_preference_scope_step | int) %}
+{% for service in ["management", "metadata", "storage"] %}
+{%   for group in (resource_group_node_preference.keys() | list) if resource_group_info[group]["beegfs_service"] == service %}
+{%     for node in resource_group_node_preference[group] | reverse %}
+{%       set priority = loop["index0"] * (beegfs_ha_node_preference_scope_step | int) %}
   <rsc_location id="location-{{ group }}-monitor-{{ node }}" node="{{ node }}" rsc="{{ group }}-monitor" score="{{ priority }}"/>
   <rsc_location id="location-{{ group }}-group-{{ node }}" node="{{ node }}" rsc="{{ group }}-group" score="0"/>
-
-    {%- endfor %}
+{%     endfor %}
   <rsc_colocation id="colocation-{{ group }}-group" rsc="{{ group }}-group" with-rsc="{{ group }}-monitor" score="INFINITY"/>
-  {% endfor %}
+{%   endfor %}
 {% endfor %}
-
-{%- for fence_agent_type, fence_agent_attributes in (beegfs_ha_fencing_agents.items() | list) -%}
-  {%- for fence_agent_attribute in fence_agent_attributes -%}
-    {%- set fence_name = fence_agent_type ~ '_' ~ loop['index'] -%}
-    {%- for node in groups[beegfs_ha_ansible_cluster_group] %}
+{% for fence_agent_type, fence_agent_definitions in (beegfs_ha_fencing_agents.items() | list) %}
+{%   for fence_agent_definition in fence_agent_definitions %}
+{%     set fence_name = fence_agent_type ~ '_' ~ loop['index'] %}
+{%     for node in groups[beegfs_ha_ansible_cluster_group] %}
+{%       if node in fence_agent_definition["pcmk_host_list"] %}
   <rsc_location id="location-{{ fence_name }}-{{ node }}-0" node="{{ node }}" rsc="{{ fence_name }}" score="0"/>
-
-    {%- endfor -%}
-  {%- endfor -%}
-{%- endfor -%}
-
+{%       else %}
+  <rsc_location id="location-{{ fence_name }}-{{ node }}-0" node="{{ node }}" rsc="{{ fence_name }}" score="100"/>
+{%       endif %}
+{%     endfor %}
+{%   endfor %}
+{% endfor %}
 </constraints>
