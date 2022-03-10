@@ -25,3 +25,10 @@
     dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-target"
     mode: 0755
   become: true
+
+- name: Ensure beegfs-alerts.sh is available for cluster alerts.
+  ansible.builtin.template:
+    src: common/beegfs-alerts.j2
+    dest: /etc/beegfs/beegfs-alerts.sh
+    mode: 0755
+  become: true

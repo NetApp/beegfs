@@ -24,3 +24,4 @@
       ansible.builtin.command: "cibadmin --replace --scope constraints --xml-file /tmp/~tmp_beegfs_ha_cluster_constraints.xml"
   when: constraints_change_required
   become: true
+
