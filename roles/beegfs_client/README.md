@@ -12,8 +12,8 @@ Support Matrix
 --------------
 
 | Component              | BeeGFS Version | Operating System          | Client Protocols  |
-| ---------------------- | -------------- | ------------------------- | ----------------- |
-| BeeGFS Client service  | 7.2.5          | RedHat 8.3, Ubuntu 20.04  | TCP/UDP and RDMA  |
+| ---------------------- |----------------| ------------------------- | ----------------- |
+| BeeGFS Client service  | 7.2.6          | RedHat 8.3, Ubuntu 20.04  | TCP/UDP and RDMA  |
 
 Supported Tags
 --------------

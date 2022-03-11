@@ -16,7 +16,7 @@ performance to suit their needs. Below we describe how to tune different aspects
 
 <br>
 
-<a name="performance-tuning"> </a>
+<a name="performance-tuning"></a>
 ## Performance Tuning
 -----------------------------------------------------------------
 
