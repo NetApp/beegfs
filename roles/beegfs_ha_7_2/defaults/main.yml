@@ -138,6 +138,7 @@ beegfs_ha_beegfs_mgmtd_conf_default_options:                      # Default mana
   storeAllowFirstRunInit: "false" # The quotes prevent the value from being treated like a boolean which converts to True/False.
   connMgmtdPortTCP: 8008
   connMgmtdPortUDP: 8008
+  sysTargetOfflineTimeoutSecs: 900 # This is required to avoid the mgmt service prematurely placing targets offline if the preferred meta/storage interface fails (ESOLA-116).
 
 # BeeGFS metadata service configuration
 beegfs_ha_beegfs_meta_conf_path: /etc/beegfs/beegfs-meta.conf   # Default BeeGFS metadata service configuration file path.
@@ -153,6 +154,7 @@ beegfs_ha_beegfs_meta_conf_default_options:                     # Default metada
   connMgmtdPortUDP: 8008
   tuneNumWorkers: 32
   connUseRDMA: "true"
+  sysTargetOfflineTimeoutSecs: 900 # This is required to avoid the mgmt service prematurely placing targets offline if the preferred meta/storage interface fails (ESOLA-116).
 
 # BeeGFS storage service configuration
 beegfs_ha_beegfs_storage_conf_path: /etc/beegfs/beegfs-storage.conf   # Default BeeGFS storage service configuration file path.
@@ -171,6 +173,7 @@ beegfs_ha_beegfs_storage_conf_default_options:                        # Default 
   tuneFileReadSize: 2048k
   tuneFileWriteSize: 2048k
   connUseRDMA: "true"
+  sysTargetOfflineTimeoutSecs: 900 # This is required to avoid the mgmt service prematurely placing targets offline if the preferred meta/storage interface fails (ESOLA-116).
 
 # Journald logging defaults
 beegfs_ha_journald_allow_changes: true                    # Allows changes to be made to journald configuration changes.
