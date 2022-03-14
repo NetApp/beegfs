@@ -72,6 +72,9 @@
 {# Note: monitoring is disabled because it's handled by the beegfs-monitor resource <op id="{{ resource_group }}-service-monitor" interval="{{ beegfs_ha_resource_systemd_monitor_interval }}" name="monitor" on-fail="restart"/> #}
       <op id="{{ resource_group }}-service-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_systemd_mgmt_stop_timeout }}"/>
     </operations>
+    <meta_attributes id="{{ resource_group }}-service-meta_attributes">
+      <nvpair id="{{ resource_group }}-service-meta_attributes-migration-threshold" name="migration-threshold" value="{{ beegfs_ha_resource_systemd_migration_threshold }}"/>
+    </meta_attributes>
   </primitive>
 </group>
 {% endif %}
