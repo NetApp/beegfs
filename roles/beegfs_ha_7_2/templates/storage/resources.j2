@@ -41,7 +41,7 @@
     </instance_attributes>
     <operations>
       <op id="{{ group }}-FS{{ loop["index"] }}-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_filesystem_stor_start_timeout }}"/>
-      <op id="{{ group }}-FS{{ loop["index"] }}-monitor" interval="{{ beegfs_ha_resource_filesystem_monitor_interval }}" name="monitor" on-fail="restart"/>
+{#  Note: monitoring is disabled because it's handled by the beegfs-monitor resource <op id="{{ group }}-FS{{ loop["index"] }}-monitor" interval="{{ beegfs_ha_resource_filesystem_monitor_interval }}" name="monitor" on-fail="restart"/> #}
       <op id="{{ group }}-FS{{ loop["index"] }}-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_filesystem_stop_timeout }}"/>
     </operations>
   </primitive>
@@ -66,7 +66,7 @@
     </instance_attributes>
     <operations>
       <op id="{{ ipaddr_id }}-start" interval="0s" name="start"/>
-      <op id="{{ ipaddr_id }}-monitor" interval="{{ beegfs_ha_resource_ipaddr_monitor_interval }}" name="monitor" on-fail="restart"/>
+{# Note: monitoring is disabled because it's handled by the beegfs-monitor resource <op id="{{ ipaddr_id }}-monitor" interval="{{ beegfs_ha_resource_ipaddr_monitor_interval }}" name="monitor" on-fail="restart"/> #}
       <op id="{{ ipaddr_id }}-stop" interval="0s" name="stop"/>
     </operations>
   </primitive>
@@ -92,7 +92,7 @@
   <primitive class="systemd" id="{{ group }}-service" type="beegfs-storage@{{ volumes[0]["name"] }}">
     <operations>
       <op id="{{ group }}-service-start" interval="0s" name="start"/>
-      <op id="{{ group }}-service-monitor" interval="{{ beegfs_ha_resource_systemd_monitor_interval }}" name="monitor" on-fail="restart"/>
+{# Note: monitoring is disabled because it's handled by the beegfs-monitor resource <op id="{{ group }}-service-monitor" interval="{{ beegfs_ha_resource_systemd_monitor_interval }}" name="monitor" on-fail="restart"/> #}
       <op id="{{ group }}-service-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_systemd_stor_stop_timeout }}"/>
     </operations>
   </primitive>
