@@ -92,7 +92,7 @@
   <primitive class="systemd" id="{{ group }}-service" type="beegfs-storage@{{ volumes[0]["name"] }}">
     <operations>
       <op id="{{ group }}-service-start" interval="0s" name="start"/>
-      <op id="{{ group }}-service-monitor" interval="{{ beegfs_ha_resource_systemd_monitor_interval }}" name="monitor" on-fail="restart"/>
+{# Note: monitoring is disabled because it's handled by the beegfs-monitor resource <op id="{{ group }}-service-monitor" interval="{{ beegfs_ha_resource_systemd_monitor_interval }}" name="monitor" on-fail="restart"/> #}
       <op id="{{ group }}-service-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_systemd_stor_stop_timeout }}"/>
     </operations>
   </primitive>
