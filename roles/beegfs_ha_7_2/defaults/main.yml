@@ -40,11 +40,12 @@ beegfs_ha_node_preference_scope_step: 200
 
 beegfs_ha_cluster_crm_config_defaults: # WARNING! These defaults are required for high-availability.
   symmetric-cluster: false  # Opt-in architecture
-  fence-reaction: stop  # Allows cluster nodes with a fence resource to fence itself.
-  concurrent-fencing: true # Allows cluster nodes to be fenced concurrently.
+  fence-reaction: panic     # Allows cluster nodes with a fence resource to fence itself by forcing a kernel panic.
+  concurrent-fencing: true  # Allows cluster nodes to be fenced concurrently.
   migration-limit: 12
   batch-limit: 12
-  cluster-ipc-limit: 5500
+  cluster-ipc-limit: 5500   # The maximum IPC message backlog before one cluster daemon will disconnect another. This is of use in large clusters, for which a good value is the number of resources in the cluster multiplied by the number of nodes.
+  transition-delay: 5s      # Delay cluster recovery for the configured interval to allow for additional or related events to occur.
 
 beegfs_ha_cluster_resource_defaults:
   resource-stickiness: 15000
