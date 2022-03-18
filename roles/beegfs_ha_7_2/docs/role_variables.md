@@ -14,7 +14,7 @@ the user by specifying the variables in one of the user's inventory files.
 
 <br>
 
-<a name="beegfs-main-defaults"></a>
+<a name="beegfs-main-variables-and-defaults"></a>
 ## BeeGFS Main Variables and Defaults
 ------------
 The variables in [BeeGFS HA Defaults](../defaults/main.yml) are for OS-agnostic settings. Review the file for the list
@@ -22,7 +22,7 @@ of variables and their details.
 
 <br>
 
-<a name="beegfs-os-specific-defaults"></a>
+<a name="beegfs-os-specific-variables-and-defaults"></a>
 ## BeeGFS OS Specific Variables and Defaults
 ------------
 The variables in `beegfs_ha_7_2/vars/*` are OS specifics. Review the applicable OS files for the list of variables and 
