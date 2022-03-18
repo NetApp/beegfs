@@ -24,3 +24,7 @@
     sysctl_file: "{{ sysctl_conf_path }}"
   loop: "{{ lookup('dict', beegfs_ha_performance_sysctl_entries) }}"
   become: true
+
+- name: tune_performance
+  include_role:
+    name: netapp_eseries.host.tune_performance
