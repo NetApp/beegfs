@@ -3,15 +3,15 @@ beegfs_client_force_rebuild: False
 
 beegfs_client_dkms_install: False
 
-beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5/dists/rhel8
-beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/RPM-GPG-KEY-beegfs
+beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.6/dists/rhel8
+beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.6/gpg/GPG-KEY-beegfs
 
-beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5/dists/sles15
-beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/RPM-GPG-KEY-beegfs
+beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.6/dists/sles15
+beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.6/gpg/GPG-KEY-beegfs
 beegfs_ha_suse_allow_unsupported_module: True
 
-beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.5
-beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.5/gpg/DEB-GPG-KEY-beegfs
+beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.6
+beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.6/gpg/GPG-KEY-beegfs
 
 beegfs_client_ofed_enable: False
 beegfs_client_ofed_include_path: "/usr/src/ofa_kernel/default/include"
