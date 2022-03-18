@@ -216,6 +216,9 @@ This file would be created as `group_vars/ha_cluster.yml`:
     beegfs_ha_alert_email_list: ["email@example.com"]  # E-mail recipient list for notifications when BeeGFS HA
                                                        #   resources change or fail. Often a distribution list 
                                                        #   for the team responsible for managing the cluster.
+    beegfs_ha_alert_conf_ha_group_options:
+      mydomain: <SEARCH DOMAIN>  # This parameter specifies the local internet domain name. This is optional when the
+                                 #    cluster nodes have fully qualified hostnames (i.e. host.example.com)
 
     ### Fencing configuration: 
     beegfs_ha_enable_fence: true

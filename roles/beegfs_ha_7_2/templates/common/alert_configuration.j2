@@ -1,0 +1,17 @@
+<configuration>
+  <alerts>
+    <alert id="alert-beegfs" path="/etc/beegfs/beegfs-alerts.sh">
+    <select>
+      <select_nodes/>
+      <select_fencing/>
+      <select_resources/>
+    </select>
+    <meta_attributes id="meta_attributes_alert-beegfs">
+      <nvpair id="meta_attributes_alert-beegfs_timestamp-format" name="timestamp-format" value="{{ beegfs_ha_alert_timestamp_format }}"/>
+    </meta_attributes>
+{% for recipient in beegfs_ha_alert_email_list %}
+    <recipient id="alert-beegfs-recipient{{ loop['index'] }}" value="{{ recipient }}"/>
+{% endfor %}
+    </alert>
+  </alerts>
+</configuration>

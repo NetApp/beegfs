@@ -22,11 +22,12 @@
   when: beegfs_ha_management_tool is defined and beegfs_ha_management_tool
   become: true
 
-- name: Ensure mailx is installed for alerts (Debian/Ubuntu - Cluster Nodes).
+- name: Ensure mail packages are installed for alerts (Debian/Ubuntu - Cluster Nodes).
   ansible.builtin.apt:
     state: present
-    name: mailx
-  when: beegfs_ha_enable_alerts
+    name: "{{ item }}"
+  when: beegfs_ha_enable_alerts == True
+  loop: ["postfix", "mailx"]
   become: true
 
 - name: Ensure NTP is installed (Debian/Ubuntu - Cluster Nodes).

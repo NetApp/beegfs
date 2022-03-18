@@ -1,0 +1,35 @@
+# Ensure opt-in constraints are configured.
+- name: Query current pacemaker alerts.
+  ansible.builtin.command: "cibadmin --query --scope alerts"
+  register: alerts_query
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Determine whether changes are required for pacemaker alerts.
+  ansible.builtin.set_fact:
+    alerts_change_required: |-
+      {%- if alerts_query["rc"] != 0 -%}
+        {{- true | bool -}}
+      {%- else -%}
+        {%- set existing = "<configuration>" ~ alerts_query["stdout"] | default("") | regex_replace("\n", "") | regex_replace("\s+", " ") | regex_replace(">\s+<", "><") ~ "</configuration>" -%}
+        {%- set expected = lookup('template', 'common/alert_configuration.j2') | regex_replace("\n", "") | regex_replace("\s+", " ") | regex_replace(">\s+<", "><") -%}
+        {{- not (existing == expected) -}}
+      {%- endif -%}
+
+- name: Modify pacemaker alerts.
+  block:
+    - name: Create temporary alerts configuration xml file.
+      ansible.builtin.template:
+        src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/alert_configuration.j2') }}"
+        dest: /tmp/~tmp_beegfs_ha_cluster_alerts_configuration.xml
+        mode: 0644
+
+    - name: Remove existing alerts.
+      ansible.builtin.command:
+        cmd: "cibadmin --delete --xpath /cib/configuration/alerts"
+
+    - name: Modify pacemaker alerts.
+      ansible.builtin.command: "cibadmin --modify --scope configuration --xml-file /tmp/~tmp_beegfs_ha_cluster_alerts_configuration.xml"
+  when: alerts_change_required
+  become: true

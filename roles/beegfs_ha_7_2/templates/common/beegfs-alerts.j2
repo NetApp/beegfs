@@ -1,0 +1,50 @@
+#!/usr/bin/bash
+sender={{ beegfs_ha_alert_sender }}
+verbosity={{ beegfs_ha_alert_verbosity }}
+cluster_name=$(crm_attribute --query -n cluster-name -q)
+subject_base="BeeGFS HA Notification - $CRM_alert_timestamp $cluster_name:"
+
+send_message() {
+  subject=$1
+  body=$2
+  sendmail "$CRM_notify_recipient" <<EOF
+from: $sender
+subject: "$subject_base $subject"
+
+$body
+EOF
+}
+
+case $CRM_alert_kind in
+  node)
+    subject="$CRM_alert_node is $CRM_alert_desc."
+    send_message "$subject" "$body"
+    ;;
+  fencing)
+    if [[ $verbosity -ge 3 ]]; then
+      subject="$CRM_alert_node has been fenced!"
+      body="$(crm_mon -rnfot1 -m3)"
+      send_message "$subject" "$body"
+    fi
+    ;;
+  resource)
+    if [[ "$CRM_alert_desc" != "Cancelled" ]]; then
+      case $CRM_alert_task in
+        start)    task=starting ;;
+        stop)     task=stopping ;;
+        monitor)  task="started and monitoring" ;;
+        *)        task=$CRM_alert_task ;;
+      esac
+
+      if [[ $verbosity -ge 5 ]]; then
+        subject="$CRM_alert_rsc is $task on $CRM_alert_node."
+        send_message "$subject" "$body"
+      elif [[ $verbosity -ge 3 && $CRM_alert_rsc == *+(-monitor) ]]; then
+        subject="${CRM_alert_rsc/-monitor} resource is $task on $CRM_alert_node."
+        send_message "$subject" "$body"
+      fi
+    fi
+    ;;
+esac
+
+exit 0

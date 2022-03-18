@@ -20,6 +20,9 @@ beegfs_ha_mgmtd_floating_ip: {{ beegfs_mgmt_ip['user_input'] }}                 
 beegfs_ha_storage_system_hostgroup_prefix: beegfs                   # This value will be prefixed to the E-Series storage host groups.
 
 beegfs_ha_alert_email_list: []                                      # E-mail recipient list for notifications when BeeGFS HA resources change or fail.
+beegfs_ha_alert_conf_ha_group_options:                              # This dictionary is used to configure postfix service (/etc/postfix/main.cf) which is required to set email alerts.
+  mydomain: <SEARCH_DOMAIN>                                         # This parameter specifies the local internet domain name. This is optional when the cluster nodes have fully qualified hostnames (i.e. host.example.com)
+
 beegfs_ha_fencing_agents:                                           # Fencing agent definitions. This variable takes a dictionary of fence agent types with a list
                                                                     #   of fence definitions.
   ## APC fencing agent example.

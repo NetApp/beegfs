@@ -16,11 +16,12 @@
     name: corosync
   become: true
 
-- name: Ensure mailx is installed for alerts (SUSE - Cluster Node).
+- name: Ensure mail packages are installed for alerts (SUSE - Cluster Node).
   community.general.zypper:
     state: present
-    name: mailx
-  when: beegfs_ha_enable_alerts
+    name: "{{ item }}"
+  when: beegfs_ha_enable_alerts == True
+  loop: ["postfix", "mailx"]
   become: true
 
 - name: Ensure NTP is installed (SUSE - Cluster Node).

@@ -42,6 +42,11 @@ options:
         description: Ensures there's padding after the equivalence.
         type: bool
         require: false
+    comment_start:
+        description: String that begins a comment line.
+        type: str
+        required: false
+        default: "#"
     mode:
         description:
             - The permissions must be in octal number form ("0644", "644")
@@ -89,6 +94,7 @@ class CreateConfFile(object):
             options=dict(type="dict", required=False, default={}),
             pattern=dict(type="str", required=False, default="^([A-Za-z0-9_-]+)( *= *)(.*)$"),
             padding=dict(type="bool", required=False, default=True),
+            comment_start=dict(type="str", required=False, default="#"),
             mode=dict(type="str", required=False),
             block_message=dict(type="str", required=False, default="E-SERIES ANSIBLE MANAGED BLOCK")
         )
@@ -107,6 +113,7 @@ class CreateConfFile(object):
         self.options = args["options"]
         self.pattern = args["pattern"]
         self.padding = args["padding"]
+        self.comment_start = args["comment_start"]
         self.mode = args["mode"]
         self.block_message = args["block_message"]
 
@@ -117,6 +124,7 @@ class CreateConfFile(object):
     def updated_copy(self):
         """Create a copy of the source conf file in memory and update the options."""
         options = self.options.keys()
+        options_applied = []
 
         if self.copy_lines_cached is None:
             with open(self.src, "r") as fh:
@@ -128,21 +136,26 @@ class CreateConfFile(object):
                 if result:
                     option, equivalence, value = list(result.groups())
                     if option in options:
+                        options_applied.append(option)
                         if self.padding:
                             self.copy_lines_cached[index] = "%s%s %s\n" % (option, equivalence.rstrip(" "), str(self.options.pop(option)))
                         else:
                             self.copy_lines_cached[index] = "%s%s%s\n" % (option, equivalence, str(self.options.pop(option)))
+
+                    # Comment out any expected options that have already been set previously to prevent duplicates
+                    elif not re.search("^%s" % self.comment_start, line) and option in options_applied:
+                        self.copy_lines_cached[index] = "%s%s\n" % (self.comment_start, line)
             
             # Check for whether any options were not used. If so, insert them into a comment block and issue a warning.
             if self.options:
                 self.copy_lines_cached.append("\n")
-                self.copy_lines_cached.append("# BEGIN %s\n" % self.block_message)
+                self.copy_lines_cached.append("%s BEGIN %s\n" % (self.comment_start, self.block_message))
                 for option, value in self.options.items():
                     if self.padding:
                         self.copy_lines_cached.append("%s = %s\n" % (option, value))
                     else:
                         self.copy_lines_cached.append("%s=%s\n" % (option, value))
-                self.copy_lines_cached.append("# END %s\n" % self.block_message)
+                self.copy_lines_cached.append("%s END %s\n" % (self.comment_start, self.block_message))
                 self.copy_lines_cached.append("\n")
                 self.module.warn("Warning! Option(s) were not found and have been placed within a comment block at the end of the configuration file. Option(s) not found: [%s]" % ", ".join(self.options))
         

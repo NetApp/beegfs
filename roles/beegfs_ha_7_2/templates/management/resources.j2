@@ -66,24 +66,6 @@
   </primitive>
     {% endfor %}
 
-    {%- if beegfs_ha_enable_alerts == True -%}
-      {%- for email in beegfs_ha_alert_email_list -%}
-        {%- set alert_id = resource_group ~ "-mailto" ~ loop["index"] %}
-  <primitive class="ocf" id="{{ alert_id }}" provider="heartbeat" type="MailTo">
-    <instance_attributes id="{{ alert_id }}-instance_attributes">
-      <nvpair id="{{ alert_id }}-instance_attributes-email" name="email" value="{{ email }}"/>
-      <nvpair id="{{ alert_id }}-instance_attributes-subject" name="subject" value="{{ beegfs_ha_alert_email_subject }}"/>
-    </instance_attributes>
-    <operations>
-      <op id="{{ alert_id }}-start" interval="0s" name="start"/>
-      <op id="{{ alert_id }}-monitor" interval="{{ beegfs_ha_resource_mailto_monitor_interval }}" name="monitor" on-fail="restart"/>
-      <op id="{{ alert_id }}-stop" interval="0s" name="stop"/>
-    </operations>
-
-  </primitive>
-      {% endfor %}
-    {% endif %}
-
   <primitive class="systemd" id="{{ resource_group }}-service" type="beegfs-mgmtd">
     <operations>
       <op id="{{ resource_group }}-service-start" interval="0s" name="start"/>

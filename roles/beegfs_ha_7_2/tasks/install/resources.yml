@@ -74,3 +74,6 @@
 
 - name: Ensure BeeGFS HA services are running.
   include_tasks: constraints.yml
+
+- name: Ensure BeeGFS HA alerts are configured.
+  include_tasks: alerts.yml
