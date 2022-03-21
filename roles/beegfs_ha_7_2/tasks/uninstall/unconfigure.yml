@@ -97,5 +97,6 @@
   include_tasks: ../common/firewall/uninstall.yml
 
 - name: Reboot nodes
-  reboot:
+  ansible.builtin.reboot:
+  when: beegfs_ha_uninstall_reboot
   become: true
