@@ -25,6 +25,6 @@
   loop: "{{ lookup('dict', beegfs_ha_performance_sysctl_entries) }}"
   become: true
 
-- name: tune_performance
+- name: Import role to apply general performance tuning settings for maximum performance.
   include_role:
     name: netapp_eseries.host.tune_performance
