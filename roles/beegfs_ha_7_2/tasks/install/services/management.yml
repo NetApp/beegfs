@@ -59,11 +59,11 @@
           {%- endfor -%}
           {{- scratch["mounted"] -}}
 
-    - name: Esure directory structure is configured on management configuration volume.
+    - name: Ensure directory structure is configured on management configuration volume.
       ansible.builtin.file:
         state: directory
         path: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}/{{ item }}"
-        mode: "0751"
+        mode: "0755"
       loop: ["data", "mgmt_config"]
 
     - name: Generate management connInterfacesFile.conf file.
