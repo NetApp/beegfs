@@ -247,7 +247,7 @@ beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false   # Whether to
                                                                     #   Be aware that removing storage pools/volume groups and host/host group mappings will effect any volumes or
                                                                     #   host mappings dependent on them.  **WARNING! This action is unrecoverable.**
 beegfs_ha_uninstall_storage_setup: false                            # Whether to remove configuration that allows storage to be accessible to the BeeGFS HA node
-beegfs_ha_uninstall_reboot: false                                   # Whether to reboot after uninstallation.
+beegfs_ha_uninstall_reboot: true                                    # Whether to reboot after uninstallation.
 
 # Volume formatting and mounting defaults
 beegfs_ha_service_volume_configuration:
