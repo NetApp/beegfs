@@ -225,9 +225,18 @@ beegfs_ha_corosync_authkey_path: /etc/corosync/authkey
 beegfs_ha_corosync_conf_path: /etc/corosync/corosync.conf
 beegfs_ha_corosync_log_path: /var/log/corosync.log
 
-
 # Pcs defaults
 beegfs_ha_pcsd_path: /var/lib/pcsd/
+
+# Package version defaults
+beegfs_ha_force_upgrade: false
+beegfs_ha_beegfs_version: 7.2.6
+beegfs_ha_corosync_version: 3.1.5
+beegfs_ha_pacemaker_version: 2.1.0
+beegfs_ha_pacemaker_remote_version: 2.1.0
+beegfs_ha_pcs_version: 0.10.10
+beegfs_ha_resource_agent_version: 4.1.1
+beegfs_ha_fence_agents_all_version: 4.2.1
 
 # Uninstall defaults
 beegfs_ha_uninstall: false                                          # Whether to uninstall the entire BeeGFS HA solution excluding the storage provisioning and host storage setup.
@@ -239,18 +248,6 @@ beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false   # Whether to
                                                                     #   host mappings dependent on them.  **WARNING! This action is unrecoverable.**
 beegfs_ha_uninstall_storage_setup: false                            # Whether to remove configuration that allows storage to be accessible to the BeeGFS HA node
 beegfs_ha_uninstall_reboot: false                                   # Whether to reboot after uninstallation.
-
-
-
-# Package version defaults *Note that the following versions were used in testing.
-#beegfs_ha_beegfs_version: 7.2.6 (Control BeeGFS versioning with the installed repository)
-#beegfs_ha_corosync_version: 3.1.5
-#beegfs_ha_pacemaker_version: 2.1.0
-#beegfs_ha_pcs_version: 0.10.8
-#beegfs_ha_pacemaker_remote_version: 2.1.0
-#beegfs_ha_resource_agent_version: 4.1.1
-#beegfs_ha_fence_agents_all_version: 4.2.1
-beegfs_ha_force_beegfs_patch_upgrade: false  # Major and master versions must not change; however the patch versions can and this flag will ensure that its the latest version.
 
 # Volume formatting and mounting defaults
 beegfs_ha_service_volume_configuration:

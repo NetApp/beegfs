@@ -19,7 +19,7 @@
 
 - name: Ensure the BeeGFS management package is installed (Debian/Ubuntu - Management).
   ansible.builtin.apt:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name: "beegfs-mgmtd{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}={{ beegfs_ha_beegfs_version }}*{% endif %}"
   register: beegfs_mgmtd_package
   when: '"management" in node_info["services"]'
@@ -35,7 +35,7 @@
 
 - name: Ensure the BeeGFS metadata package is installed (Debian/Ubuntu - Metadata).
   ansible.builtin.apt:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name: "beegfs-meta{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}={{ beegfs_ha_beegfs_version }}*{% endif %}"
   register: beegfs_meta_package
   when: '"metadata" in node_info["services"]'
@@ -51,7 +51,7 @@
 
 - name: Ensure the BeeGFS storage package is installed (Debian/Ubuntu - Storage).
   ansible.builtin.apt:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name: "beegfs-storage{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}={{ beegfs_ha_beegfs_version }}*{% endif %}"
   register: beegfs_storage_package
   when: '"storage" in node_info["services"]'
@@ -67,14 +67,14 @@
 
 - name: Ensure the BeeGFS infiniband package is installed (Debian/Ubuntu - Metadata/Storage).
   ansible.builtin.apt:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name: libbeegfs-ib
   when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and node_info["service_configuration_options"]["connUseRDMA"] | default(true)'
   become: true
 
 - name: Ensure the numactl package is installed (Debian/Ubuntu - Metadata/Storage).
   ansible.builtin.apt:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name: numactl
   when: '"metadata" in node_info["services"] or "storage" in node_info["services"]'
   become: true

@@ -1,6 +1,6 @@
 - name: Ensure the required HA packages are installed (Debian/Ubuntu - Remote Nodes).
   ansible.builtin.apt:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name:
       - "pacemaker-remote{% if beegfs_ha_pacemaker_remote_version is defined and beegfs_ha_pacemaker_remote_version %}={{ beegfs_ha_pacemaker_remote_version }}*{% endif %}"
       - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined%}={{beegfs_ha_fence_agents_all_version}}*{% endif %}"
@@ -10,7 +10,7 @@
   block:
     - name: Ensure pcs management tool is installed (Debian/Ubuntu - Remote nodes).
       ansible.builtin.apt:
-        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+        state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
         name: "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version -%}={{ beegfs_ha_pcs_version }}*{% endif %}"
 
     - name: Ensure pcsd daemon is running and enabled (Debian/Ubuntu - Remote Nodes)..

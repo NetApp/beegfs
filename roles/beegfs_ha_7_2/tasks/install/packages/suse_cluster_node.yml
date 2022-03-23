@@ -54,7 +54,7 @@
 
 - name: Ensure the firewalld is installed (SUSE).
   community.general.zypper:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name: firewalld
   when: beegfs_ha_firewall_start_and_enable
   become: true

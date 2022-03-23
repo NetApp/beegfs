@@ -1,6 +1,6 @@
 - name: Ensure the required HA packages are installed (Debian/Ubuntu - Cluster Nodes).
   ansible.builtin.apt:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name:
       - "corosync{% if beegfs_ha_corosync_version is defined and beegfs_ha_corosync_version %}={{ beegfs_ha_corosync_version }}*{% endif %}"
       - "pacemaker={% if beegfs_ha_pacemaker_version is defined and beegfs_ha_pacemaker_version %}{{ beegfs_ha_pacemaker_version }}*{% endif %}"
@@ -11,7 +11,7 @@
   block:
     - name: Ensure pcs management tool is installed (Debian/Ubuntu - Remote nodes).
       ansible.builtin.apt:
-        state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+        state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
         name: "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version %}={{ beegfs_ha_pcs_version }}*{% endif %}"
 
     - name: Ensure pcsd daemon is running and enabled (Debian/Ubuntu - Remote Nodes)..
@@ -60,7 +60,7 @@
 
 # - name: Ensure the ufw is installed (Debian/Ubuntu - Cluster Nodes).
 #   ansible.builtin.apt:
-#     state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+#     state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
 #     name: ufw
 #   when: beegfs_ha_firewall_start_and_enable
 #   become: true
