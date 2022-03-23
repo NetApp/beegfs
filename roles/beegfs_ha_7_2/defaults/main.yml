@@ -230,7 +230,7 @@ beegfs_ha_pcsd_path: /var/lib/pcsd/
 
 # Package version defaults
 beegfs_ha_force_upgrade: false
-beegfs_ha_beegfs_version: 7.2.6
+#beegfs_ha_beegfs_version:  # By default the BeeGFS version will be selected based on the repository url (beegfs_ha_X_repository_base_url).
 beegfs_ha_corosync_version: 3.1.5
 beegfs_ha_pacemaker_version: 2.1.0
 beegfs_ha_pacemaker_remote_version: 2.1.0
