@@ -47,7 +47,7 @@ provisioned storage is retained. This file would typically be created as `uninst
             beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false # **WARNING: If set to true, 
                                                             #   this action is unrecoverable.**
             beegfs_ha_uninstall_storage_setup: false
-            beegfs_ha_uninstall_reboot: false
+            beegfs_ha_uninstall_reboot: true
 
 <br>
 
