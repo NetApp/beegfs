@@ -4,7 +4,7 @@
     name:
       - "corosync{% if beegfs_ha_corosync_version is defined and beegfs_ha_corosync_version %}={{ beegfs_ha_corosync_version }}{% endif %}"
       - "pacemaker={% if beegfs_ha_pacemaker_version is defined and beegfs_ha_pacemaker_version %}{{ beegfs_ha_pacemaker_version }}{% endif %}"
-      - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined%}={{ beegfs_ha_fence_agents_all_version }}{% endif %}"
+      - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined and beegfs_ha_fence_agents_all_version %}={{ beegfs_ha_fence_agents_all_version }}{% endif %}"
       - "resource-agents{% if beegfs_ha_resource_agent_version is defined and beegfs_ha_resource_agent_version -%}={{ beegfs_ha_resource_agent_version }}{% endif %}"
   become: true
 

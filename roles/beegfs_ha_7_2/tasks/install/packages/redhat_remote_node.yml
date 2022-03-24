@@ -4,6 +4,7 @@
     allow_downgrade: true
     name:
       - "pacemaker-remote{% if beegfs_ha_pacemaker_remote_version is defined and beegfs_ha_pacemaker_remote_version %}-{{ beegfs_ha_pacemaker_remote_version }}{% endif %}"
+      - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined and beegfs_ha_fence_agents_all_version %}-{{ beegfs_ha_fence_agents_all_version }}{% endif %}"
       - "resource-agents{% if beegfs_ha_resource_agent_version is defined and beegfs_ha_resource_agent_version -%}-{{ beegfs_ha_resource_agent_version }}{% endif %}"
   become: true
 
