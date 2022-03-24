@@ -18,7 +18,7 @@
 
 - name: Ensure the BeeGFS management package is installed (SUSE - Management).
   community.general.zypper:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name: "beegfs-mgmtd={{ beegfs_ha_beegfs_version }}*"
   register: beegfs_mgmtd_package
   when: '"management" in node_info["services"]'
@@ -34,7 +34,7 @@
 
 - name: Ensure the BeeGFS metadata package is installed (SUSE - Metadata).
   community.general.zypper:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name: "beegfs-meta={{ beegfs_ha_beegfs_version }}*"
   register: beegfs_meta_package
   when: '"metadata" in node_info["services"]'
@@ -50,7 +50,7 @@
 
 - name: Ensure the BeeGFS storage package is installed (SUSE - Storage).
   community.general.zypper:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name: "beegfs-storage={{ beegfs_ha_beegfs_version }}*"
   register: beegfs_storage_package
   when: '"storage" in node_info["services"]'
@@ -66,14 +66,14 @@
 
 - name: Ensure the BeeGFS infiniband package is installed (SUSE - Metadata/Storage).
   community.general.zypper:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name: libbeegfs-ib
   when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and node_info["service_configuration_options"]["connUseRDMA"] | default(true)'
   become: true
 
 - name: Ensure the numactl package is installed (SUSE - Metadata/Storage).
   community.general.zypper:
-    state: "{% if beegfs_ha_force_beegfs_patch_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name: numactl
   when: '"metadata" in node_info["services"] or "storage" in node_info["services"]'
   become: true
