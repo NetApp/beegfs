@@ -2,9 +2,10 @@
   ansible.builtin.apt:
     state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     name:
-      - "corosync{% if beegfs_ha_corosync_version is defined and beegfs_ha_corosync_version %}={{ beegfs_ha_corosync_version }}*{% endif %}"
-      - "pacemaker={% if beegfs_ha_pacemaker_version is defined and beegfs_ha_pacemaker_version %}{{ beegfs_ha_pacemaker_version }}*{% endif %}"
-      - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined%}={{ beegfs_ha_fence_agents_all_version }}*{% endif %}"
+      - "corosync{% if beegfs_ha_corosync_version is defined and beegfs_ha_corosync_version %}={{ beegfs_ha_corosync_version }}{% endif %}"
+      - "pacemaker={% if beegfs_ha_pacemaker_version is defined and beegfs_ha_pacemaker_version %}{{ beegfs_ha_pacemaker_version }}{% endif %}"
+      - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined%}={{ beegfs_ha_fence_agents_all_version }}{% endif %}"
+      - "resource-agents{% if beegfs_ha_resource_agent_version is defined and beegfs_ha_resource_agent_version -%}={{ beegfs_ha_resource_agent_version }}{% endif %}"
   become: true
 
 - name: Ensure pcs management tool is installed and configured (Debian/Ubuntu - Remote nodes).
@@ -12,7 +13,7 @@
     - name: Ensure pcs management tool is installed (Debian/Ubuntu - Remote nodes).
       ansible.builtin.apt:
         state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
-        name: "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version %}={{ beegfs_ha_pcs_version }}*{% endif %}"
+        name: "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version %}={{ beegfs_ha_pcs_version }}{% endif %}"
 
     - name: Ensure pcsd daemon is running and enabled (Debian/Ubuntu - Remote Nodes)..
       ansible.builtin.systemd:

@@ -3,15 +3,15 @@
     state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     allow_downgrade: true
     name:
-      - "pacemaker-remote{% if beegfs_ha_pacemaker_remote_version is defined and beegfs_ha_pacemaker_remote_version %}-{{ beegfs_ha_pacemaker_remote_version }}*{% endif %}"
-      - "resource-agents{% if beegfs_ha_resource_agent_version is defined and beegfs_ha_resource_agent_version -%}-{{ beegfs_ha_resource_agent_version }}*{% endif %}"
+      - "pacemaker-remote{% if beegfs_ha_pacemaker_remote_version is defined and beegfs_ha_pacemaker_remote_version %}-{{ beegfs_ha_pacemaker_remote_version }}{% endif %}"
+      - "resource-agents{% if beegfs_ha_resource_agent_version is defined and beegfs_ha_resource_agent_version -%}-{{ beegfs_ha_resource_agent_version }}{% endif %}"
   become: true
 
 - name: Ensure the required HA packages are installed (RedHat/CentOS - Remote Node).
   ansible.builtin.yum:
     state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
     allow_downgrade: true
-    name: "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version -%}-{{ beegfs_ha_pcs_version }}*{% endif %}"
+    name: "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version -%}-{{ beegfs_ha_pcs_version }}{% endif %}"
   when: beegfs_ha_management_tool is defined and beegfs_ha_management_tool
   become: true
 
