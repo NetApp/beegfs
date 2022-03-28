@@ -381,6 +381,7 @@ setup_monitor() {
     # Verify storage target is mounted before continuing
     parent_path=$(findmnt -n -o SOURCE $mount)
     if [ -z "$parent_path" ]; then
+      ocf_log info "$mount is not available..."
       return 1
     fi
     parent_name=$(lsblk -n -o KNAME $parent_path) # grab the kernel name of the device
