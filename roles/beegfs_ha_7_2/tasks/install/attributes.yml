@@ -1,11 +1,40 @@
 # Ensure cluster crm_config defaults are configured.
+- name: Get pacemaker-schedulerd metadata.
+  ansible.builtin.command: /usr/libexec/pacemaker/pacemaker-schedulerd metadata
+  changed_when: false
+  register: pacemaker_schedulerd_metadata
+
+- name: Get pacemaker-controld metadata.
+  ansible.builtin.command: /usr/libexec/pacemaker/pacemaker-controld metadata
+  changed_when: false
+  register: pacemaker_controld_metadata
+
+- name: Get pacemaker-based metadata.
+  ansible.builtin.command: /usr/libexec/pacemaker/pacemaker-based metadata
+  changed_when: false
+  register: pacemaker_based_metadata
+
 - name: Determine cluster resource defaults.
   ansible.builtin.command: "crm_attribute --type crm_config --name {{ item['key'] }} --query --quiet"
-  loop: "{{ lookup('ansible.builtin.dict', beegfs_ha_cluster_crm_config_defaults) }}"
+  loop: "{{ lookup('ansible.builtin.dict', pacemaker_cluster_defaults) }}"
   changed_when: false
   failed_when: false
   register: crm_config_defaults_query
   become: true
+  vars:
+    pacemaker_cluster_defaults: |-
+      {%- set defaults = beegfs_ha_cluster_crm_config_defaults -%}
+      {%- set parameters_schedulerd_raw_xml = pacemaker_schedulerd_metadata["stdout"] | regex_search('<parameters(.|\n)*parameters>') -%}
+      {%- set parameters_controld_raw_xml = pacemaker_controld_metadata["stdout"] | regex_search('<parameters(.|\n)*parameters>') -%}
+      {%- set parameters_based_raw_xml = pacemaker_based_metadata["stdout"] | regex_search('<parameters(.|\n)*parameters>') -%}
+      {%- set parameters_raw_xml = parameters_schedulerd_raw_xml ~ parameters_controld_raw_xml ~ parameters_based_raw_xml -%}
+      {%- for parameter_raw_xml in parameters_raw_xml.split("</parameter>") -%}
+        {%- set parameter_info = parameter_raw_xml | regex_search('<parameter.*name=\\\"(?P<parameter>.*?)\\\"(.|\n)*<content.*default=\\"(?P<default>.*?)\\"', '\\g<parameter>', '\\g<default>') -%}
+        {%- if parameter_info is iterable and parameter_info | length == 2 and parameter_info[0] not in (defaults.keys() | list) + beegfs_ha_cluster_crm_config_ignore -%}
+          {%- if defaults.update({parameter_info[0]: parameter_info[1]}) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- defaults -}}
 
 - name: Set cluster resource defaults.
   ansible.builtin.command: "crm_attribute --type crm_config --name {{ item['item']['key'] }} --update {{ item['item']['value'] }}"

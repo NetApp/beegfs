@@ -409,10 +409,7 @@ setup_monitor() {
   mkdir $interfaces_path
   interfaces=$(get_interfaces)
   for interface in $interfaces; do
-    neighbors=$(ip neigh show dev $interface | grep REACHABLE | cut -d ' ' -f 1)
-
-    #TODO: Filter neighbors
-    echo $neighbors > $interfaces_path/$interface
+    touch $interfaces_path/$interface
   done
 
   # Update beegfs-monitor status to started.
