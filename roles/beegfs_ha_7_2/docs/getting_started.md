@@ -220,9 +220,7 @@ This file would be created as `group_vars/ha_cluster.yml`:
       mydomain: <SEARCH DOMAIN>  # This parameter specifies the local internet domain name. This is optional when the
                                  #    cluster nodes have fully qualified hostnames (i.e. host.example.com)
 
-    ### Fencing configuration: 
-    beegfs_ha_enable_fence: true
-
+    ### Fencing configuration:
     # OPTION 1: To enable fencing using APC Power Distribution Units (PDUs): 
     beegfs_ha_fencing_agents:
       fence_apc:
@@ -435,7 +433,7 @@ A file for each nodes would be created as `host_vars/<hostname>.yml`  (i.e., hos
 -------------
 - All BeeGFS cluster nodes need to be available.
 - Fencing agents should be used to ensure failed nodes are definitely down.  
-  - WARNING: If `beegfs_ha_enable_fence` is set to false then fencing agent will not be configured!
+  - WARNING: If `beegfs_ha_cluster_crm_config_options['stonith-enabled']` is set to false then fencing agent will not be configured!
   - For details on configuring different fencing agents, see [Configuring Fencing in a High Availability Cluster](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_high_availability_clusters/assembly_configuring-fencing-configuring-and-managing-high-availability-clusters).
 - Uninstall functionality will remove required BeeGFS 7.2 packages. This means that there will be no changes made to the kernel development/NTP/chrony packages whether they previously existed or not.
 - BeeGFS is added to the PRUNEFS list in /etc/updatedb.conf to prevent daily indexing scans on clients which causes performance degradations.

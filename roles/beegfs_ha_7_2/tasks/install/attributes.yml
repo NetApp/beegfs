@@ -14,50 +14,24 @@
       {%- set attributes = [] -%}
       {%- for line in crm_config["stdout_lines"] -%}
         {%- set results = line | regex_search(' *<nvpair.*name="(?P<name>.*?)"', '\\g<name>') -%}
-        {%- if results is iterable and results[0] not in (beegfs_ha_cluster_crm_config_defaults.keys() | list) + beegfs_ha_cluster_crm_config_ignore -%}
+        {%- if results is iterable and results[0] not in (beegfs_ha_cluster_crm_config_defaults.keys() | list) + (beegfs_ha_cluster_crm_config_options.keys() | list) + beegfs_ha_cluster_crm_config_ignore -%}
           {%- if attributes.append(results[0]) -%}{%- endif -%}
         {%- endif -%}
       {%- endfor -%}
       {{- attributes -}}
 
-- name: Determine cluster resource defaults.
+- name: Get the current global configuration attributes.
   ansible.builtin.command: "crm_attribute --type crm_config --name {{ item['key'] }} --query --quiet"
-  loop: "{{ lookup('ansible.builtin.dict', beegfs_ha_cluster_crm_config_defaults) }}"
+  loop: "{{ lookup('ansible.builtin.dict', beegfs_ha_cluster_crm_config_defaults | combine(beegfs_ha_cluster_crm_config_options)) }}"
   changed_when: false
   failed_when: false
   register: crm_config_defaults_query
   become: true
 
-- name: Set cluster resource defaults.
+- name: Set global configuration attributes
   ansible.builtin.command: "crm_attribute --type crm_config --name {{ item['item']['key'] }} --update {{ item['item']['value'] }}"
   loop: "{{ crm_config_defaults_query['results'] }}"
   when: item['rc'] != 0 or item['stdout'] != item["item"]["value"] | string
-  become: true
-
-# Ensure pcs stonith-action property is configured as expected.
-- name: Determine whether cluster stonith action is set to shutdown.
-  ansible.builtin.command: "crm_attribute --type crm_config --name stonith-action --query --quiet"
-  changed_when: false
-  failed_when: false
-  register: stonith_action_query
-  become: true
-
-- name: Set cluster stonith action is set to shutdown
-  ansible.builtin.command: "crm_attribute --type crm_config --name stonith-action --update {{ beegfs_ha_enable_fence_action }}"
-  when: stonith_action_query['rc'] != 0 or stonith_action_query['stdout'] != beegfs_ha_enable_fence_action
-  become: true
-
-# Ensure pcs stonith-enabled property is configured as expected.
-- name: Determine whether cluster stonith is enabled.
-  ansible.builtin.command: "crm_attribute --type crm_config --name stonith-enabled --query --quiet"
-  changed_when: false
-  failed_when: false
-  register: stonith_enabled_query
-  become: true
-
-- name: Set cluster stonith is enabled.
-  ansible.builtin.command: "crm_attribute --type crm_config --name stonith-enabled --update {{ beegfs_ha_enable_fence }}"
-  when: stonith_enabled_query['rc'] != 0 or (stonith_enabled_query['stdout'] | bool) != beegfs_ha_enable_fence
   become: true
 
 # Ensure cluster resource defaults are configured.
