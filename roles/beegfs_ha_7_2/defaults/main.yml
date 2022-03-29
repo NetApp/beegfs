@@ -52,13 +52,13 @@ beegfs_ha_alert_verbosity: 3  #  1) high-level node activity
 
 beegfs_ha_cluster_crm_config_options: {}  # Dictionary for overriding or adding to the beegfs_ha_cluster_crm_config_defaults.
 beegfs_ha_cluster_crm_config_defaults: # WARNING! These defaults are required for high-availability.
-  symmetric-cluster: false  # Opt-in architecture
+  symmetric-cluster: "false"  # Opt-in architecture
   fence-reaction: panic     # Allows cluster nodes with a fence resource to fence itself by forcing a kernel panic.
-  concurrent-fencing: true  # Allows cluster nodes to be fenced concurrently.
+  concurrent-fencing: "true"  # Allows cluster nodes to be fenced concurrently.
   cluster-ipc-limit: 5500   # The maximum IPC message backlog before one cluster daemon will disconnect another. This is of use in large clusters, for which a good value is the number of resources in the cluster multiplied by the number of nodes.
-  start-failure-is-fatal: false  # Whether a failure to start a resource on a particular node prevents further start attempts on that node?
-  stonith-action: off       # Action the fencing agent takes when stonith-enabled is set to true. Options: off, reboot
-  stonith-enabled: true     # When stonith-enabled is set to false then beegfs-monitor monitoring operation's on-fail action will be set to standby instead of fence.
+  start-failure-is-fatal: "false"  # Whether a failure to start a resource on a particular node prevents further start attempts on that node?
+  stonith-action: "off"       # Action the fencing agent takes when stonith-enabled is set to true. Options: off, reboot
+  stonith-enabled: "true"     # When stonith-enabled is set to false then beegfs-monitor monitoring operation's on-fail action will be set to standby instead of fence.
 
 beegfs_ha_cluster_crm_config_ignore:
   - cluster-infrastructure
