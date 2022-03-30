@@ -18,9 +18,8 @@ License
 -------
 BSD-3-Clause
 
-Author Information
+Maintainer Information
 ------------------
-- Christopher Seirer (@CSeirer)
-- Janey Le (@janeyle)
-- Joe McCormick (@iamjoemccormick)
 - Nathan Swartz (@ndswartz)
+- Joe McCormick (@iamjoemccormick)
+- Tracy Cummins (@tracycummins)
