@@ -26,24 +26,40 @@
   become: true
   vars:
     attributes: |-
-      {%- set defaults_parameters = beegfs_ha_cluster_crm_config_defaults -%}
+      {#- Capture a list of parameter definitions from the metadata for pacemaker_base, pacemaker_controld and pacemaker_schedulerd -#}
       {%- set parameters_schedulerd_raw_xml = pacemaker_schedulerd_metadata["stdout"] | regex_search('<parameters(.|\n)*parameters>') -%}
       {%- set parameters_controld_raw_xml = pacemaker_controld_metadata["stdout"] | regex_search('<parameters(.|\n)*parameters>') -%}
       {%- set parameters_based_raw_xml = pacemaker_based_metadata["stdout"] | regex_search('<parameters(.|\n)*parameters>') -%}
       {%- set parameters_raw_xml = parameters_schedulerd_raw_xml ~ parameters_controld_raw_xml ~ parameters_based_raw_xml -%}
+
+      {#- Determine a complete dictionary of default global configuration attributes. -#}
+      {%- set defaults_parameters = [] -%}
       {%- for parameter_raw_xml in parameters_raw_xml.split("</parameter>") -%}
-        {%- set parameter_info = parameter_raw_xml | regex_search('<parameter.*name=\\\"(?P<parameter>.*?)\\\"(.|\n)*<content.*default=\\"(?P<default>.*?)\\"', '\\g<parameter>', '\\g<default>') -%}
-        {%- if parameter_info is iterable and parameter_info | length == 2 and parameter_info[0] not in (defaults_parameters.keys() | list) + beegfs_ha_cluster_crm_config_ignore -%}
-          {%- if defaults_parameters.update({parameter_info[0]: parameter_info[1]}) -%}{%- endif -%}
+
+        {#- Capture parameter name and default from each parameter metadata definition. -#}
+        {%- set parameter_info = parameter_raw_xml | regex_search('<parameter.*name=\\\"(?P<parameter>.*?)\\\"(.|\n)*<content.*default=\\\"(?P<default>.*?)\\\"', '\\g<parameter>', '\\g<default>') -%}
+        {%- if parameter_info is iterable and parameter_info | length == 2 and parameter_info[1] -%}
+          {%- set parameter, default = parameter_info[0], parameter_info[1] -%}
+
+          {#- Add only the defaults that are not explicitly listed in beegfs_ha_cluster_crm_config_ignore. -#}
+          {%- if parameter not in defaults_parameters and parameter not in beegfs_ha_cluster_crm_config_ignore -%}
+            {%- if defaults_parameters.append(parameter) -%}{%- endif -%}
+          {%- endif -%}
         {%- endif -%}
       {%- endfor -%}
 
+      {#- Determine complete list of attributes that have a default but are not expected to be explicitly defined. -#}
       {%- set attributes = [] -%}
-      {%- set expected_keys = (beegfs_ha_cluster_crm_config_defaults.keys() | list) + (beegfs_ha_cluster_crm_config_options.keys() | list) + beegfs_ha_cluster_crm_config_ignore -%}
+      {%- set expected_keys = ((beegfs_ha_cluster_crm_config_defaults | combine(beegfs_ha_cluster_crm_config_options)).keys() | list) -%}
       {%- for line in crm_config["stdout_lines"] -%}
-        {%- set results = line | regex_search(' *<nvpair.*name="(?P<name>.*?)"', '\\g<name>') -%}
-        {%- if results is iterable and results[0] in defaults_parameters and results[0] not in expected_keys -%}
-          {%- if attributes.append(results[0]) -%}{%- endif -%}
+
+        {#- Search <nvpair> definitions from cibadmin --query --scope crm_config to determine the current global configuration attributes. -#}
+        {%- set results = line | regex_search('<nvpair.*name=\\\"(?P<name>.*?)\\\".*value=\\\"(?P<value>.*?)\\\"', '\\g<name>', '\\g<value>') -%}
+        {%- if results is iterable and results | length == 2 -%}
+          {%- set name, value = results[0], results[1] -%}
+          {% if value and name in defaults_parameters and name not in expected_keys -%}
+            {%- if attributes.append(name) -%}{%- endif -%}
+          {%- endif -%}
         {%- endif -%}
       {%- endfor -%}
       {{- attributes -}}

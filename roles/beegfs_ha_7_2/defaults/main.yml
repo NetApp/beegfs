@@ -54,7 +54,7 @@ beegfs_ha_cluster_crm_config_options: {}  # Dictionary for overriding or adding 
 beegfs_ha_cluster_crm_config_defaults: # WARNING! These defaults are required for high-availability.
   symmetric-cluster: false  # Opt-in architecture
   fence-reaction: panic     # Allows cluster nodes with a fence resource to fence itself by forcing a kernel panic.
-  concurrent-fencing: true  # Allows cluster nodes to be fenced concurrently.
+  concurrent-fencing: false # Allows cluster nodes to be fenced concurrently.
   cluster-ipc-limit: 5500   # The maximum IPC message backlog before one cluster daemon will disconnect another. This is of use in large clusters, for which a good value is the number of resources in the cluster multiplied by the number of nodes.
   start-failure-is-fatal: false  # Whether a failure to start a resource on a particular node prevents further start attempts on that node?
   stonith-action: "off"       # Action the fencing agent takes when stonith-enabled is set to true. Options: off, reboot
@@ -64,7 +64,7 @@ beegfs_ha_cluster_crm_config_ignore:
   - cluster-infrastructure
   - dc-version
   - cluster-name
-  - maintenance-mode
+  - maintenance-mode  # Must be ignored because it would bring the cluster out of maintenance-mode and break the automation.
 
 beegfs_ha_cluster_resource_defaults:
   resource-stickiness: 15000
