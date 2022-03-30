@@ -20,7 +20,7 @@ if not already has one from the same directory as the install playbook and set `
 By default, the `beegfs_ha_uninstall` variable is set to false. When it is set to true, the uninstall tasks will be 
 executed. 
 
-There are other additional `beegfs_ha_uninstall_x` variables that can be set to perform more vigourous clean-up of the 
+There are other additional `beegfs_ha_uninstall_x` variables that can be set to perform more vigorous clean-up of the 
 systems. Please see the list of additional variables and their description at: 
 [BeeGFS HA Defaults](../defaults/main.yml)
 
@@ -28,7 +28,7 @@ systems. Please see the list of additional variables and their description at:
 
 ### Example Uninstall Playbook
 This playbook performs an uninstall of a BeeGFS HA instance where the BeeGFS HA services are unconfigured while the
-provisioned storage is retained. This file would typically be created as `uninstall_playbook.yml`:
+provisioned storage is retained. This file would be created as `uninstall_beegfs_ha_playbook.yml`:
 
     - hosts: all
       collections:

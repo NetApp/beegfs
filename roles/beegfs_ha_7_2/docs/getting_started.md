@@ -4,14 +4,25 @@
 
 ## Table of Contents:
 ------------
-1. [Requirements](#requirements)
-2. [Getting Started](#getting-started)
-3. [Example Playbook, Inventory, Group/Host Variables](#example-playbook-inventory-grouphost-variables)
-    1. [Example Playbook File](#example-playbook-file)
-    2. [Example Inventory File](#example-inventory-file)
-    3. [Example group_vars Inventory Files](#example-group_vars-inventory-files)
-    4. [Example host_vars Inventory Files](#example-host_vars-inventory-files)
-4. [General Notes](#general-notes)
+- [Getting Started](#getting-started)
+  - [## Table of Contents:](#-table-of-contents)
+  - [## Requirements](#-requirements)
+  - [## Getting Started](#-getting-started)
+  - [## Example Playbook, Inventory, Group/Host Variables](#-example-playbook-inventory-grouphost-variables)
+    - [Example BeeGFS HA Playbook File](#example-beegfs-ha-playbook-file)
+    - [Example E-Series Management Playbook File](#example-e-series-management-playbook-file)
+    - [Example Inventory File](#example-inventory-file)
+    - [Example group_vars Inventory Files](#example-group_vars-inventory-files)
+      - [Example All Group](#example-all-group)
+      - [Example E-Series Storage Systems Group](#example-e-series-storage-systems-group)
+      - [Example HA Cluster Group](#example-ha-cluster-group)
+      - [Example Management Group](#example-management-group)
+      - [Example Metadata Group](#example-metadata-group)
+      - [Example Storage Group](#example-storage-group)
+    - [Example host_vars Inventory Files](#example-host_vars-inventory-files)
+      - [Example E-Series Storage System Inventory File](#example-e-series-storage-system-inventory-file)
+      - [Example BeeGFS HA Node Inventory File](#example-beegfs-ha-node-inventory-file)
+  - [## General Notes](#-general-notes)
 
 <br>
 
@@ -24,15 +35,14 @@ Ensure the following conditions are met:
   - Python 3.6 or later
     - The Ansible version above may have a minimum required Python version 
   - NetApp E-Series Ansible Collections:
-    - netappeseries.santricity 1.1 or later.
-    - netappeseries.host 0.1 or later (later revisions will have more protocol options to extend this role's 
-      capabilities).
+    - netapp_eseries.santricity 1.3 or later.
+    - netapp_eseries.host 1.0 or later.
   - Python (pip) packages installed:
     - ipaddr
     - netaddr
 - Passwordless SSH is setup from the Ansible control node to all BeeGFS HA nodes.
-- BeeGFS HA nodes have the following installed:
-  - HA repositories containing the necessary packages (pacemaker, corosync, fence-agents-all, pcs) are enabled via 
+- BeeGFS HA nodes have the following configured:
+  - HA repositories containing the necessary packages (pacemaker, corosync, fence-agents-all, resource-agents, pcs) are enabled via 
   package manager
     - Enable command example: `subscription-manager repo-override repo=rhel-8-for-x86_64-highavailability-rpms --add=enabled:1`
 
@@ -41,10 +51,10 @@ Ensure the following conditions are met:
 <a name="getting-started"></a>
 ## Getting Started
 ----------------
-Build the inventory and playbook files for on your BeeGFS cluster requirements.
+Build the inventory and playbook files for on your BeeGFS cluster requirements. The inventory will require several passwords. For security reasons these passwords should not be stored in plain text and, instead, should use [Ansible Vault](https://docs.ansible.com/ansible/latest/user_guide/vault.html).
 
 There are two ways to build the necessary files:
-1. Run the `create_inventory_structure.yml` playbook from the `examples/beegfs_ha_7_2` folder. This is the recommended 
+1. Define the inventory and run the `create_inventory_structure.yml` playbook from the `getting_started/beegfs_ha_7_2` folder. This is the recommended 
 way to get started with the BeeGFS HA role.
    * Refer to the readme from [beegfs_ha_7_2 getting_started project](../../../getting_started/beegfs_ha_7_2/README.md) 
      for details. 
@@ -60,16 +70,16 @@ Once all the files are created, then run the playbook.
 ## Example Playbook, Inventory, Group/Host Variables 
 -------------------------------------------------
 This section contains an example of how to layout the playbook and inventory files. The variables used in the inventory 
-files are not exclusive, see additional variables from under [Role Variables](role_variables.md) or other NetApp 
-E-Series Ansible Collections.
+files are not exhaustive, see additional variables from under [Role Variables](role_variables.md) or other NetApp 
+E-Series Ansible Collections ([santricity](https://galaxy.ansible.com/netapp_eseries/santricity), [host](https://galaxy.ansible.com/netapp_eseries/host)).
 
 <br>
 
-<a name="example-playbook-file"></a>
-### Example Playbook File
-To use the BeeGFS HA role, import the role where it is to be used in the playbook YAML file.
+<a name="example-beegfs-ha-playbook-file"></a>
+### Example BeeGFS HA Playbook File
+To apply the BeeGFS HA role, execute the following playbook (ansible-playbook -i inventory.yml beegfs_ha_playbook.yml)
 
-This file would typically be created as `playbook.yml`:
+This file would be created as `beegfs_ha_playbook.yml`:
 
     - hosts: all
       gather_facts: false
@@ -80,50 +90,58 @@ This file would typically be created as `playbook.yml`:
           import_role:
             name: beegfs_ha_7_2
 
+
+<a name="example-eseries-management-playbook-file"></a>
+### Example E-Series Management Playbook File
+To apply the management configuration, execute the following playbook ((ansible-playbook -i inventory.yml eseries_management_playbook.yml))
+
+This file would be created as `eseries_management_playbook.yml`:
+
+    - hosts: eseries_storage_systems
+      gather_facts: false
+      collections:
+        - netapp_eseries.santricity
+      tasks:
+        - name: Ensure E-Series systems are configured.
+          import_role:
+            name: management
+
 <a name="example-inventory-file"></a>
 ### Example Inventory File
-This file contains the setup of the BeeGFS HA nodes and the storage systems used to configure BeeGFS HA.
+This file defines the required Ansible groups which are used to designate BeeGFS HA cluster resource groups and related
+storage systems. Any variables for a group can be defined in ./group_vars/<GROUP_NAME>.yml and any variable for a specific
+node can be defined in ./host_vars/<NODE_NAME>.yml. Currently, there is a recommended limit of 10 BeeGFS HA cluster nodes.
 
 This file would typically be created as `inventory.yml`:
 
     all:
       vars:
-        ansible_python_interpreter: /usr/bin/python
+        ansible_python_interpreter: /usr/bin/python3
       
       children:
-        eseries_storage_systems:  # A group that has variables that are applied to the below 
-                                  #   associated storage systems.
+        eseries_storage_systems:  # BeeGFS HA E-Series storage group
           hosts:
-            eseries_storage_system_c1:  # A host_vars that represents an E-Series storage system.
+            eseries_storage_system_c1:
             eseries_storage_system_c2:  
             eseries_storage_system_c3:
 
-        ha_cluster:    # A group that has variables that are applied to the below associated 
-                       #   BeeGFS HA nodes.
+        ha_cluster:   # BeeGFS HA (Pacemaker) cluster group
           children:
-            mgmt:       # A group representing the management resource.
-                        #   Management resource group name must be 10 characters or less.
-                        #   The resource group is used to name the floating ip resource iflabel.
-                        #   This label must match the "beegfs_ha_mgmtd_group" variable.
-              hosts:    # The ordering of hosts will be used to determine the resource constraint 
-                        #   opt-in preferences (highest to lowest).
-                node_h1:    # A BeeGFS node
+            mgmt:  # A group representing the management resource.
+              hosts:
+                node_h1:  # Dictionary of nodes that may run the management resource (highest to lowest priority).
                 node_h2:
 
-            meta_01:   # A group representing a metadata resource.
-                       #   Metadata resource name must end with and underscore followed 
-                       #   by the nodeNumID that is designated for the service resource.
-                       #   There can be up to 8 metadata resources.
+            meta_01:   # A group representing a metadata resource. To add additional metadata resources, define
+                       # more meta_XX resource groups with in the ha_cluster group.
               hosts:
-                node_h1:    # A BeeGFS node
+                node_h1:  # Dictionary of nodes that may run this metadata resource (highest to lowest priority).
                 node_h2:
-              
-            stor_01:    # A group representing a storage resource.
-                        #   Storage resource name must end with an underscore followed 
-                        #   by the nodeNumID that is designated for the service resource.
-                        #   There can be up to 8 storage resources.
+
+            stor_01:   # A group representing a storage resource. To add additional storage resources, define
+                       # more stor_XX resource groups with in the ha_cluster group.
               hosts:
-                node_h1:    # A BeeGFS node
+                node_h1:  # Dictionary of nodes that may run this storage resource (highest to lowest priority).
                 node_h2:
 
 <a name="example-group_vars-inventory-files"></a>
@@ -131,42 +149,39 @@ This file would typically be created as `inventory.yml`:
 #### Example All Group
 This file would be created as `group_vars/all.yml`:
 
-    beegfs_ha_ntp_server_pools: # Modify the NTP server addressess if desired.
+    beegfs_ha_ntp_server_pools: # Modify the NTP server addresses if desired.
       - "pool 0.pool.ntp.org iburst maxsources 3"
       - "pool 1.pool.ntp.org iburst maxsources 3"
 
 <br>
 
 #### Example E-Series Storage Systems Group
-Any variables supported by the netappeseries.santricity can set in this inventory file.
+Any variables supported by the netapp_eseries.santricity can set in this inventory file.
 
 This file would be created as `group_vars/eseries_storage_systems.yml`:
 
     ### eseries_storage_systems Ansible group inventory file. 
     # Place all default/common variables for NetApp E-Series Storage Systems here: 
     ansible_connection: local
-    eseries_system_password: <PASSWORD>          # Listing any passwords in plaintext is not recommended.
-                                                 #   Use Ansible vault or provide the eseries_system_password 
-                                                 #   when running Ansible using --extra-vars.
+    eseries_system_password: <PASSWORD>
     eseries_validate_certs: false
 
-    # Firmware, NVSRAM, and Drive Firmware (modify the filenames as needed):
-    eseries_firmware_firmware: "packages/RCB_11.70.1R1_6000_60fa2a9f.dlp"
-    eseries_firmware_nvsram: "packages/N6000-871834-D05.dlp"
-    eseries_drive_firmware_firmware_list:
-      - "packages/D_MZWLJ3T8HBLS-0G5_30604635_NA51_XXXX_000.dlp"
+    # Controller Firmware (Requires executing eseries_management_playbook.yml playbook.)
+    eseries_firmware_firmware: <FIRMWARE_PATH>  # Controller firmware file path
+    eseries_firmware_nvsram: <NVSRAM_PATH>      # Controller NVSRAM file path
 
-    eseries_drive_firmware_firmware_list:
-      - "packages/<FILENAME>.dlp"
+    # Drive Firmware (Requires executing eseries_management_playbook.yml playbook.)
     eseries_drive_firmware_upgrade_drives_online: true
+    eseries_drive_firmware_firmware_list:       # List of paths to drive firmware files.
+      - <DRIVE_FIRMWARE_PATH>
 
-    # Global Configuration Defaults
+    # Global Configuration Defaults (Requires executing eseries_management_playbook.yml playbook.)
     eseries_system_cache_block_size: 32768
     eseries_system_cache_flush_threshold: 80
     eseries_system_default_host_type: linux dm-mp
     eseries_system_autoload_balance: disabled
     eseries_system_host_connectivity_reporting: disabled
-    eseries_system_controller_shelf_id: 99                  # Required variable.
+    eseries_system_controller_shelf_id: 99  # The controller shelf ID will effect eseries_storage_pool_usable_drives definition.
 
     # Storage Provisioning Defaults
     eseries_volume_size_unit: pct
@@ -191,15 +206,9 @@ This file would be created as `group_vars/ha_cluster.yml`:
 
     # If the following options are specified, then Ansible will automatically reboot nodes when necessary for changes to take effect: 
     eseries_common_allow_host_reboot: true
-    eseries_common_reboot_test_command: "systemctl --state=active,exited | grep eseries_nvme_ib.service"
+    eseries_common_reboot_test_command: "! systemctl status eseries_nvme_ib.service || systemctl --state=active,exited | grep eseries_nvme_ib.service"
 
     ### Cluster information
-    # The following variables define the default Ansible group names and should not be changed: 
-    beegfs_ha_cluster_ansible_host_group: ha_cluster                    
-    beegfs_ha_ansible_client_group: ha_clients                          
-    beegfs_ha_cluster_ansible_storage_group: eseries_storage_systems    
-    beegfs_ha_mgmtd_group: mgmt
-
     # The following variables should not typically need to be modified:
     beegfs_ha_storage_system_hostgroup_prefix: beegfs  # Prefixed to the E-Series storage host groups.
     beegfs_ha_pacemaker_ipc_buffer_bytes: 13213776
@@ -279,23 +288,23 @@ This file would be created as `group_vars/mgmt.yml`:
     beegfs_service: management
 
     beegfs_targets:
-      ictm1620c1:
+      <BLOCK NODE>:  # E-Series storage system as defined in the inventory as listed within eseries_storage_systems group.
         eseries_storage_pool_configuration:
-          - name: beegfs_m1_m2_m5_m6
+          - name: <STORAGE POOL>  # Shared storage pools must be defined exactly the same with the exception of volumes each time.
             raid_level: raid1
             criteria_drive_count: 4
             common_volume_configuration:                
               segment_size_kb: 128
             volumes:
               - size: 1
-                owning_controller: A
+                owning_controller: <OWNING CONTROLLER>
 
 <br>
 
 #### Example Metadata Group
-A file for each metadata resources would be created as `group_vars/meta_0<number>.yml` (i.e., group_vars/meta_01.yml):
+A file for each metadata resources would be created as `group_vars/meta_<number>.yml` (i.e., group_vars/meta_01.yml):
 
-    # meta_0X - BeeGFS HA Metadata Resource Group
+    # meta_XX - BeeGFS HA Metadata Resource Group
     beegfs_ha_beegfs_meta_conf_resource_group_options:
       connMetaPortTCP: <PORT>
       connMetaPortUDP: <PORT>
@@ -308,7 +317,7 @@ A file for each metadata resources would be created as `group_vars/meta_0<number
     beegfs_service: metadata
 
     beegfs_targets:
-      <BLOCK NODE>:
+      <BLOCK NODE>:  # E-Series storage system as defined in the inventory as listed within eseries_storage_systems group.
         eseries_storage_pool_configuration:
           - name: <STORAGE POOL>
             raid_level: raid1
@@ -322,9 +331,9 @@ A file for each metadata resources would be created as `group_vars/meta_0<number
 <br>
 
 #### Example Storage Group
-A file for each storage resources would be created as `group_vars/stor_0<number>.yml` (i.e., group_vars/stor_01.yml):
+A file for each storage resources would be created as `group_vars/stor_<number>.yml` (i.e., group_vars/stor_01.yml):
 
-    # stor_0X - BeeGFS HA Storage Resource Group
+    # stor_XX - BeeGFS HA Storage Resource Group
     beegfs_ha_beegfs_storage_conf_resource_group_options:
       connStoragePortTCP: <PORT>
       connStoragePortUDP: <PORT>
@@ -344,8 +353,9 @@ A file for each storage resources would be created as `group_vars/stor_0<number>
             criteria_drive_count: 10
             common_volume_configuration:
               segment_size_kb: 512
-            volumes:
-              - size: 21.50 # See note below! 
+            volumes:  # See the performance tuning defaults section of [BeeGFS HA Defaults](../defaults/main.yml) for
+                      # comprehensive list of options.
+              - size: 21.50
                 owning_controller: <OWNING CONTROLLER>         
               - size: 21.50
                 owning_controller: <OWNING CONTROLLER>         
@@ -354,77 +364,51 @@ A file for each storage resources would be created as `group_vars/stor_0<number>
 
 <a name="example-host_vars-inventory-files"></a>
 ### Example host_vars Inventory Files
+<a name="example-host_vars-storage-inventory-files"></a>
 #### Example E-Series Storage System Inventory File
 A file for each storage systems would be created as `host_vars/<hostname>.yml` (i.e., host_vars/eseries_storage_system_c1.yml):
 
     eseries_system_name: <STORAGE_ARRAY_NAME>
     eseries_system_api_url: https://<MANAGEMENT_IP>:8443/devmgr/v2/
 
-    eseries_initiator_protocol: nvme_ib
+    eseries_initiator_protocol: <PROTOCOL>  # Communications protocol. Choices: fc, ib_iser, ib_srp, iscsi, nvme_fc, nvme_ib, nvme_roce, sas
+                                            # See [netapp_eseries.santricity collection](https://galaxy.ansible.com/netapp_eseries/santricity) for more details.
 
-    # For odd numbered block nodes (i.e., c1, c3, ..):
+    # Define NVMe over InfiniBand ports.
     eseries_controller_nvme_ib_port:
-      controller_a:
-        - 192.168.1.101
-        - 192.168.2.101
-        - 192.168.1.100
-        - 192.168.2.100
-      controller_b:
-        - 192.168.3.101
-        - 192.168.4.101
-        - 192.168.3.100
-        - 192.168.4.100
+      controller_a:    # Ordered list of controller A channel address definition.
+          -            # Port IPv4 address for channel 1
+      controller_b:    # Ordered list of controller B channel address definition.
+          - (...)      # Same as controller A but for controller B
 
-    # For even numbered block nodes (i.e., c2, c4, ..):
-    eseries_controller_nvme_ib_port:
-      controller_a:
-        - 192.168.5.101
-        - 192.168.6.101
-        - 192.168.5.100
-        - 192.168.6.100
-      controller_b:
-        - 192.168.7.101
-        - 192.168.8.101
-        - 192.168.7.100
-        - 192.168.8.100
+    # Define InfiniBand iSER ports
+    eseries_controller_ib_iser_port:
+      controller_a:    # Ordered list of controller A channel address definition.
+          -            # Port IPv4 address for channel 1
+      controller_b:    # Ordered list of controller B channel address definition.
+          - (...)      # Same as controller A but for controller B
 
 <br>
-
+<a name="example-host_vars-node-inventory-files"></a>
 #### Example BeeGFS HA Node Inventory File
 A file for each nodes would be created as `host_vars/<hostname>.yml`  (i.e., host_vars/node_h1.yml):
 
-    ansible_host: “<MANAGEMENT_IP>”
-    # NVMe over InfiniBand storage communication protocol information
-    # For odd numbered file nodes (i.e., h1, h3, ..):
-    eseries_nvme_ib_interfaces:
-      - name: i1a
-        address: 192.168.1.10/24
-        configure: true
-      - name: i2a
-        address: 192.168.3.10/24
-        configure: true
-      - name: i3a
-        address: 192.168.5.10/24
-        configure: true
-      - name: i4a
-        address: 192.168.7.10/24
-        configure: true
+    ansible_host: <MANAGEMENT_IP>
+    ansible_ssh_user: <SSH_USER>
+    ansible_become_password: <SUPER_USER_PASSWORD>
 
-    # For even numbered file nodes (i.e., h2, h4, ..):
-    # NVMe over InfiniBand storage communication protocol information
-    eseries_nvme_ib_interfaces:
-      - name: i1a
-        address: 192.168.2.10/24
-        configure: true
-      - name: i2a
-        address: 192.168.4.10/24
-        configure: true
-      - name: i3a
-        address: 192.168.6.10/24
-        configure: true
-      - name: i4a
-        address: 192.168.8.10/24
-        configure: true
+    # See [netapp_eseries.host collection](https://galaxy.ansible.com/netapp_eseries/host) for more information on
+    # configuring host communications.
+
+    # NVMe over InfiniBand (nvme_ib)
+    eseries_nvme_ib_interfaces:   # (Required) List of NVMe InfiniBand interfaces.
+      - name:                     # (Required) Name of NVMe InfiniBand  interface (i.e. ib0, ib1).
+        address:                  # (Required) IPv4 address. Use CIDR form (ex. 192.168.1.1/24).
+
+    # InfiniBand iSER (ib_iser)
+    eseries_ib_iser_interfaces:   # (Required) List of iSCSI interfaces.
+      - name:                     # (Required) Name of iSCSI interface (i.e. ib0, ib1).
+        address:                  # (Required) IPv4 address. Use the format 192.0.2.24.
 
 <br>
 
@@ -438,4 +422,3 @@ A file for each nodes would be created as `host_vars/<hostname>.yml`  (i.e., hos
 - Uninstall functionality will remove required BeeGFS 7.2 packages. This means that there will be no changes made to the kernel development/NTP/chrony packages whether they previously existed or not.
 - BeeGFS is added to the PRUNEFS list in /etc/updatedb.conf to prevent daily indexing scans on clients which causes performance degradations.
 - Please refer to the documentation for your Linux distribution/version for guidance on the maximum cluster size. For example, the limitations for RedHat can be found [here](https://access.redhat.com/articles/3069031).
-- For a comprehensive list of available performance tuning parameters, see the performance tuning defaults section of [BeeGFS HA Defaults](../defaults/main.yml).

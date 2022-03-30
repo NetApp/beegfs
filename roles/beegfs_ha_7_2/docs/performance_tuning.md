@@ -1,18 +1,20 @@
 # Performance Tuning
-With the BeeGFS HA Role we provide access to many different tuning parameters that allow users to customize their 
-performance to suit their needs. Below we describe how to tune different aspects of the BeeGFS HA Role.
+With the BeeGFS HA role we provide access to many different tuning parameters that allow users to customize their 
+performance to suit their needs. Below describes how to tune different aspects of the BeeGFS HA role.
 
 <br>
 
 ## Table of Contents
 
 --------------------------------------------------------------
-1. [Performance Tuning](#performance-tuning)
-2. [Tuning Kernel Parameters Using sysctl](#tuning-kernel-parameters-using-sysctl)
-3. [Tuning parameters on E-Series block devices/paths using udev](#tuning-parameters-on-eseries-block-devices)
-4. [Using Mixed Drives](#using-mixed-drives)
-5. [Advanced](#advanced)
-6. [Restrictions](#restrictions)
+- [Performance Tuning](#performance-tuning)
+  - [Table of Contents](#table-of-contents)
+  - [## Performance Tuning](#-performance-tuning)
+  - [## Tuning kernel parameters using sysctl](#-tuning-kernel-parameters-using-sysctl)
+  - [## Tuning parameters on E-Series block devices/paths using udev](#-tuning-parameters-on-e-series-block-devicespaths-using-udev)
+  - [## Using mixed drives](#-using-mixed-drives)
+  - [## Advanced](#-advanced)
+  - [## Restrictions](#-restrictions)
 
 <br>
 
@@ -34,7 +36,7 @@ The BeeGFS role provides the following functionality:
 1) Tuning kernel parameters using sysctl.
 2) Tuning parameters on E-Series block devices/paths using udev.
 
-All default tuning parameters are defined at [BeeGFS Tuning](../defaults/main.yml), more than likely these will need to
+All default tuning parameters are defined at [BeeGFS Tuning](../defaults/main.yml), these may need to
 be adjusted to tune based on the environment. As with any Ansible variable, you can override these defaults on a
 host-by-host or group basis to tune each node or sets of nodes differently. See [Role Variables](role_variables.md) to
 see the order of precedence for setting variables.
@@ -51,8 +53,7 @@ runtime when you're making incremental adjustments to these parameters during be
 -----------------------------------------
 BeeGFS recommends setting various kernel parameters under `/proc/sys` to help optimize the performance of BeeGFS
 storage/metadata nodes. One option to ensure these changes are persistent is to set them using sysctl. By default this
-role will override the following parameters on BeeGFS storage and metadata nodes in /etc/sysctl.conf on RedHat or
-/etc/sysctl.d/99-eseries-beegfs.conf on SUSE:
+role will override the following parameters on BeeGFS storage and metadata nodes in /etc/sysctl.d/99-eseries-beegfs.conf
 
     beegfs_ha_sysctl_entries:
       vm.dirty_background_ratio: 5
@@ -64,12 +65,6 @@ role will override the following parameters on BeeGFS storage and metadata nodes
 **Important:**
 - If you define your own `beegfs_ha_sysctl_entries` you will need to explicitly list all sysctl key/value pairs you wish
 to be set.
-- The documentation for some Linux distributions indicates you need to rebuild the initramfs after modifying the values
-of kernel variables using sysctl 
-(reference: https://documentation.suse.com/sles/12-SP4/html/SLES-all/cha-boot.html#var-initrd-regenerate-kernelvars).
-Based on testing, these values do persist through a reboot for the operating 
-systems listed on the support matrix, and thus is not done automatically by the role. It is recommended users verify
-these settings persist in their environment, and rebuild the initramfs if needed.
 
 <br>
 

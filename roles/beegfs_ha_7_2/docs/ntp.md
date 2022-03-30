@@ -4,16 +4,17 @@ ability to configure the ntpd service on all BeeGFS nodes.
 
 There are two types of NTP services used by Linux (ntpd daemon or Chrony) but ntpd daemon is no longer available on the 
 latest Linux systems. To supports older Linux versions, `beegfs_ha_chrony_enabled` and `beegfs_ha_ntp_enabled` variables
-are provided to enable the appropriate services depending on the OS flavor is used. Only one of the two can be 
-configured or would work on a system so the variables are mutually exclusive.
+are provided to enable the appropriate services depending on the OS distribution. The two variables are mutually exclusive.
 
 <br>
 
 ## Table of Contents
 ------------
-1. [How to Configure Chrony Service](#how-to-configure-chrony-service)
-2. [How to Configure ntpd Service](#how-to-configure-ntpd-service)
-3. [General Notes](#general-notes)
+- [NTP Configuration](#ntp-configuration)
+  - [## Table of Contents](#-table-of-contents)
+  - [## How to Configure Chrony Service](#-how-to-configure-chrony-service)
+  - [## How to Configure ntpd Service](#-how-to-configure-ntpd-service)
+  - [## General Notes](#-general-notes)
 
 <br>
 

@@ -1,8 +1,4 @@
 # Override Default Templates
-Most parameters (i.e., NUMA zones) in the default templates used to build the BeeGFS cluster already have variables 
-that allow the values to be specified as described in the getting started readme. However, in the case where certain
-parameters weren't setup with a variable then you can override the templates to add new variables.
-
 Any templates found in beegfs_ha_7_2/templates/ can be overridden but this should only be done when absolutely necessary 
 to avoid BeeGFS configuration issues.
 
@@ -13,8 +9,10 @@ comply to the security policies of your organization.
 
 ## Table of Contents
 ------------
-1. [Override Default Templates](#how-to-override-the-default-templates)
-2. [Parameters Override with Jinja2 Expression](#parameters-override-with-jinja2-expression)
+- [Override Default Templates](#override-default-templates)
+  - [## Table of Contents](#-table-of-contents)
+  - [## How to Override the Default Templates](#-how-to-override-the-default-templates)
+  - [## Parameters Override with Jinja2 Expression](#-parameters-override-with-jinja2-expression)
 
 <br>
 
@@ -48,7 +46,3 @@ If you're replacing the value with a Jinja2 expression and for consistency, ensu
 in the case the new variable is unset, we recommend the following Jinja2 expression is used:
 
     {{ beegfs_ha_<VARIABLE_X> | default(<DEFAULT_VALUE>) }}.
-
-For example, you want to replace the line `TimeoutStopSec=300` in management/beegfs_mgmtd_service.j2 with an expression.
-You would change it to `TimeoutStopSec={{ beegfs_ha_timeoutStopSec | default('300') }}`. Then simply set
-`beegfs_ha_timeoutStopSec` variable under group_vars/mgmt.yml with the desired value.

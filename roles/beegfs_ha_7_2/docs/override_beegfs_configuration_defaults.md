@@ -3,8 +3,13 @@ BeeGFS cluster is installed and operated using a set of configuration settings.
 
 ## Table of Contents
 ------------
-1. [Basic Information About the Configuration Settings](#basic-information-about-the-configuration-settings)
-2. [How to Override Default Templates](#how-to-override-beegfs-configuration-defaults)
+- [BeeGFS Configuration Settings](#beegfs-configuration-settings)
+  - [## Table of Contents](#-table-of-contents)
+  - [## Basic Information About the Configuration Settings](#-basic-information-about-the-configuration-settings)
+  - [## How to Override BeeGFS Configuration Defaults](#-how-to-override-beegfs-configuration-defaults)
+    - [Resource Group Options Examples:](#resource-group-options-examples)
+    - [HA Group Options Examples](#ha-group-options-examples)
+- [mgmt - BeeGFS HA Management](#mgmt---beegfs-ha-management)
 
 <a name="basic-information-about-the-configuration-settings"></a>
 ## Basic Information About the Configuration Settings
@@ -39,17 +44,17 @@ to override.
 
 Management resource:
 
-    beegfs_ha_beegfs_mgmtd_conf_resource_group_options      # This variable typically goes into the `group_vars/mgnt.yml` file
+    beegfs_ha_beegfs_mgmtd_conf_resource_group_options      # This variable typically goes into the `group_vars/mgmt.yml` file
     beegfs_ha_beegfs_mgmtd_conf_ha_group_options            # This variable typically goes into the `group_vars/ha_cluster.yml` file
 
 Metadata resource:
 
-    beegfs_ha_beegfs_meta_conf_resource_group_options      # This variable typically goes into the `group_vars/meta_0<number>.yml` files
+    beegfs_ha_beegfs_meta_conf_resource_group_options      # This variable typically goes into the `group_vars/meta_<number>.yml` files
     beegfs_ha_beegfs_meta_conf_ha_group_options            # This variable typically goes into the `group_vars/ha_cluster.yml` file
 
 Storage resource:
 
-    beegfs_ha_beegfs_storage_conf_resource_group_options   # This variable typically goes into the `group_vars/stor_0<number>.yml` files
+    beegfs_ha_beegfs_storage_conf_resource_group_options   # This variable typically goes into the `group_vars/stor_<number>.yml` files
     beegfs_ha_beegfs_storage_conf_ha_group_options         # This variable typically goes into the `group_vars/ha_cluster.yml` file
 
 

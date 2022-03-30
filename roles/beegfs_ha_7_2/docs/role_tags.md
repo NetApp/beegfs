@@ -22,7 +22,7 @@ Use the following tags when executing your BeeGFS HA playbook to only execute se
     - storage                                    # Provisions storage and ensures volumes are presented on hosts.
     - storage_provision                          # Provision storage.
     - storage_communication                      # Setup communication protocol between storage and cluster nodes.
-    - storage_format                             # Format all provisioned storage.
+    - storage_format                             # Format all provisioned storage when not previously formatted.
     - beegfs_ha                                  # Install and configure the BeeGFS HA cluster (ensure volumes have been presented to the cluster nodes).
     - beegfs_ha_package                          # Install the BeeGFS HA packages.
     - beegfs_ha_configure                        # All BeeGFS HA configuration tasks (Ensure volumes are present and BeeGFS packages are installed).
@@ -30,4 +30,3 @@ Use the following tags when executing your BeeGFS HA playbook to only execute se
     - beegfs_ha_move_all_to_preferred            # Restore all resources to their preferred nodes.
     - beegfs_ha_performance_tuning               # All BeeGFS HA performance tuning tasks (Ensure volumes are present and BeeGFS packages are installed).
     - beegfs_ha_backup                           # Backup Pacemaker and Corosync configuration files.
-    - beegfs_ha_client                           # Configures BeeGFS clients (Ensure BeeGFS is configured and running).
