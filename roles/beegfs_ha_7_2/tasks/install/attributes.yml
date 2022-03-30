@@ -1,42 +1,81 @@
 # Ensure cluster crm_config defaults are configured.
-- name: Determine cluster resource defaults.
+- name: Get pacemaker-schedulerd metadata.
+  ansible.builtin.command: /usr/libexec/pacemaker/pacemaker-schedulerd metadata
+  changed_when: false
+  register: pacemaker_schedulerd_metadata
+
+- name: Get pacemaker-controld metadata.
+  ansible.builtin.command: /usr/libexec/pacemaker/pacemaker-controld metadata
+  changed_when: false
+  register: pacemaker_controld_metadata
+
+- name: Get pacemaker-based metadata.
+  ansible.builtin.command: /usr/libexec/pacemaker/pacemaker-based metadata
+  changed_when: false
+  register: pacemaker_based_metadata
+
+- name: Determine all global configuration attributes.
+  ansible.builtin.command: "cibadmin --query --scope crm_config"
+  changed_when: false
+  register: crm_config
+  become: true
+
+- name: Delete any unexpected global configuration attributes.
+  ansible.builtin.command: "crm_attribute --type crm_config --name {{ item }} --delete --quiet"
+  loop: "{{ attributes }}"
+  become: true
+  vars:
+    attributes: |-
+      {#- Capture a list of parameter definitions from the metadata for pacemaker_base, pacemaker_controld and pacemaker_schedulerd -#}
+      {%- set parameters_schedulerd_raw_xml = pacemaker_schedulerd_metadata["stdout"] | regex_search('<parameters(.|\n)*parameters>') -%}
+      {%- set parameters_controld_raw_xml = pacemaker_controld_metadata["stdout"] | regex_search('<parameters(.|\n)*parameters>') -%}
+      {%- set parameters_based_raw_xml = pacemaker_based_metadata["stdout"] | regex_search('<parameters(.|\n)*parameters>') -%}
+      {%- set parameters_raw_xml = parameters_schedulerd_raw_xml ~ parameters_controld_raw_xml ~ parameters_based_raw_xml -%}
+
+      {#- Determine a complete dictionary of default global configuration attributes. -#}
+      {%- set defaults_parameters = [] -%}
+      {%- for parameter_raw_xml in parameters_raw_xml.split("</parameter>") -%}
+
+        {#- Capture parameter name and default from each parameter metadata definition. -#}
+        {%- set parameter_info = parameter_raw_xml | regex_search('<parameter.*name=\\\"(?P<parameter>.*?)\\\"(.|\n)*<content.*default=\\\"(?P<default>.*?)\\\"', '\\g<parameter>', '\\g<default>') -%}
+        {%- if parameter_info is iterable and parameter_info | length == 2 and parameter_info[1] -%}
+          {%- set parameter, default = parameter_info[0], parameter_info[1] -%}
+
+          {#- Add only the defaults that are not explicitly listed in beegfs_ha_cluster_crm_config_ignore. -#}
+          {%- if parameter not in defaults_parameters and parameter not in beegfs_ha_cluster_crm_config_ignore -%}
+            {%- if defaults_parameters.append(parameter) -%}{%- endif -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+
+      {#- Determine complete list of attributes that have a default but are not expected to be explicitly defined. -#}
+      {%- set attributes = [] -%}
+      {%- set expected_keys = ((beegfs_ha_cluster_crm_config_defaults | combine(beegfs_ha_cluster_crm_config_options)).keys() | list) -%}
+      {%- for line in crm_config["stdout_lines"] -%}
+
+        {#- Search <nvpair> definitions from cibadmin --query --scope crm_config to determine the current global configuration attributes. -#}
+        {%- set results = line | regex_search('<nvpair.*name=\\\"(?P<name>.*?)\\\".*value=\\\"(?P<value>.*?)\\\"', '\\g<name>', '\\g<value>') -%}
+        {%- if results is iterable and results | length == 2 -%}
+          {%- set name, value = results[0], results[1] -%}
+          {% if value and name in defaults_parameters and name not in expected_keys -%}
+            {%- if attributes.append(name) -%}{%- endif -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- attributes -}}
+
+- name: Get the current global configuration attributes.
   ansible.builtin.command: "crm_attribute --type crm_config --name {{ item['key'] }} --query --quiet"
-  loop: "{{ lookup('ansible.builtin.dict', beegfs_ha_cluster_crm_config_defaults) }}"
+  loop: "{{ lookup('ansible.builtin.dict', beegfs_ha_cluster_crm_config_defaults | combine(beegfs_ha_cluster_crm_config_options)) }}"
   changed_when: false
   failed_when: false
   register: crm_config_defaults_query
   become: true
 
-- name: Set cluster resource defaults.
+- name: Set global configuration attributes
   ansible.builtin.command: "crm_attribute --type crm_config --name {{ item['item']['key'] }} --update {{ item['item']['value'] }}"
   loop: "{{ crm_config_defaults_query['results'] }}"
   when: item['rc'] != 0 or item['stdout'] != item["item"]["value"] | string
-  become: true
-
-# Ensure pcs stonith-action property is configured as expected.
-- name: Determine whether cluster stonith action is set to shutdown.
-  ansible.builtin.command: "crm_attribute --type crm_config --name stonith-action --query --quiet"
-  changed_when: false
-  failed_when: false
-  register: stonith_action_query
-  become: true
-
-- name: Set cluster stonith action is set to shutdown
-  ansible.builtin.command: "crm_attribute --type crm_config --name stonith-action --update {{ beegfs_ha_enable_fence_action }}"
-  when: stonith_action_query['rc'] != 0 or stonith_action_query['stdout'] != beegfs_ha_enable_fence_action
-  become: true
-
-# Ensure pcs stonith-enabled property is configured as expected.
-- name: Determine whether cluster stonith is enabled.
-  ansible.builtin.command: "crm_attribute --type crm_config --name stonith-enabled --query --quiet"
-  changed_when: false
-  failed_when: false
-  register: stonith_enabled_query
-  become: true
-
-- name: Set cluster stonith is enabled.
-  ansible.builtin.command: "crm_attribute --type crm_config --name stonith-enabled --update {{ beegfs_ha_enable_fence }}"
-  when: stonith_enabled_query['rc'] != 0 or (stonith_enabled_query['stdout'] | bool) != beegfs_ha_enable_fence
   become: true
 
 # Ensure cluster resource defaults are configured.

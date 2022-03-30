@@ -1,3 +1,8 @@
+{%- set on_fail_action = "fence" %}
+{%- if not (beegfs_ha_cluster_crm_config_defaults | combine(beegfs_ha_cluster_crm_config_options))["stonith-enabled"] | default(true) -%}
+  {%- set on_fail_action = "standby" %}
+{%- endif -%}
+
 {% for host in groups[beegfs_ha_ansible_cluster_group] if "metadata" in (hostvars[host]["node_info"].keys() | list) %}
   {%- for info in hostvars[host]["node_info"]["metadata"] if host in info["preferred_node_order"][0] -%}
     {%- set group = info["resource_group"] -%}
@@ -17,7 +22,7 @@
   </instance_attributes>
   <operations>
     <op id="{{ group }}-monitor-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_monitor_start_timeout }}"/>
-    <op id="{{ group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_monitor_timeout }}" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
+    <op id="{{ group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_monitor_timeout }}" on-fail="{{ on_fail_action }}"/>
     <op id="{{ group }}-monitor-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_monitor_stop_timeout }}"/>
   </operations>
   <meta_attributes id="{{ group }}-monitor-meta_attributes">

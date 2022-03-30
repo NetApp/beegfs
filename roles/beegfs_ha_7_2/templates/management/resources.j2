@@ -1,3 +1,8 @@
+{%- set on_fail_action = "fence" %}
+{%- if not (beegfs_ha_cluster_crm_config_defaults | combine(beegfs_ha_cluster_crm_config_options))["stonith-enabled"] | default(true) -%}
+  {%- set on_fail_action = "standby" %}
+{%- endif -%}
+
 {%- if management_info["volumes"] is defined -%}
   {%- set resource_group = management_info["resource_group"] -%}
   {%- set mgmt_volume = management_info["volumes"][0] -%}
@@ -17,7 +22,7 @@
   </instance_attributes>
   <operations>
     <op id="{{ resource_group }}-monitor-start" interval="0s" name="start" timeout="{{ beegfs_ha_resource_monitor_start_timeout }}"/>
-    <op id="{{ resource_group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_monitor_timeout }}" on-fail="{% if beegfs_ha_enable_fence == True %}fence{% else %}standby{% endif %}"/>
+    <op id="{{ resource_group }}-monitor-monitor" interval="{{ beegfs_ha_resource_monitor_monitor_interval }}" name="monitor" timeout="{{ beegfs_ha_resource_monitor_monitor_timeout }}" on-fail="{{ on_fail_action }}"/>
     <op id="{{ resource_group }}-monitor-stop" interval="0s" name="stop" timeout="{{ beegfs_ha_resource_monitor_stop_timeout }}"/>
   </operations>
   <meta_attributes id="{{ resource_group }}-monitor-meta_attributes">
