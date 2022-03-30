@@ -64,6 +64,7 @@ beegfs_ha_cluster_crm_config_ignore:
   - cluster-infrastructure
   - dc-version
   - cluster-name
+  - have-watchdog
   - maintenance-mode  # Must be ignored because it would bring the cluster out of maintenance-mode and break the automation.
 
 beegfs_ha_cluster_resource_defaults:
