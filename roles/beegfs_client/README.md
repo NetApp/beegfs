@@ -40,6 +40,11 @@ The following variables control how the BeeGFS client is installed and kernel mo
   * `beegfs_client_ofed_enable: False`
 * To use the InfiniBand kernel modules from the OpenFabrics OFED, you must specify the header include path: 
   * `beegfs_client_ofed_include_path: "/usr/src/ofa_kernel/default/include"`
+* Create a BeeGFS client udev rule to override attributes in `/sys/class/bdi/beegfs-*` when BeeGFS is mounted (default: True): 
+  * `beegfs_client_udev_rule_install: True`
+* Adjust attributes in `/sys/class/bdi/beegfs-*` tuned by the BeeGFS client udev rule:
+  * `beegfs_client_udev_rule_attributes['read_ahead_kb']=4096`
+  * Note: Adding additional attributes beyond `read_ahead_kb` or changing the value to anything other than 4096 has NOT been tested extensively, and may result in performance or stability issues.
 * Experimental - Specify if the DKMS or traditional BeeGFS client should be installed (default: False):
   * `beegfs_client_dkms_install: False`
   * Note: Currently installing the beegfs-client-dkms package using this role is an experimental feature. In particular changes to enable/disable the OFED driver will not automatically rebuild/reload the BeeGFS kernel module.

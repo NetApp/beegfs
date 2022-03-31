@@ -23,6 +23,21 @@
           name: beegfs-helperd
           state: started
           enabled: true
+  
+      - name: Install BeeGFS Client udev rule. 
+        ansible.builtin.template:
+          src: beegfs-client-udev.rules.j2
+          dest: "/etc/udev/rules.d/{{ beegfs_client_udev_rule_name }}"
+          owner: root
+          group: root
+          mode: '0644'
+        register: install_beegfs_client_udev
+        when: beegfs_client_udev_rule_install
+
+      - name: Reload udev rules.
+        ansible.builtin.command: udevadm control --reload
+        when: install_beegfs_client_udev['changed'] == True
+        notify: Restart BeeGFS Client
     tags: beegfs_client_install          
 
   - name: Complete non-DKMS BeeGFS Client Tasks
