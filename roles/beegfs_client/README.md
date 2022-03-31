@@ -6,7 +6,11 @@ Installs the BeeGFS Client and optionally mounts one or more BeeGFS file systems
 Requirements
 ------------
 
+* The BeeGFS client [does not currently support SELinux](https://doc.beegfs.io/latest/trouble_shooting/general.html#access-denied-error-on-the-client-even-with-correct-permissions) so it must be disabled before running the role.
+* The firewall ports used by the BeeGFS client for communication must not be blocked. The default TCP/UDP ports [can be found here](https://doc.beegfs.io/latest/advanced_topics/network_tuning.html#firewalls-network-address-translation-nat), and optionally overridden as part of mounting BeeGFS using this role (see beegfs_client_config below).
 * When installing the BeeGFS client to Ubuntu, the ca-certificates package must be installed, or an error like the following will occur when attempting to add the BeeGFS repository using apt: `Certificate verification failed: The certificate is NOT trusted. The certificate chain uses expired certificate.  Could not handshake: Error in the certificate verification. [IP: 178.254.21.65 443]`. If you still get this error with ca-certificates installed try updating the package. 
+
+IMPORTANT: If you are using this role in conjunction with the BeeGFS high availability solution deployed by the other role(s) in this collection, please see the notes below for additional [requirements when mounting BeeGFS with HA enabled](#requirements-when-mounting-beegfs-with-ha-enabled).
 
 Support Matrix
 --------------
@@ -36,6 +40,11 @@ The following variables control how the BeeGFS client is installed and kernel mo
   * `beegfs_client_ofed_enable: False`
 * To use the InfiniBand kernel modules from the OpenFabrics OFED, you must specify the header include path: 
   * `beegfs_client_ofed_include_path: "/usr/src/ofa_kernel/default/include"`
+* Create a BeeGFS client udev rule to override attributes in `/sys/class/bdi/beegfs-*` when BeeGFS is mounted (default: True): 
+  * `beegfs_client_udev_rule_install: True`
+* Adjust attributes in `/sys/class/bdi/beegfs-*` tuned by the BeeGFS client udev rule:
+  * `beegfs_client_udev_rule_attributes['read_ahead_kb']=4096`
+  * Note: Adding additional attributes beyond `read_ahead_kb` or changing the value to anything other than 4096 has NOT been tested extensively, and may result in performance or stability issues.
 * Experimental - Specify if the DKMS or traditional BeeGFS client should be installed (default: False):
   * `beegfs_client_dkms_install: False`
   * Note: Currently installing the beegfs-client-dkms package using this role is an experimental feature. In particular changes to enable/disable the OFED driver will not automatically rebuild/reload the BeeGFS kernel module.
@@ -96,6 +105,20 @@ Notes:
 * Specifying `connInterfacesFile` in `beegfs_client_config` is supported, though unnecessary as specifying `connInterfaces` will generate a file and populate this automatically. 
   * If both `connInterfaces` and `connInterfacesFile` are specified then any existing `connInterfacesFile` will be overwritten to reflect `connInterfaces`.
 * By default the role will attempt to mount all BeeGFS filesystems listed in `beegfs_client_mounts` every time it runs unless `mounted: False`, in which case it will ensure that file system is unmounted.
+
+<a name="requirements-when-mounting-beegfs-with-ha-enabled"></a>
+Requirements when mounting BeeGFS with HA enabled
+-------------------------------------------------
+
+If you are using the BeeGFS client role to mount a BeeGFS filesystem backed by NetApp's shared-disk high availability solution, to prevent clients reporting "remote I/O" errors when a storage service crashes and is restarted on another node, [`sysSessionChecksEnabled`](https://git.beegfs.com/pub/v7/-/blob/master/client_module/build/dist/etc/beegfs-client.conf#L312) must be set to false in the `beegfs_client_config` for each mount point:
+```
+beegfs_client_mounts:
+  - sysMgmtdHost: mgmt
+    mount_point: /mnt/beegfs   
+    beegfs_client_config:
+      sysSessionChecksEnabled: false 
+```
+IMPORTANT: To prevent silent data corruption `sysSessionChecksEnabled: false` must only be set when the underlying ext4/xfs filesystems used for the BeeGFS management, metadata and storage targets are mounted using the "sync" option. Mounting the targets in "sync" mode is the default configuration provided by the beegfs_ha_7_2 role provided in this collection, but could be overridden.
 
 Tuning recommendations when mounting BeeGFS
 -------------------------------------------
