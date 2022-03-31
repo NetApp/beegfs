@@ -9,7 +9,7 @@
     # register: beegfs_client_build_mk_result
     # TODO: Reinstall DKMS packages or otherwise force rebuilding/reloading the module if this changes.
 
-  - name: Install BeeGFS packages (All).
+  - name: Install and configure BeeGFS Client packages (All).
     block:
       - import_tasks: packages/redhat_packages.yml
         when: ansible_facts['os_family'] | lower == 'redhat'
@@ -17,13 +17,13 @@
         when: ansible_facts['os_family'] | lower == 'suse'
       - import_tasks: packages/debian_packages.yml
         when: ansible_facts['os_family'] | lower == 'debian'
-    tags: beegfs_client_install
 
-  - name: Ensure beegfs-helperd is started/enabled.
-    systemd:
-      name: beegfs-helperd
-      state: started
-      enabled: true
+      - name: Ensure beegfs-helperd is started/enabled.
+        systemd:
+          name: beegfs-helperd
+          state: started
+          enabled: true
+    tags: beegfs_client_install          
 
   - name: Complete non-DKMS BeeGFS Client Tasks
     block:
