@@ -236,10 +236,10 @@ beegfs_ha_pcsd_path: /var/lib/pcsd/
 # Package version defaults
 beegfs_ha_force_upgrade: false
 #beegfs_ha_beegfs_version:  # By default the BeeGFS version will be selected based on the repository url (beegfs_ha_X_repository_base_url).
-beegfs_ha_corosync_version: 3.1.5
-beegfs_ha_pacemaker_version: 2.1.0
-beegfs_ha_pacemaker_remote_version: 2.1.0
-beegfs_ha_pcs_version: 0.10.10
+beegfs_ha_corosync_version: 3.1.0
+beegfs_ha_pacemaker_version: 2.0.5
+beegfs_ha_pacemaker_remote_version: 2.0.5
+beegfs_ha_pcs_version: 0.10.8
 beegfs_ha_resource_agent_version: 4.1.1
 beegfs_ha_fence_agents_all_version: 4.2.1
 
@@ -268,7 +268,7 @@ beegfs_ha_service_volume_configuration:
     mount_dir: /mnt/
   storage:
     format_type: xfs
-    format_options: "-d su=VOLUME_SEGMENT_SIZE_KBk,sw=VOLUME_STRIPE_COUNT -l version=2,su=VOLUME_SEGMENT_SIZE_KBk"
+    format_options: "-d su=VOLUME_SEGMENT_SIZE_KBk,sw=VOLUME_STRIPE_COUNT -l version=2,su=256k"
     mount_options: "sync,noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k"  # Note that nobarrier does not work on newer versions of XFS (ie. RHEL8)
     mount_dir: /mnt/
 
