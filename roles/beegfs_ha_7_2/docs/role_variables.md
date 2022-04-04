@@ -7,10 +7,10 @@ There are different locations where the variables and their defaults are defined
 the user by specifying the variables in one of the user's inventory files.
 
 <a name="table-of-contents"></a>
-## Table of Contents:
+## Table of Contents
 
 - [Role Variables](#role-variables)
-  - [Table of Contents:](#table-of-contents)
+  - [Table of Contents](#table-of-contents)
   - [BeeGFS Main Variables and Defaults](#beegfs-main-variables-and-defaults)
   - [BeeGFS OS Specific Variables and Defaults](#beegfs-os-specific-variables-and-defaults)
   - [Order of Precedence for Variables](#order-of-precedence-for-variables)

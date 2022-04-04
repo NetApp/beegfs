@@ -8,7 +8,7 @@ The list is non-exhaustive so use the Linux man pages or command help to see all
 
 - [Command Reference](#command-reference)
   - [Table of Contents](#table-of-contents)
-  - [pcs command](#pcs-command)
+  - [PCS Command](#pcs-command)
     - [Cluster Status](#cluster-status)
     - [Cluster Control](#cluster-control)
     - [Resource Migration](#resource-migration)
@@ -16,7 +16,7 @@ The list is non-exhaustive so use the Linux man pages or command help to see all
     - [Cluster Configuration Backup](#cluster-configuration-backup)
 
 <a name="pcs-command"></a>
-## pcs command
+## PCS Command
 
 This section provides a list of commonly used pcs commands for the BeeGFS HA role.
 

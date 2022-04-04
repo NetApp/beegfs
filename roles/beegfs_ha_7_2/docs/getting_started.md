@@ -2,15 +2,14 @@
 # Getting Started
 
 <a name="table-of-contents"></a>
-## Table of Contents:
+## Table of Contents
 
 - [Getting Started](#getting-started)
-  - [Table of Contents:](#table-of-contents)
+  - [Table of Contents](#table-of-contents)
   - [Requirements](#requirements)
   - [Getting Started Guide](#getting-started-guide)
   - [Example Playbook, Inventory, Group/Host Variables](#example-playbook-inventory-grouphost-variables)
     - [Example BeeGFS HA Playbook File](#example-beegfs-ha-playbook-file)
-    - [Example E-Series Management Playbook File](#example-e-series-management-playbook-file)
     - [Example Inventory File](#example-inventory-file)
     - [Example group_vars Inventory Files](#example-group_vars-inventory-files)
       - [Example All Group](#example-all-group)
@@ -84,23 +83,6 @@ This file would be created as `beegfs_ha_playbook.yml`:
           import_role:
             name: beegfs_ha_7_2
 
-
-<a name="example-e-series-management-playbook-file"></a>
-### Example E-Series Management Playbook File
-
-To apply the management configuration, execute the following playbook ((ansible-playbook -i inventory.yml eseries_management_playbook.yml))
-
-This file would be created as `eseries_management_playbook.yml`:
-
-    - hosts: eseries_storage_systems
-      gather_facts: false
-      collections:
-        - netapp_eseries.santricity
-      tasks:
-        - name: Ensure E-Series systems are configured.
-          import_role:
-            name: management
-
 <a name="example-inventory-file"></a>
 ### Example Inventory File
 
@@ -155,7 +137,7 @@ This file would be created as `group_vars/all.yml`:
 <a name="example-e-series-storage-systems-group"></a>
 #### Example E-Series Storage Systems Group
 
-Any variables supported by the netapp_eseries.santricity can set in this inventory file.
+Any variable supported by the netapp_eseries.santricity collection can be set in the storage system inventory files.
 
 This file would be created as `group_vars/eseries_storage_systems.yml`:
 
@@ -327,7 +309,7 @@ A file for each storage resources would be created as `group_vars/stor_<number>.
     beegfs_service: storage
 
     beegfs_targets:
-      <BLOCK NODE>:
+      <BLOCK NODE>:  # E-Series storage system as defined in the inventory as listed within eseries_storage_systems group.
         eseries_storage_pool_configuration:
           - name: <STORAGE POOL>
             raid_level: raid6
@@ -352,7 +334,7 @@ A file for each storage systems would be created as `host_vars/<hostname>.yml` (
     eseries_system_name: <STORAGE_ARRAY_NAME>
     eseries_system_api_url: https://<MANAGEMENT_IP>:8443/devmgr/v2/
 
-    eseries_initiator_protocol: <PROTOCOL>  # Communications protocol. Choices: fc, ib_iser, ib_srp, iscsi, nvme_fc, nvme_ib, nvme_roce, sas
+    eseries_initiator_protocol: <PROTOCOL>  # Communications protocol. Example: ib_iser or nvme_ib
                                             # See [netapp_eseries.santricity collection](https://galaxy.ansible.com/netapp_eseries/santricity) for more details.
 
     # Define NVMe over InfiniBand ports.

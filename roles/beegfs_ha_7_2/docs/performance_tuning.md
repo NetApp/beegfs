@@ -9,15 +9,15 @@ performance to suit their needs. Below describes how to tune different aspects o
 
 - [Performance Tuning](#performance-tuning)
   - [Table of Contents](#table-of-contents)
-  - [Performance Tuning](#performance-tuning-1)
-  - [Tuning kernel parameters using sysctl](#tuning-kernel-parameters-using-sysctl)
-  - [Tuning parameters on E-Series block devices/paths using udev](#tuning-parameters-on-e-series-block-devicespaths-using-udev)
+  - [BeeGFS Performance Tuning](#beegfs-performance-tuning)
+    - [Tuning Kernel Parameters Using Sysctl](#tuning-kernel-parameters-using-sysctl)
+    - [Tuning Parameters on E-Series Block Devices and Paths Using Udev](#tuning-parameters-on-e-series-block-devices-and-paths-using-udev)
   - [Using mixed drives](#using-mixed-drives)
   - [Advanced](#advanced)
   - [Restrictions](#restrictions)
 
-<a name="performance-tuning"></a>
-## Performance Tuning
+<a name="beegfs-performance-tuning"></a>
+## BeeGFS Performance Tuning
 
 BeeGFS calls out a number of parameters at https://www.beegfs.io/wiki/StorageServerTuning and 
 https://www.beegfs.io/wiki/MetaServerTuning that can be used to improve the performance of BeeGFS storage and metadata
@@ -44,7 +44,7 @@ information about all available tags check out [BeeGFS HA Role Tags](role_tags.m
 runtime when you're making incremental adjustments to these parameters during benchmark testing.
 
 <a name="tuning-kernel-parameters-using-sysctl"></a>
-## Tuning kernel parameters using sysctl
+### Tuning Kernel Parameters Using Sysctl
 
 BeeGFS recommends setting various kernel parameters under `/proc/sys` to help optimize the performance of BeeGFS
 storage/metadata nodes. One option to ensure these changes are persistent is to set them using sysctl. By default this
@@ -62,7 +62,7 @@ role will override the following parameters on BeeGFS storage and metadata nodes
 to be set.
 
 <a name="tuning-parameters-on-eseries-block-devicespaths-using-udev"></a>
-## Tuning parameters on E-Series block devices/paths using udev
+### Tuning Parameters on E-Series Block Devices and Paths Using Udev
 
 The following variables should be used to optimize performance for storage and metadata volumes:
 

@@ -12,7 +12,7 @@ supported by the BeeGFS HA Role. Tags run all ansible tasks that are associated 
   - [Table of Contents](#table-of-contents)
   - [All Role Tags](#all-role-tags)
 
-<a name="role-tags"></a>
+<a name="all-role-tags"></a>
 ## All Role Tags
 
 Use the following tags when executing your BeeGFS HA playbook to only execute select tasks:
