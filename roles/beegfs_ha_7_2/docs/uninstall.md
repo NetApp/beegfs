@@ -1,10 +1,12 @@
 <a name="uninstall"></a>
 # Uninstall
+
 Uninstall will have the BeeGFS and HA applications, configuration, performance tunings, and mount points removed at 
 the minimum.
 
 <a name="table-of-contents"></a>
 ## Table of Contents
+
 - [Uninstall](#uninstall)
   - [Table of Contents](#table-of-contents)
   - [How to Uninstall](#how-to-uninstall)
@@ -49,6 +51,7 @@ provisioned storage is retained. This file would be created as `uninstall_beegfs
 <a name="general-notes"></a>
 ## General Notes
 
-If `beegfs_ha_uninstall_wipe_format_volumes: true` is not set, then when user performs a volumes delete and, 
+- If `beegfs_ha_uninstall_wipe_format_volumes: true` is not set, then when user performs a volumes delete and, 
 subsequently, creates new volumes of the same size may result in recovering the original volume. While this is helpful 
 if the volumes were unintentionally deleted, it can create mounting issues for the BeeGFS HA cluster nodes.
+- The uninstall mode is primarily intended for use in training and testing environments. This may not fully remove all remnants of the previous installation, thus reinstalling the operating system before redeploying BeeGFS is recommended in production environments.
