@@ -117,7 +117,6 @@ BeeGFS commands
     beegfs-check-servers -p <MOUNT_PATH>   # Checks connectivity for all BeeGFS servers.
     beegfs-net                             # Shows established connections to BeeGFS servers.
     beegfs-df -p <MOUNT_PATH>              # Shows available capacity information.
-    beegfs-fsck                            # File system consistency check and repair tool.
     beegfs-ctl                             # Comprehensive command-line tool for BeeGFS (see beegfs-ctl --help for more details)
 
 Limitations

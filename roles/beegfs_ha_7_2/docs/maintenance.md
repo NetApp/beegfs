@@ -1,23 +1,22 @@
+<a name="maintenance"></a>
 # Maintenance
+
 There may be a need to perform maintenance actions on the BeeGFS cluster. This page is only describing
 some common maintenance operations as a guide for users.
 
-<br>
+<a name="table-of-contents"></a>
+## Table of Contents
 
-## Table of Content
-------------
 - [Maintenance](#maintenance)
-  - [## Table of Content](#-table-of-content)
-  - [## Maintenance a BeeGFS Node/Cluster](#-maintenance-a-beegfs-nodecluster)
-  - [## Handle an Unexpected Failed BeeGFS Node](#-handle-an-unexpected-failed-beegfs-node)
-  - [## Replacing a Node in the Cluster](#-replacing-a-node-in-the-cluster)
-  - [## Adding a Building Block to the Cluster](#-adding-a-building-block-to-the-cluster)
-
-<br>
+  - [Table of Contents](#table-of-contents)
+  - [Maintenance a BeeGFS Node/Cluster](#maintenance-a-beegfs-nodecluster)
+  - [Handle an Unexpected Failed BeeGFS Node](#handle-an-unexpected-failed-beegfs-node)
+  - [Replacing a Node in the Cluster](#replacing-a-node-in-the-cluster)
+  - [Adding a Building Block to the Cluster](#adding-a-building-block-to-the-cluster)
 
 <a name="maintenance-a-beegfs-nodecluster"></a>
 ## Maintenance a BeeGFS Node/Cluster
-------------
+
 In the case where a BeeGFS node needs to be serviced such as replacing a HBA card, the resources running on the node
 should to be moved to other node(s) in the cluster gracefully for high availability.
 
@@ -32,27 +31,24 @@ following commands to restore the resources back to their preferred node.
     pcs node unstandby <NODE_NAME>  # Removes node from standby.
     pcs resource relocate run       # Relocates all resource to their preferred nodes.
 
-<br>
-
 <a name="handle-an-unexpected-failed-beegfs-node"></a>
 ## Handle an Unexpected Failed BeeGFS Node
-------------
-In the case where a BeeGFS node failed unexpectedly, the node should be fenced automatically. All resources owned by the node will be moved to another for high availability.
+
+In the case where a BeeGFS node failed unexpectedly, the node should be fenced automatically. All resources owned by
+the node will be moved to another for high availability.
 
 To restore the failed node, first power on the fenced node. This action will not automatically add the node back into the cluster.
 
 Before proceeding be sure the cause of the failure has been resolved.
 
-    pcs cluster start                         # Bring the cluster node online
+    pcs cluster start <NODE_NAME>             # Bring the cluster node online
     pcs resource cleanup node=<NODE_NAME>     # Cleanup an resource failures associated with the node.
     pcs stonith history cleanup <NODE_NAME>   # Cleanup the node's fencing history.
     pcs resource relocate run                 # Relocate all failed over resources back to the node.
 
-<br>
-
 <a name="replacing-a-node-in-the-cluster"></a>
 ## Replacing a Node in the Cluster
-------------
+
 To replace a node in the cluster, perform the following steps:
 
 1. Create a new node inventory file (host_vars/<NEW_NODE>.yml) for the new node being added. See [example node inventory file](getting_started.md#example-beegfs-ha-node-inventory-file) for details.
@@ -77,11 +73,8 @@ To replace a node in the cluster, perform the following steps:
    ansible-playbook -i <inventory>.yml <playbook>.yml
    ```
 
-<br>
-
 <a name="adding-a-building-block-to-the-cluster"></a>
 ## Adding a Building Block to the Cluster
-------------
 
 When adding a building block to your cluster, you will need to create the `host_vars` files for each of the new hosts and 
 eseries arrays. The names of these hosts need to be added to the inventory, along with the new resources that are to be
@@ -89,5 +82,3 @@ created. The corresponding `group_vars` files will need to be created for each n
 
 After creating the correct files, all that is needed is to rerun the automation using the command 
 `ansible-playbook -i <inventory>.yml <playbook>.yml`.
-
-<br>
