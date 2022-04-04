@@ -1,7 +1,7 @@
 # Changelog
 Notable changes to the BeeGFS collection will be documented in this file.
 
-[3.0.0] - 2022-04-04
+[3.0.0] - 2022-04-05
 --------------------
  ### Added
 - A role (beegfs_ha_7_2) to deploy BeeGFS 7.2 into a Linux High Availability cluster backed by NetApp E-Series
@@ -9,9 +9,9 @@ Notable changes to the BeeGFS collection will be documented in this file.
   - The ability to deploy BeeGFS with and without HA, eliminating the need to ship/maintain separate roles, and allow
     switching between HA/non-HA BeeGFS file systems post-deployment.
   - A custom OCF resource agent for BeeGFS health monitoring that allows for more fine grained monitoring of BeeGFS
-    services and dependant resources than possible with built-in Pacemaker resource agents. Among other benefits this
-    allows the cluster to be more intelligent about what failure conditions prompt a full node failover, reducing the
-    performance impact of many failures.
+    services and dependent resources than built-in Pacemaker resource agents. Among other benefits this allows the
+    cluster to be more intelligent about what failure conditions prompt a full node failover, reducing the performance
+    impact of many failures.
   - Support for configuring multiple network interfaces in the same IP subnet (multihoming) using a custom BeeGFS IP
     address OCF resource. This allows multiple BeeGFS services to run on the same physical server using
     different/isolated network interfaces. One benefit is the ability to minimize rack space required for BeeGFS

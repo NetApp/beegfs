@@ -5,7 +5,7 @@ readme: "README.md"
 authors:
   - "Joe McCormick (@iamjoemccormick)"
   - "Nathan Swartz (@ndswartz)"
-  - Tracy Cummins (@tracycummins)
+  - "Tracy Cummins (@tracycummins)"
 description: "The NetApp E-Series BeeGFS collection provides roles to deploy supported versions of BeeGFS on hosts using NetApp E-Series storage."
 license:
 - "BSD-3-Clause"
