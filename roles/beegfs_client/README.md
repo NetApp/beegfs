@@ -135,6 +135,13 @@ beegfs_client_mounts:
       connRDMABufSize: 65536 # Size of each allocated RDMA buffer (BeeGFS Client Default: 70).
 ```
 
+BeeGFS commands
+---------------
+    beegfs-check-servers -p <MOUNT_PATH>   # Checks connectivity for all BeeGFS servers.
+    beegfs-net                             # Shows established connections to BeeGFS servers.
+    beegfs-df -p <MOUNT_PATH>              # Shows available capacity information.
+    beegfs-ctl                             # Comprehensive command-line tool for BeeGFS (see beegfs-ctl --help for more details)
+
 Limitations
 -----------
 
