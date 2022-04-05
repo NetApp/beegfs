@@ -1,7 +1,0 @@
-beegfs_mgmt_node_ip: 192.168.xx.xxx                # The BeeGFS's management host IP
-beegfs_connInterfaces:                             # This variable is needed to configure  for iSCSI, IB connections, The ports needs to be changed appropriate with your hosts (ex:  ib0, ib1, eth1, eth2, ens123, ens456)
-    - ib0
-    - ib1
-
-
-# NOTE:  This is not a comprehensive list of variables. Please reference the README for additional details including how to enable RDMA support.

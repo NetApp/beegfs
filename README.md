@@ -8,8 +8,7 @@ Getting Started
 ---------------
 Each role is used independently to deploy the desired version of BeeGFS in the desired mode of operation. The following roles are currently available:
 
-* [BeeGFS 7.1 with High-Availability (HA)](https://github.com/netappeseries/beegfs/blob/master/roles/beegfs_ha_7_1/README.md): End-to-end deployment of the NetApp E-Series BeeGFS 7.1 HA solution including provisioning and mapping E-Series storage, creating a Linux HA cluster using Pacemaker and Corosync, deploying BeeGFS into the cluster, and configuring clients.
-* [BeeGFS 7.1](https://github.com/netappeseries/beegfs/blob/master/roles/nar_santricity_beegfs_7_1/README.md): Description: Deployment of BeeGFS 7.1 servers and clients backed by NetApp E-Series storage. Often used to create high performance scratch space for use cases where HA is less of a concern.
+* [BeeGFS 7.2 with High-Availability (HA)](https://github.com/netappeseries/beegfs/blob/master/roles/beegfs_ha_7_2/README.md): End-to-end deployment of the NetApp E-Series BeeGFS 7.2 HA solution including provisioning and mapping E-Series storage, creating a Linux HA cluster using Pacemaker and Corosync, deploying BeeGFS into the cluster, and configuring clients.
 
 Submitting Questions and Feedback
 ---------------------------------
@@ -19,9 +18,8 @@ License
 -------
 BSD-3-Clause
 
-Author Information
+Maintainer Information
 ------------------
-- Christopher Seirer (@CSeirer)
-- Janey Le (@janeyle)
-- Joe McCormick (@iamjoemccormick)
 - Nathan Swartz (@ndswartz)
+- Joe McCormick (@iamjoemccormick)
+- Tracy Cummins (@tracycummins)

@@ -1,0 +1,79 @@
+# The following tasks builds the authoritative resources for the BeeGFS HA cluster. Next, they compare the existing cluster resources with what is expected and
+#   if there is a discrepancy then the cluster will be placed into maintenance mode and remove any existing constraints and resources to prevent any problems
+#   with the update. After the resource update has complete and the constraints have been reinstated then the cluster will be pulled out of maintenance mode.
+# Note: crm_diff was not used because it does not account for resource ordering.
+
+- name: Create cluster_resource opening xml tag.
+  set_fact:
+    cluster_resources: "<resources>"
+
+- name: Build pacemaker remote node resources.
+  set_fact:
+    cluster_resources: '{{ cluster_resources ~ lookup("template", "management/remote_nodes.j2") }}'
+
+- name: Build pacemaker cluster management group resources.
+  set_fact:
+    cluster_resources: '{{ cluster_resources ~ lookup("template", "management/resources.j2") }}'
+
+- name: Build pacemaker cluster metadata group resources.
+  set_fact:
+    cluster_resources: "{{ cluster_resources ~ lookup('template', 'metadata/resources.j2') }}"
+
+- name: Build pacemaker cluster storage group resources.
+  set_fact:
+    cluster_resources: "{{ cluster_resources ~  lookup('template', 'storage/resources.j2') }}"
+
+- name: Build pacemaker cluster fencing agent resources.
+  set_fact:
+    cluster_resources: "{{ cluster_resources ~ lookup('template', 'common/fencing_agent_resources.j2') }}"
+
+- name: Create cluster_resource closing xml tag.
+  set_fact:
+    cluster_resources: "{{ cluster_resources }}</resources>"
+
+- name: Query pacemaker resources.
+  ansible.builtin.command:
+    cmd: "cibadmin --query --scope resources"
+  changed_when: false
+  register: resources_query
+  become: true
+
+- name: Determine whether changes are required for pacemaker resources.
+  set_fact:
+    resources_change_required: |-
+      {%- set existing = resources_query["stdout"] | default("") | regex_replace("\n", "") | regex_replace("\s+", " ") | regex_replace(">\s+<", "><") -%}
+      {%- set expected = cluster_resources | regex_replace("\n", "") | regex_replace("\s+", " ") | regex_replace(">\s+<", "><") -%}
+      {{- not (existing == expected) -}}
+
+- name: Update pacemaker resources.
+  block:
+    - name: Create temporary resource xml file.
+      copy:
+        dest: /tmp/~tmp_beegfs_ha_cluster_resources.xml
+        content:  "{{ cluster_resources }}"
+      become: true
+
+    - name: Remove existing constraints.
+      ansible.builtin.command:
+        cmd: "cibadmin --replace --scope constraints --xml-text '<constraints/>'"
+      become: true
+
+    - name: Remove existing resources.
+      ansible.builtin.command:
+        cmd: "cibadmin --replace --scope resources --xml-text '<resources/>'"
+      become: true
+
+    - name: Update pacemaker resources.
+      ansible.builtin.command:
+        cmd: "cibadmin --replace --scope resources --xml-file /tmp/~tmp_beegfs_ha_cluster_resources.xml"
+      become: true
+  when: resources_change_required
+
+- name: Ensure BeeGFS HA cluster attributes are correct.
+  include_tasks: attributes.yml
+
+- name: Ensure BeeGFS HA services are running.
+  include_tasks: constraints.yml
+
+- name: Ensure BeeGFS HA alerts are configured.
+  include_tasks: alerts.yml

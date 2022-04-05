@@ -1,0 +1,12 @@
+[Unit]
+Description=BeeGFS Storage Server (multimode)
+Documentation=http://www.beegfs.com/content/documentation/
+Requires=network-online.target
+After=network-online.target beegfs-mgmtd.service openibd.service openib.service rdma.service opensmd.service opensm.service zfs.target
+
+[Service]
+ExecStart=nice -n {{ beegfs_ha_beegfs_storage_service_niceness }} /etc/beegfs/beegfs_ha_service_daemon.sh /opt/beegfs/sbin/beegfs-storage /mnt/%I/storage_config/beegfs-storage.conf
+Type=simple
+
+[Install]
+WantedBy=default.target

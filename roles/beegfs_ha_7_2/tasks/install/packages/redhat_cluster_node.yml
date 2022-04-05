@@ -1,0 +1,61 @@
+- name: Ensure the required HA packages are installed (RedHat/CentOS - Cluster Node).
+  ansible.builtin.yum:
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+    allow_downgrade: true
+    name:
+      - "corosync{% if beegfs_ha_corosync_version is defined and beegfs_ha_corosync_version %}-{{ beegfs_ha_corosync_version }}{% endif %}"
+      - "pacemaker{% if beegfs_ha_pacemaker_version is defined and beegfs_ha_pacemaker_version %}-{{ beegfs_ha_pacemaker_version }}{% endif %}"
+      - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined and beegfs_ha_fence_agents_all_version %}-{{ beegfs_ha_fence_agents_all_version }}{% endif %}"
+      - "resource-agents{% if beegfs_ha_resource_agent_version is defined and beegfs_ha_resource_agent_version -%}-{{ beegfs_ha_resource_agent_version }}{% endif %}"
+  become: true
+
+- name: Ensure the required HA packages are installed (RedHat/CentOS - Cluster Node).
+  ansible.builtin.yum:
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+    allow_downgrade: true
+    name: "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version -%}-{{ beegfs_ha_pcs_version }}{% endif %}"
+  when: beegfs_ha_management_tool is defined and beegfs_ha_management_tool == 'pcs'
+  become: true
+
+- name: Ensure mail packages are installed for alerts (RedHat/CentOS - Cluster Node).
+  ansible.builtin.yum:
+    state: present
+    name: "{{ item }}"
+  when: beegfs_ha_enable_alerts == True
+  loop: ["postfix", "mailx"]
+  become: true
+
+- name: Ensure NTP is installed (RedHat/CentOS - Cluster Node).
+  block:
+    - name: Ensure NTP is installed (RedHat/CentOS - Cluster Node).
+      ansible.builtin.yum:
+        state: present
+        name: ntp
+      become: true
+    - name: Ensure Chrony is uninstalled (RedHat/CentOS - Cluster Node).
+      ansible.builtin.yum:
+        state: absent
+        name: chrony
+      become: true
+  when: beegfs_ha_ntp_enabled
+
+- name: Ensure Chrony is installed (RedHat/CentOS - Cluster Node).
+  block:
+    - name: Ensure Chrony is installed (RedHat/CentOS - Cluster Node).
+      ansible.builtin.yum:
+        state: present
+        name: chrony
+      become: true
+    - name: Ensure NTP is uninstalled (RedHat/CentOS - Cluster Node).
+      ansible.builtin.yum:
+        state: absent
+        name: ntp
+      become: true
+  when: beegfs_ha_chrony_enabled
+
+- name: Ensure the firewalld is installed (RedHat/CentOS).
+  ansible.builtin.yum:
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+    name: firewalld
+  when: beegfs_ha_firewall_start_and_enable
+  become: true

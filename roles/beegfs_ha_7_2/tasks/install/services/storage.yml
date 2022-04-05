@@ -1,0 +1,215 @@
+- name: Create mount point directory for each storage volume from each storage service.
+  ansible.builtin.file:
+    state: directory
+    path: "{{ item }}"
+    mode: "0755"
+  loop: "{{ directories }}"
+  become: true
+  vars:
+    directories: |-
+      {%- set directories = [] -%}
+      {%- for service in node_info['storage'] if inventory_hostname == service['preferred_node_order'][0] -%}
+        {%- for volume in service["volumes"] -%}
+          {%- if directories.append(volume["metadata"]["mount_dir"] ~ volume["name"]) -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- directories -}}
+
+- name: Retrieve currently mounted volumes on the preferred host.
+  ansible.builtin.command:
+    cmd: mount
+    warn: false
+  changed_when: false
+  register: mount_info
+  become: true
+
+- name: Ensure the storage volumes are mounted on the preferred hosts.
+  ansible.builtin.command:
+    cmd: "mount -t {{ item['metadata']['format_type'] }} -o {{ item['metadata']['mount_options'] }}
+                {{ item['path'] }} {{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
+    warn: false
+  loop: "{{ preferred_volumes }}"
+  register: storage_volume_mount
+  changed_when: "storage_volume_mount['rc'] == 0"
+  failed_when: "storage_volume_mount['rc'] != 0 and not (storage_volume_mount['rc'] == 32 and 'already mounted' in storage_volume_mount['stderr'])"
+  when: item['name'] not in mounted_storage_volumes
+  become: true
+  vars:
+    preferred_volumes: |-  # Creates a list of preferred volumes for each host
+      {%- set preferred_volumes = [] -%}
+      {%- for storage in node_info["storage"] if storage["preferred_node_order"][0] == inventory_hostname -%}
+        {%- for volume in storage["volumes"] -%}
+          {%- if preferred_volumes.append(volume) -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- preferred_volumes -}}
+    mounted_storage_volumes: |-
+      {%- set volumes = [] -%}
+      {%- for storage in node_info["storage"] -%}
+        {%- for volume in storage["volumes"] -%}
+          {%- for line in mount_info["stdout_lines"] if volume["name"] in line -%}
+            {%- if volumes.append(volume) -%}{%- endif -%}
+          {%- endfor -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- volumes -}}
+
+- name: Create required directories for storage service.
+  ansible.builtin.file:
+    state: directory
+    path: "{{ item }}"
+    mode: "0700"
+  loop: "{{ directories }}"
+  become: true
+  vars:
+    directories: |-
+      {%- set directories = [] -%}
+      {%- for service in node_info['storage'] if inventory_hostname == service['preferred_node_order'][0] -%}
+        {%- for volume in service["volumes"] -%}
+          {%- if directories.append(volume["metadata"]["mount_dir"] ~ volume["name"] ~ "/data") -%}{%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- directories -}}
+
+- name: Create required directories for storage service.
+  ansible.builtin.file:
+    state: directory
+    path: "{{ item }}"
+    mode: "0755"
+  loop: "{{ directories }}"
+  become: true
+  vars:
+    directories: |-
+      {%- set directories = [] -%}
+      {%- for service in node_info['storage'] if inventory_hostname == service['preferred_node_order'][0] -%}
+        {%- if directories.append(service["volumes"][0]["metadata"]["mount_dir"] ~ service["volumes"][0]["name"] ~ "/storage_config") -%}{%- endif -%}
+      {%- endfor -%}
+      {{- directories -}}
+
+- name: Generate storage connInterfacesFile.conf file.
+  ansible.builtin.template:
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/connInterfacesFile_conf.j2') }}"
+    dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config/connInterfacesFile.conf"
+  loop: "{{ node_info['storage'] }}"
+  register: storage_interface_conf
+  when: inventory_hostname == item['preferred_node_order'][0]
+  become: true
+
+- name: Generate storage connNetFilterFile.conf file.
+  ansible.builtin.template:
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/connNetFilterFile_conf.j2') }}"
+    dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config/connNetFilterFile.conf"
+  loop: "{{ node_info['storage'] }}"
+  register: storage_filter_conf
+  when: inventory_hostname == item['preferred_node_order'][0]
+  become: true
+
+- name: Ensure beegfs-storage.conf file is configured.
+  netapp_eseries.beegfs.update_conf:
+    src: "{{ beegfs_ha_beegfs_storage_conf_path }}"
+    dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config/beegfs-storage.conf"
+    options: |-
+      {%- set storeStorageDirectory = [] -%}
+      {%- for volume in item["volumes"] -%}
+        {%- if storeStorageDirectory.append(volume["metadata"]["mount_dir"] ~ volume["name"] ~ "/data") -%}{%- endif -%}
+      {%- endfor -%}
+      {%- set required_options = {"sysMgmtdHost": management_info["resource_group"],
+                                  "storeStorageDirectory": storeStorageDirectory | join(","),
+                                  "connInterfacesFile": item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/storage_config/connInterfacesFile.conf",
+                                  "logStdFile": "/var/log/beegfs-storage-" ~ item["volumes"][0]["name"] ~ ".log"} -%}
+      {%- if (item["filter_ip_ranges"] | default(beegfs_ha_filter_ip_ranges)) | length > 0 -%}
+        {%- if required_options.update({"connNetFilterFile": item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/storage_config/connNetFilterFile.conf"}) -%}{%- endif -%}
+      {%- endif -%}
+      {{- item["service_configuration_options"] | combine(required_options) -}}
+    mode: "0644"
+  loop: "{{ node_info['storage'] }}"
+  register: storage_service_conf
+  when: inventory_hostname == item['preferred_node_order'][0]
+  become: true
+
+- name: Determine BeeGFS storage services that need to be restarted.
+  ansible.builtin.set_fact:
+    restart_storage_services: |-
+      {%- set services = [] -%}
+      {%- for result in storage_interface_conf["results"] if result["changed"] -%}
+        {%- set service = "beegfs-storage@" ~ result["item"]["volumes"][0]["name"] ~ ".service" -%}
+        {%- if ansible_facts.services[service]['state'] | default('') == 'running' -%}
+          {%- if services.append(service) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- for result in storage_filter_conf["results"] if result["changed"] -%}
+        {%- set service = "beegfs-storage@" ~ result["item"]["volumes"][0]["name"] ~ ".service" -%}
+        {%- if service not in services and ansible_facts.services[service]['state'] | default('') == 'running' -%}
+          {%- if services.append(service) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- for result in storage_service_conf["results"] if result["changed"] -%}
+        {%- set service = "beegfs-storage@" ~ result["item"]["volumes"][0]["name"] ~ ".service" -%}
+        {%- if service not in services and ansible_facts.services[service]['state'] | default('') == 'running' -%}
+          {%- if services.append(service) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- services -}}
+
+- name: Restart BeeGFS storage services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: restarted
+  loop: "{{ restart_storage_services }}"
+  become: true
+
+- name: Initialize storage directory for beegfs-storage server daemon and update beegfs-storage config file.
+  ansible.builtin.command:
+    cmd: "{{ item }}"
+  loop: "{{ commands }}"
+  register: beegfs_setup_storage
+  failed_when: "beegfs_setup_storage['rc'] != 0 and 'ERROR: Storage target directory is not empty.' not in beegfs_setup_storage['stdout']"
+  changed_when: "'ERROR: Storage target directory is not empty.' not in beegfs_setup_storage['stdout']"
+  become: true
+  vars:
+    commands: |-
+      {%- set commands = [] -%}
+      {%- for storage in node_info["storage"] if storage["preferred_node_order"][0] == inventory_hostname -%}
+        {%- set conf_path = storage["volumes"][0]["metadata"]["mount_dir"] ~ storage["volumes"][0]["name"] ~ "/storage_config/beegfs-storage.conf" -%}
+        {%- set node_string_id = storage['node_string_id'] -%}
+        {%- set node_id = node_string_id.split('_')[-1] | int | string -%}
+
+        {%- for volume in storage["volumes"] -%}
+          {%- set target_name = volume['name'] -%}
+          {%- set target_id = target_name.split('_')[-1] | int -%}
+          {%- set data_path = volume['metadata']['mount_dir'] ~ volume['name'] ~ "/data" -%}
+          {%- set base_cmd = "/opt/beegfs/sbin/beegfs-setup-storage -C -p " ~ data_path ~ " -s " ~ node_id ~ " -S " ~ target_name ~ " -i " ~ target_id -%}
+          {%- if loop['first'] -%}
+            {%- if commands.append(base_cmd ~ " -m " ~ management_info['resource_group']) -%}{%- endif -%}
+          {%- else -%}
+            {%- if commands.append(base_cmd) -%}{%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- commands -}}
+
+- name: Unmount storage volume.
+  ansible.builtin.command:
+    cmd: "umount {{ item['item']['metadata']['mount_dir'] }}{{ item['item']['name'] }}"
+  loop: "{{ storage_volume_mount['results'] }}"
+  ignore_errors: true
+  when: item['changed'] == True
+  become: true
+
+# Update beegfs-storage.service to point to beegfs-storage.conf.
+- name: Override the default beegfs-beegfs-storage.service file.
+  ansible.builtin.template:
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'storage/beegfs_storage_service.j2') }}"
+    dest: /etc/systemd/system/beegfs-storage@.service
+  register: beegfs_storage_service_override
+  become: true
+
+- name: Reload systemctl daemons.
+  ansible.builtin.systemd:
+    name: "beegfs-storage@{{ item['volumes'][0]['name'] }}"
+    #state: stopped
+    enabled: false
+    daemon_reload: "{% if beegfs_storage_service_override['changed'] %}true{% else %}false{% endif %}"
+  register: beegfs_storage_service
+  loop: "{{ node_info['storage'] }}"
+  become: true

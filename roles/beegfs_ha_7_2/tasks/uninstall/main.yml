@@ -1,0 +1,43 @@
+- name: Set current storage system credentials
+  ansible.builtin.include_role:
+    name: netapp_eseries.santricity.nar_santricity_common
+    tasks_from: build_info.yml
+  when: inventory_hostname in groups[beegfs_ha_ansible_storage_group] and current_eseries_api_url is not defined
+
+- name: Collect NetApp E-Series volume information (Always).
+  ansible.builtin.include_tasks: ../collect_facts.yml
+
+- name: Unconfigure cluster nodes.
+  ansible.builtin.include_tasks: unconfigure.yml
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+
+- name: Ensure storage has been deprovisioned for hosts.
+  ansible.builtin.include_role:
+    name: netapp_eseries.host.unmount
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  vars:
+    eseries_common_group: "{{ beegfs_ha_ansible_storage_group }}"
+    eseries_unmount_volumes: |-
+      {%- set volumes = [] -%}
+      {%- if "node_info" in (hostvars[inventory_hostname].keys() | list) -%}
+        {%- set info = hostvars[inventory_hostname]["node_info"] -%}
+        {%- for service in info["services"] -%}
+          {%- for resource in info[service] -%}
+            {%- for volume in resource["volumes"] -%}
+              {%- if volumes.append(volume["name"]) -%}{%- endif -%}
+            {%- endfor -%}
+          {%- endfor -%}
+        {%- endfor -%}
+      {%- endif -%}
+      {{- volumes -}}
+    eseries_unmount_purge: "{{ beegfs_ha_uninstall_unmap_volumes or beegfs_ha_uninstall_delete_volumes or beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
+    eseries_unmount_unmap: "{{ beegfs_ha_uninstall_unmap_volumes or beegfs_ha_uninstall_delete_volumes or beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
+    eseries_unmount_wipe_format_signatures: "{{ beegfs_ha_uninstall_wipe_format_volumes }}" 
+    eseries_unmount_delete: "{{ beegfs_ha_uninstall_delete_volumes or beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
+    
+- name: Ensure storage has been removed for hosts.
+  include_role:
+    name: netapp_eseries.santricity.nar_santricity_host
+  when: beegfs_ha_uninstall_delete_storage_pools_and_host_mappings and inventory_hostname in groups[beegfs_ha_ansible_storage_group]
+  vars:
+    eseries_remove_all_configuration: true

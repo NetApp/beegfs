@@ -1,3 +1,0 @@
-- name: Ensure expected BeeGFS packages are installed (Always).
-  include_tasks: "packages/{{ ansible_os_family | lower }}.yml"
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]

@@ -1,0 +1,84 @@
+---
+- name: Mount BeeGFS  # We wrap things in a block to ensure the tags work right with include_tasks.
+  block:
+  - name: Generate the BeeGFS client configuration file for this mount point.
+    block:
+      - name: Generate the path to the BeeGFS client configuration file for {{ item['sysMgmtdHost'] }}.
+        set_fact:
+          beegfs_client_conf_path: "/etc/beegfs/{{ item['sysMgmtdHost'] }}_beegfs-client.conf"
+
+      # If there are multiple BeeGFS mount points for the same sysMgmtdHost unique UDP ports would be provided.
+      - name: Generate the path to the BeeGFS client configuration file for {{ item['sysMgmtdHost'] }} if a unique UDP port was requested.
+        set_fact:
+          beegfs_client_conf_path: "/etc/beegfs/{{ item['sysMgmtdHost'] }}_{{ item['beegfs_client_config']['connClientPortUDP'] }}_beegfs-client.conf"
+        when: item['beegfs_client_config']['connClientPortUDP'] is defined
+
+      - name: Ensure BeeGFS client service is configured.
+        netapp_eseries.beegfs.update_conf:
+          src: /etc/beegfs/beegfs-client.conf
+          dest: "{{ beegfs_client_conf_path }}"
+          options: |-
+            {%- set required_options = {'sysMgmtdHost': item['sysMgmtdHost']} -%}
+            {%- if item['beegfs_client_config']['connInterfacesFile'] is defined -%}
+                {%- if required_options.update({'connInterfacesFile': item['beegfs_client_config']['connInterfacesFile']}) -%}{%- endif -%}
+            {%- elif item["connInterfaces"] is defined -%}
+              {%- if item['beegfs_client_config']['connClientPortUDP'] is defined -%}
+                {%- if required_options.update({'connInterfacesFile': '/etc/beegfs/' ~ item['sysMgmtdHost'] ~ '_' ~ item['beegfs_client_config']['connClientPortUDP'] ~ '_connInterfaces.conf'}) -%}{%- endif -%}
+              {%- else -%}
+                {%- if required_options.update({'connInterfacesFile': '/etc/beegfs/' ~ item['sysMgmtdHost'] ~ '_connInterfaces.conf'}) -%}{%- endif -%}
+              {%- endif -%}
+            {%- endif -%}
+            {{- beegfs_client_config_default_options | combine(item['beegfs_client_config']) | combine(required_options) -}}
+          mode: "0644"
+        notify: Restart BeeGFS Client
+
+  - name: Configure connInterfaces for this mount point if defined.
+    block:
+      - name: Set beegfs_connInterfaces
+        set_fact: beegfs_connInterfaces="{{ item['connInterfaces'] }}"
+
+      - name: Generate a default connInterfacesFile path.
+        set_fact:
+          beegfs_connInterfaces_path_default: "/etc/beegfs/{{ item['sysMgmtdHost'] }}_connInterfaces.conf"
+
+      - name: Generate a default connInterfacesFile path if a custom UDP port was requested.
+        set_fact:
+          beegfs_connInterfaces_path_default: >-
+            /etc/beegfs/{{ item['sysMgmtdHost'] }}_{{ item['beegfs_client_config']['connClientPortUDP'] }}_connInterfaces.conf
+        when: item['beegfs_client_config']['connClientPortUDP'] is defined
+
+      - name: Use the user defined connInterfacesFile path if provided.
+        set_fact:
+          beegfs_connInterfaces_path: "{{ item['beegfs_client_config']['connInterfacesFile'] | default(beegfs_connInterfaces_path_default)}}"
+
+      - name: Create/populate the connInterfaces file at {{ beegfs_connInterfaces_path }}.
+        template:
+          src: beegfs_connection_interfaces.j2
+          dest: "{{ beegfs_connInterfaces_path }}"
+          mode: 0644
+        notify: Restart BeeGFS Client
+
+    when: item['connInterfaces'] is defined
+
+  - name: Mount BeeGFS (non-DKMS client).
+    block:
+      - name: Update /etc/beegfs/beegfs-mounts.conf to include requested BeeGFS file system.
+        lineinfile:
+          path: /etc/beegfs/beegfs-mounts.conf
+          line: "{{ item['mount_point'] }} {{ beegfs_client_conf_path }}"
+          state: "{%- if item['mounted'] is defined and item['mounted'] == False  %}absent{%- else %}present{%- endif %}"
+        notify: Restart BeeGFS Client
+    when: not beegfs_client_dkms_install
+
+  - name: Mount BeeGFS (DKMS client).
+    block:
+      - name: Mount BeeGFS and add entry to /etc/fstab.
+        ansible.posix.mount:
+          path: "{{ item['mount_point'] }}"
+          src: beegfs_nodev
+          fstype: beegfs
+          opts: "rw,relatime,cfgFile={{ beegfs_client_conf_path }},_netdev,x-systemd.after=beegfs-helperd"
+          state: "{%- if item['mounted'] is defined and item['mounted'] == False  %}unmounted{%- else %}mounted{%- endif %}"
+    when: beegfs_client_dkms_install
+
+  tags: beegfs_client_mount

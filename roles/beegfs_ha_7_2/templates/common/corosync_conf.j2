@@ -1,0 +1,40 @@
+totem {
+    version: 2
+    cluster_name: {{ beegfs_ha_cluster_name }}
+    transport: knet
+    crypto_cipher: aes256
+    crypto_hash: sha256
+}
+
+nodelist {
+{% for node in groups[beegfs_ha_ansible_cluster_group] if (hostvars[node]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == True %}
+    node {
+        name: {{ node }}
+        nodeid: {{ loop["index"] }}
+{% if hostvars[node]["beegfs_ha_cluster_node_ips"] == [] %}
+        ring{{ loop["index0"] }}_addr: {{ node }}
+{% else %}
+{% for address in hostvars[node]["beegfs_ha_cluster_node_ips"] %}
+        ring{{ loop["index0"] }}_addr: {{ address }}
+{% endfor %}
+{% endif %}
+    }
+{% endfor %}
+}
+
+quorum {
+    provider: corosync_votequorum
+
+    # The options will allow a cluster with only 2 online nodes to be online and this mode will give the lowest
+    # node an extra vote. The two_node attribute enables the wait_for_all and only taken into affect when there
+    # are only two nodes in the cluster.
+    two_node: 1
+    auto_tie_breaker: 1
+}
+
+logging {
+    to_logfile: yes
+    logfile: /var/log/cluster/corosync.log
+    to_syslog: yes
+    timestamp: on
+}

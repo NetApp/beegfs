@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "data_version": 1,
+  "known_hosts": {
+{% for host in groups[beegfs_ha_ansible_cluster_group] %}
+    "{{ host }}": {
+      "dest_list": [
+        {
+          "addr": "{{ host | lower }}",
+          "port": 2224
+        }
+      ],
+      "token": "{{ host | to_uuid }}"
+    }{% if not loop["last"] %},{% endif %}
+
+{% endfor %}
+  }
+}

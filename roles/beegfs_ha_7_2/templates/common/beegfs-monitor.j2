@@ -1,0 +1,619 @@
+#!/bin/bash
+# OCF Resource Agent compliant beegfs-monitor script.
+#
+# License: BSD-3-Clause
+# Author: Nathan Swartz
+
+: ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
+. ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
+
+
+# Fail when commands errors are unhandled, variables undefined, and increases the niceness (priority) of this scripts process - Great idea Joe!
+#set -eu  # Unfortunately the dependent library, heartbeat/ocf-shellfuncs, causes this to fail for ocf_log. error output [ /usr/lib/ocf/lib/heartbeat/ocf-shellfuncs: line 179: HA_LOGTAG: unbound variable ]
+          #   TODO: To make this work either use our own logging or addresss the issues found in dependent libraries.
+
+# A niceness of -10 gives the beegfs-monitor process a higher priority than BeeGFS itself which prevents the monitor from being starved under heavy BeeGFS workloads.
+renice -n {{ beegfs_ha_beegfs_monitor_niceness }} -p $$ > /dev/null
+
+###############################################################################
+# Helper functions
+
+shm_root=/dev/shm/eseries_beegfs_ha
+start_timeout={{ beegfs_ha_resource_monitor_start_timeout | regex_replace("[^0-9]*", "") }}
+
+convert_ipv4_address_to_int() {
+  echo "$1" | awk '''
+  {
+    split($0, parts, "/")
+    cidr=parts[2]
+    split(parts[1], octets, ".")
+    address_int=octets[1]*16777216 + octets[2]*65536 + octets[3]*256 + octets[4]
+    printf address_int
+  }
+  '''
+}
+
+convert_int_to_ipv4_address() {
+  echo "$1" | awk '''
+  {
+    address_int=$0
+    v1=lshift(rshift(address_int, 24), 24)
+    v2=lshift(rshift(address_int - v1, 16), 16)
+    v3=lshift(rshift(address_int - v1 - v2, 8), 8)
+    v4= address_int - v1 - v2 - v3
+    octet1 = v1 / 16777216
+    octet2 = v2 / 65536
+    octet3 = v3 / 256
+    octet4 = v4
+    printf octet1"."octet2"."octet3"."octet4" "
+  }
+  '''
+}
+
+get_ipv4_subnet_addresses() {
+  cidr_subnet=$1
+  base_address=$(echo $cidr_subnet | cut -f 1 -d '/' )
+  subnet=$(echo $cidr_subnet | cut -f 2 -d '/' )
+
+  start_address_int=$(convert_ipv4_address_to_int $base_address)
+  end_address_int=$(( $start_address_int + 2 ** (32 - $subnet) - 1 ))
+  for address_int in $(seq $start_address_int $end_address_int); do
+    convert_int_to_ipv4_address $address_int
+  done
+}
+
+check_resource_service() {
+  if systemctl --state running | grep -wq "$service"; then
+    return 0
+  fi
+
+  return 1
+}
+
+# Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
+get_mgmt_ip() {
+  if [ "$type" != "management" ]; then
+    grep "^sysMgmtdHost" "$conf_path" | tr -d "[:space:]" | cut -f 2 -d "="
+  fi
+}
+
+# Return network communication interface name(s) from the BeeGFS resource's connInterfaceFile
+get_interfaces() {
+  # Determine BeeGFS service network IP interfaces.
+  connInterfacesFile_path=$(grep "^connInterfacesFile" "$conf_path" | tr -d "[:space:]" | cut -f 2 -d "=")
+
+  interfaces=""
+  if [ -f "$connInterfacesFile_path" ]; then
+    for entry in $(cat $connInterfacesFile_path); do
+      echo $entry | cut -f 1 -d ':'
+    done
+  fi
+}
+
+# Return list containing all the BeeGFS resource's usable IP addresses. *Note that these are filtered by the connNetFilterFile entries.
+get_subnet_ips() {
+  # Determine all possible BeeGFS service network IP addresses.
+  connNetFilterFile_path=$(grep "^connNetFilterFile" "$conf_path" | tr -d "[:space:]" | cut -f 2 -d "=")
+
+  filter_ips=""
+  if [ -n "$connNetFilterFile_path" ] && [ -e $connNetFilterFile_path ]; then
+    while read -r filter; do
+      filter_ips="$filter_ips $(get_ipv4_subnet_addresses $filter)"
+    done < $connNetFilterFile_path
+  fi
+
+  echo "$filter_ips"
+}
+
+# Retrieves the volume path devices (slaves) for the BeeGFS service target.
+get_parent_slaves() {
+  parent_path=$1
+  parent_name=$2
+  parent_slaves="$(ls -A /sys/class/block/$parent_name/slaves)"
+  block_devices="$(ls /sys/class/block)"
+
+  # Check whether the slaves directory was populated which means multipath is used. If not then
+  #   attempt to discover block devices with wwids matching the parent device (nvme native).
+  if [ -z "$parent_slaves" ] && [ -f /sys/class/block/$parent_name/wwid ]; then
+    parent_wwid=$(cat /sys/class/block/$parent_name/wwid)
+    for device_path in $block_devices; do
+      if [ ! -f $device_path/wwid ]; then
+        continue
+      fi
+
+      # Find child devices wwids matching the parent device.
+      name=$(basename $device_path)
+      wwid=$(cat $device_path/wwid)
+      if [ "$name" != "$parent_name" ] && [ "$wwid" == "$parent_wwid" ]; then
+        parent_slaves="$parent_slaves $name"
+      fi
+    done
+  fi
+
+  echo $parent_slaves
+}
+
+# Dump a log of the current state of BeeGFS HA resource running on the cluster node.
+dump_cluster_node_state() {
+  for resource_path in /dev/shm/eseries_beegfs_ha/*; do
+    echo "=== $resource_path ===";
+
+    for resource_file in $resource_path; do
+      if [ -f $resource_file ]; then
+        echo "${resource_file}: $(cat $resource_file)"
+      fi
+    done
+
+    # Log status information.
+    if [ -d $resource_path/status ]; then
+      for status_path in $resource_path/status/*; do
+        if [ -f $status_path ]; then
+          echo "${status_path}: $(cat $status_path)"
+        fi
+      done
+    fi
+
+    # Log interface information.
+    if [ -d $resource_path/interfaces ]; then
+      for interface_path in $resource_path/interfaces/*; do
+        if [ -f $interface_path ]; then
+          echo "${interface_path}: $(cat $interface_path)"
+          interface=$(basename $interface_path)
+          ip addr show dev $interface
+        fi
+      done
+    fi
+
+    # Log storage device information.
+    if [ -d $resource_path/devices ]; then
+      for device_path in $resource_path/devices/*; do
+        if [ -f $device_path ]; then
+          echo "${device_path}: $(cat $device_path)"
+        fi
+
+        if [ -d $device_path/stats ]; then
+          for stat_file in $device_path/stats/*/*; do
+            if [ -f $stat_file ] || [ -h $stat_file ]; then
+              echo "${stat_file}: $(cat $stat_file)"
+            fi
+          done
+        fi
+      done
+    fi
+
+    echo
+  done > /var/log/netapp/beegfs_ha_${group}_dump.log-$(date +%s)
+}
+
+# Determine the interface's link state
+interface_state() {
+  interface=$1
+  if ip -oneline link show dev $interface | grep "state UP" > /dev/null 2>&1; then
+    echo "up"
+  else
+    echo "down"
+  fi
+}
+
+check_network_connectivity() {
+
+  # Determine whether the service links are up. This is done in parallel in the case interface_state hangs for one of the interfaces.
+  pids=
+  interfaces=$(ls $shm_group_path/interfaces)
+  for interface_path in $interfaces; do
+    interface=$(basename $interface_path)
+
+    true > $interface_path
+    interface_state $interface > $interface_path &
+    pids="$pids $!"
+  done
+
+  # Wait for an 'up' interface or for status checks to complete with 'down' states.
+  while true; do
+
+    # Check for whether background processes have completed.
+    check_complete=0
+    for pid in $pids; do
+      if ps -p $pid > /dev/null 2>&1; then
+        check_complete=1
+        break
+      else
+        for interface_path in $interfaces; do
+          if [ "$(cat $interface_path)" = "up" ]; then
+            return 0
+          fi
+        done
+      fi
+    done
+
+    if [ "$check_complete" -eq "0" ]; then
+      break
+    fi
+  done
+
+  return 1
+}
+
+
+# Check whether block device is actively completing I/O.
+is_device_active() {
+  shm_device_path=$1
+
+  rc=1
+  devices=$(ls $shm_device_path/stats)
+  for stat_path in $devices; do
+    current=$(awk '{reads=$1; writes=$5; print reads+writes}' $stat_path/current)
+
+    # Determine whether there are new completed I/O requests.
+    previous=$(cat $stat_path/previous)
+    echo $current > $stat_path/previous
+    if [ "$current" != "$previous" ]; then
+      rc=0
+    fi
+  done
+
+  return $rc
+}
+
+# Check whether the block device is accessible.
+is_device_accessible() {
+  device_path=$1
+  dd if=$device_path iflag=direct bs=4k count=1 > /dev/null 2>&1
+  rc=$?
+
+  return $rc
+}
+
+# Check file system mounts are indeed mounted and accessible.
+check_filesystem_mounts() {
+  devices=$(ls $shm_group_path/devices)
+  for shm_device_path in $devices; do
+    parent_name=$(cat $shm_device_path/name)
+    parent_path=$(cat $shm_device_path/path)
+    mount=$(cat $shm_device_path/mount)
+
+    # Check for new device links
+    parent_slaves="$(get_parent_slaves $parent_path $parent_name)"
+    stats_path=$shm_device_path/stats
+    for device_name in $parent_slaves; do
+      if [ -d $stats_path/$device_name ]; then
+        continue
+      fi
+      device_path="/sys/class/block/$device_name"
+      mkdir $stats_path/$device_name
+      ln -s $device_path/stat $stats_path/$device_name/current
+      awk '{reads=$1; writes=$5; print reads+writes}' $device_path/stat > $stats_path/$device_name/previous
+    done
+
+    if ! mountpoint -q $mount; then
+      return $?
+    elif ! is_device_active $shm_device_path && ! is_device_accessible $parent_path; then
+      return $?
+    fi
+  done
+
+  return 0
+}
+
+# Test the provided command. usage: retry_command_until_success [command] [error message] [attempts] [timeout]
+#   retry_command_until_success() provides a predictable timeout for each attempt and excludes the commands execution time from the total sleep delay.
+#   Note that the timeout command will not work in this situation since it is placed in the background and the monitor's functions have not been exported.
+#
+#   [command]       The test function or command that needs to be evaluated.
+#   [error message] Error message to be reported when a failed attempt occurs. Each failed attempt will issue warning messages with the final attempt issuing the error message.
+#   [attempts]      Number of failed attempts before reporting the error message.
+#   [timeout]       The full amount of time all failed attempts will take with the exception of the final attempt. The final attempt will immediately fail.
+retry_command_until_success() {
+  command=$1
+  error_message=$2
+  declare -i attempts=$3
+  timeout=$4
+
+  while true; do
+    start=$(date +%s%N)
+    eval "$command" > /dev/null 2>&1 &
+    command_pid=$!
+
+    # Start a background tasks to kill the $command if it exceeds the $timeout
+    { sleep $timeout
+      if ps -p $command_pid > /dev/null 2>&1; then
+        kill -9 $command_pid > /dev/null 2>&1
+      fi
+    } &
+    timeout_pid=$!
+
+    # Wait for $command to complete and get it's return code.
+    wait $command_pid
+    rc=$?
+
+    # Ensure background timeout tasks are stopped.
+    if ps -p $timeout_pid > /dev/null 2>&1; then
+      kill -9 $timeout_pid > /dev/null 2>&1
+    fi
+
+    # Check whether the command was successful
+    if [ "$rc" -eq "0" ]; then
+      echo 0
+      return
+    fi
+
+    # Check whether there are anymore attempts
+    attempts=$attempts-1
+    if [ "$attempts" -le "0" ]; then
+      dump_cluster_node_state
+      ocf_log error "$group rc=$rc, msg=$error_message!"
+      ocf_exit_reason "$error_message"
+      echo 1
+      return
+    fi
+
+    # Sleep the remainder of the timeout. This ensures each failed attempt only uses the timeout duration.
+    stop=$(date +%s%N)
+    delay=$(echo "scale=2; duration=($stop-$start)/1000000000; timeout=$timeout; delay=$timeout-duration; if (duration > timeout) { print 0 } else { print delay }" | bc)
+    sleep $delay
+    ocf_log warn "$group rc=$rc, msg=$error_message! Retrying..."
+  done
+}
+
+initialize_monitor() {
+  # Ensure shared memory is in a clean state
+  rm -rf $shm_group_path
+  mkdir -p $shm_group_path/devices
+  mkdir $shm_group_path/status
+  echo $(stat -c %Z {{ beegfs_ha_resource_agent_path }}eseries/beegfs-monitor) > $shm_group_path/monitor_last_modified
+
+  # Initialize statuses
+  deadline=$(( $(date +%s) + start_timeout ))
+  echo "starting $deadline" > $shm_group_path/status/monitor
+  echo 0 > $shm_group_path/status/storage
+  echo 0 > $shm_group_path/status/network
+  echo 0 > $shm_group_path/status/service
+}
+
+setup_monitor() {
+  get_mgmt_ip > $shm_group_path/mgmt_ip
+  get_subnet_ips > $shm_group_path/filter_ips
+
+  # Load file system information into memory
+  mounts=$(grep "^store.*Directory" "$conf_path" | cut -f 2 -d "=" | sed 's/\/data//g' | sed 's/,/ /g')
+  for mount in $mounts; do
+
+    # Verify storage target is mounted before continuing
+    parent_path=$(findmnt -n -o SOURCE $mount)
+    if [ -z "$parent_path" ]; then
+      ocf_log info "$mount is not available..."
+      return 1
+    fi
+    parent_name=$(lsblk -n -o KNAME $parent_path) # grab the kernel name of the device
+
+    # Populate the /dev/shm/eseries_beegfs_ha/<group>/devices/nvmeXnX
+    parent_device_path=$shm_group_path/devices/$parent_name
+    stats_path=$parent_device_path/stats
+    mkdir $parent_device_path
+    mkdir $stats_path
+    echo "$parent_name" > $parent_device_path/name
+    echo "$parent_path" > $parent_device_path/path
+    echo "$mount" > $parent_device_path/mount
+
+    # Populate the /dev/shm/eseries_beegfs_ha/<group>/devices/nvmeXnX/stats
+    parent_slaves="$(get_parent_slaves $parent_path $parent_name)"
+    for device_name in $parent_slaves; do
+      device_path="/sys/class/block/$device_name"
+      mkdir $stats_path/$device_name
+      ln -s $device_path/stat $stats_path/$device_name/current
+      awk '{reads=$1; writes=$5; print reads+writes}' $device_path/stat > $stats_path/$device_name/previous
+    done
+  done
+
+  # Load initial neighbors into memory
+  interfaces_path=$shm_group_path/interfaces
+  mkdir $interfaces_path
+  interfaces=$(get_interfaces)
+  for interface in $interfaces; do
+    touch $interfaces_path/$interface
+  done
+
+  # Update beegfs-monitor status to started.
+  echo "started $(date +%s)" > $shm_group_path/status/monitor
+  ocf_log info "$shm_group_path/status/monitor: $(cat $shm_group_path/status/monitor)"
+  return 0
+}
+
+###############################################################################
+
+# Output the usage information
+beegfs_monitor_usage() {
+  cat <<END
+Usage: $0 (start|stop|monitor|meta-data|validate-all)
+
+Requires: ping, ip
+Parameters:
+  service_group                 (Required) BeeGFS resource group name
+  service_type                  (Required) Beegfs service (Choices: management, metadata, storage)
+  service_name                  (Required) BeeGFS service name
+  service_configuration_mount   (Required) BeeGFS service configuration mount path
+END
+}
+
+# Output the meta-data XML
+beegfs_monitor_meta_data() {
+  cat <<END
+<?xml version="1.0"?>
+<!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
+<resource-agent name="beegfs-monitor">
+  <version>1.0</version>
+  <longdesc lang="en">This resource agent monitors a single BeeGFS service.</longdesc>
+  <shortdesc lang="en">BeeGFS service monitor</shortdesc>
+  <parameters>
+    <parameter name="service_group" unique="1" required="0">
+      <longdesc lang="en">The BeeGFS resource group name.</longdesc>
+      <shortdesc lang="en">BeeGFS service group name</shortdesc>
+      <content type="string"/>
+    </parameter>
+    <parameter name="service_type" unique="0" required="0">
+      <longdesc lang="en">Type of BeeGFS service which can be one of the following: management, metadata, storage.</longdesc>
+      <shortdesc lang="en">BeeGFS service type</shortdesc>
+      <content type="string"/>
+    </parameter>
+    <parameter name="service_name" unique="0" required="0">
+      <longdesc lang="en">Name of the BeeGFS systemd service to monitor.</longdesc>
+      <shortdesc lang="en">BeeGFS service name</shortdesc>
+      <content type="string"/>
+    </parameter>
+    <parameter name="service_configuration_mount" unique="1" required="0">
+      <longdesc lang="en">Path to the BeeGFS service configuration file.</longdesc>
+      <shortdesc lang="en">BeeGFS service configuration file</shortdesc>
+      <content type="string"/>
+    </parameter>
+  </parameters>
+  <actions>
+    <action name="start"/>
+    <action name="stop"/>
+    <action name="monitor"        timeout="15" interval="17" />
+    <action name="meta-data"/>
+    <action name="validate-all"/>
+  </actions>
+</resource-agent>
+END
+}
+
+# Pacemaker start action must not be blocking since under high IO workloads pacemaker will throttle jobs to one. So
+#   waiting for either the colocated resources (targets, ips, beegfs service) to start or a pacemaker start timeout to fail
+#   should be avoided. Use a deadline in the monitor action for a start timeout instead.
+beegfs_monitor_start() {
+  mkdir -p /var/log/netapp
+  initialize_monitor
+
+  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} start
+  return $OCF_SUCCESS
+}
+
+beegfs_monitor_stop() {
+  rm -rf $shm_group_path
+  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} stop
+}
+
+beegfs_monitor_monitor() {
+
+  # Check resource tracking file. This is required for probing for whether the service has started on another cluster node.
+  ha_pseudo_resource ${OCF_RESOURCE_INSTANCE} monitor
+  ha_pseudo_resource_status=$?
+  if [ $ha_pseudo_resource_status -ne $OCF_SUCCESS ]; then
+    return $ha_pseudo_resource_status
+  fi
+
+  # Check whether BeeGFS resource is still starting.
+  if grep -wq "starting" $shm_group_path/status/monitor; then
+
+    deadline=$(cat $shm_group_path/status/monitor | cut -f 2 -d ' ')
+    if [ $(date +%s) -ge $deadline ]; then
+      error_message="Start timeout"
+      dump_cluster_node_state
+      ocf_log error "$group, msg=$error_message!"
+      ocf_exit_reason "$error_message"
+      return $OCF_ERR_GENERIC
+
+    elif [ ! -f $conf_path ]; then
+      ocf_log info "Waiting for $conf_path..."
+    elif ! check_resource_service; then
+      ocf_log info "Waiting for $service service to start..."
+    else
+      ocf_log info "Initializing..."
+      if setup_monitor; then
+        ocf_log info "Initializing complete."
+      fi
+    fi
+
+  # Check if beegfs-monitor has changed.
+  elif [ "$(cat $shm_group_path/monitor_last_modified)" != "$(stat -c %Z {{ beegfs_ha_resource_agent_path }}eseries/beegfs-monitor)" ]; then
+    ocf_log info "beegfs-monitor was modified. Reinitializing..."
+    initialize_monitor
+    if setup_monitor; then
+      ocf_log info "Reinitializing complete."
+    fi
+
+  # Check the status of the BeeGFS resources.
+  else
+
+    # Check services.
+    #   ** beegfs-monitor.j2 templating node: The hardcoded attempts must correspond to the divisor in the timeout with an added 10% to ensure the monitor fails prior to the
+    #        pacemaker's monitoring timeout. For example, 3 attempts should result in a divisor of 3.3 which ensures all attempts will fail in about 54 seconds.
+    #                           Calling function             Error message                     Attempts  Timeout   Status file
+    retry_command_until_success "check_filesystem_mounts"     "Target(s) are not accessible!"   3         {{ "%0.2f" % (beegfs_ha_resource_monitor_monitor_timeout | regex_replace("[A-Za-z]*", "") | float / 3.3) | float }}    > $shm_group_path/status/storage &
+    retry_command_until_success "check_network_connectivity"  "Network is not reachable!"       3         {{ "%0.2f" % (beegfs_ha_resource_monitor_monitor_timeout | regex_replace("[A-Za-z]*", "") | float / 3.3) | float }}    > $shm_group_path/status/network &
+    retry_command_until_success "check_resource_service"      "BeeGFS service is not active!"   1         {{ "%0.2f" % (beegfs_ha_resource_monitor_monitor_timeout | regex_replace("[A-Za-z]*", "") | float / 1.1) | float }}    > $shm_group_path/status/service &
+    wait
+
+    if [ "$(cat $shm_group_path/status/storage)" -ne "0" ] || [ "$(cat $shm_group_path/status/network)" -ne "0" ] || [ "$(cat $shm_group_path/status/service)" -ne "0" ]; then
+      return $OCF_ERR_GENERIC
+    fi
+  fi
+  return $OCF_SUCCESS
+}
+
+# Validate beegfs-monitor requirements
+beegfs_monitor_validate_all() {
+  return $OCF_SUCCESS
+}
+
+###############################################################################
+
+# Provide information for metadata and usage requests
+case $__OCF_ACTION in
+  meta-data)
+    beegfs_monitor_meta_data
+    exit $OCF_SUCCESS
+    ;;
+  usage|help)
+    beegfs_monitor_usage
+    exit $OCF_SUCCESS
+    ;;
+esac
+
+# Set argument variables
+group=${OCF_RESKEY_service_group:-""}
+type=${OCF_RESKEY_service_type:-""}
+service=${OCF_RESKEY_service_name:-""}
+configuration_mount=${OCF_RESKEY_service_configuration_mount:-""}
+configuration_mount=${configuration_mount%%/}
+shm_group_path=$shm_root/$group
+
+case $type in
+  management)
+    conf_path="${configuration_mount}/mgmt_config/beegfs-mgmtd.conf"
+    ;;
+  metadata)
+    conf_path="${configuration_mount}/metadata_config/beegfs-meta.conf"
+    ;;
+  storage)
+    conf_path="${configuration_mount}/storage_config/beegfs-storage.conf"
+    ;;
+  *)
+    beegfs_monitor_usage
+    exit $OCF_ERR_ARGS
+    ;;
+esac
+
+# Perform action requests
+case $__OCF_ACTION in
+  start)
+    beegfs_monitor_start
+    exit $?
+    ;;
+  stop)
+    beegfs_monitor_stop
+    exit $?
+    ;;
+  monitor)
+    beegfs_monitor_monitor
+    exit $?
+    ;;
+  validate-all)
+    beegfs_monitor_validate_all
+    exit $?
+    ;;
+  *)
+    beegfs_monitor_usage
+    exit $OCF_ERR_UNIMPLEMENTED
+    ;;
+esac

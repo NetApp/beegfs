@@ -1,0 +1,34 @@
+- name: Ensure eseries resource agent path exists
+  ansible.builtin.file:
+    state: directory
+    path: "{{ beegfs_ha_resource_agent_path }}eseries"
+    mode: 0755
+  become: true
+
+- name: Install E-Series BeeGFS HA resource agent for monitoring individual resources.
+  ansible.builtin.template:
+    src: common/beegfs-monitor.j2
+    dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-monitor"
+    mode: 0755
+  become: true
+
+- name: Install E-Series BeeGFS HA resource agent for managing floating IP resources.
+  ansible.builtin.copy:
+    src: common/beegfs-ipaddr2
+    dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-ipaddr2"
+    mode: 0755
+  become: true
+
+- name: Install E-Series BeeGFS HA resource agent for managing filesystem resources.
+  ansible.builtin.copy:
+    src: common/beegfs-target
+    dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-target"
+    mode: 0755
+  become: true
+
+- name: Ensure beegfs-alerts.sh is available for cluster alerts.
+  ansible.builtin.template:
+    src: common/beegfs-alerts.j2
+    dest: /etc/beegfs/beegfs-alerts.sh
+    mode: 0755
+  become: true

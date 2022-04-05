@@ -1,0 +1,60 @@
+- name: Ensure ha-cluster-bootstrap is installed (SUSE - Cluster Node).
+  community.general.zypper:
+    state: present
+    name: ha-cluster-bootstrap
+  become: true
+
+- name: Ensure ha-cluster-bootstrap is installed (SUSE - Cluster Node).
+  community.general.zypper:
+    state: present
+    name: pacemaker
+  become: true
+
+- name: Ensure ha-cluster-bootstrap is installed (SUSE - Cluster Node).
+  community.general.zypper:
+    state: present
+    name: corosync
+  become: true
+
+- name: Ensure mail packages are installed for alerts (SUSE - Cluster Node).
+  community.general.zypper:
+    state: present
+    name: "{{ item }}"
+  when: beegfs_ha_enable_alerts == True
+  loop: ["postfix", "mailx"]
+  become: true
+
+- name: Ensure NTP is installed (SUSE - Cluster Node).
+  block:
+    - name: Ensure NTP is installed (SUSE - Cluster Node).
+      community.general.zypper:
+        state: present
+        name: ntp
+      become: true
+    - name: Ensure Chrony is uninstalled (SUSE - Cluster Node).
+      community.general.zypper:
+        state: absent
+        name: chrony
+      become: true
+  when: beegfs_ha_ntp_enabled
+
+- name: Ensure Chrony is installed (SUSE - Cluster Node).
+  block:
+    - name: Ensure Chrony is installed (SUSE - Cluster Node).
+      community.general.zypper:
+        state: present
+        name: chrony
+      become: true
+    - name: Ensure NTP is uninstalled (SUSE - Cluster Node).
+      community.general.zypper:
+        state: absent
+        name: ntp
+      become: true
+  when: beegfs_ha_chrony_enabled
+
+- name: Ensure the firewalld is installed (SUSE).
+  community.general.zypper:
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+    name: firewalld
+  when: beegfs_ha_firewall_start_and_enable
+  become: true

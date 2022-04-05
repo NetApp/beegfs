@@ -1,0 +1,56 @@
+- name: Add BeeGFS ZYPPER repository (SUSE).
+  zypper_repository:
+    name: beegfs
+    description: BeeGFS ZYPPER Repo
+    repo: "{{ beegfs_ha_suse_repository_base_url }}"
+    autorefresh: true
+    state: present
+    auto_import_keys: true
+  when: "'.repo' in beegfs_ha_suse_repository_base_url"
+
+- name: Create BeeGFS repo file (SUSE).
+  template:
+    src: beegfs_suse_repo.j2
+    dest: "/etc/zypp/repos.d/beegfs.repo"
+    mode: 0644  # TODO: Verify the standard mode/owner/group set for Zypper repos if support is added.
+    owner: root
+  when: "'.repo' not in beegfs_ha_suse_repository_base_url"
+
+- name: Get kernel version (SUSE - Client).
+  command: "uname -r | cut -f 1,2 -d \"-\""
+  register: shell_output
+  failed_when: "shell_output.rc != 0"
+  changed_when: false
+
+- name: Ensure kernel-devel is installed (SUSE - Client).
+  zypper:
+    name: "kernel-devel={{ shell_output.stdout_lines[0] }}"
+    state: present
+
+- name: Ensure kernel-default-devel is installed (SUSE - Client).
+  zypper:
+    name: "kernel-default-devel={{ shell_output.stdout_lines[0] }}"
+    state: present
+
+- name: Ensure kernel-source is installed (SUSE - Client).
+  zypper:
+    name: "kernel-source={{ shell_output.stdout_lines[0] }}"
+    state: present
+
+- name: Enable unsupported modules (SUSE - Client).
+  replace:
+    path: /etc/modprobe.d/10-unsupported-modules.conf
+    regexp: 'allow_unsupported_modules 0'
+    replace: 'allow_unsupported_modules 1'
+  when: beegfs_ha_suse_allow_unsupported_module
+
+- name: Ensure the BeeGFS client package is installed (SUSE - Client).
+  zypper:
+    state: |-
+      {%- if beegfs_client_force_upgrade %}latest{%- else %}present{%- endif %}
+    name:
+      - "{%- if beegfs_client_dkms_install %}beegfs-client-dkms{%- else %}beegfs-client{%- endif %}"
+      - beegfs-helperd
+      - beegfs-utils
+      - beegfs-client-devel
+  register: package_mgr_result

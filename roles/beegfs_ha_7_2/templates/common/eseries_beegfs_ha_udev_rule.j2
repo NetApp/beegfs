@@ -1,0 +1,73 @@
+# NetApp E-Series (Ansible)
+# NVMe Devices
+ACTION=="add|change", \
+  ATTRS{model}=="NetApp E-Series*", \
+  ENV{DEVTYPE}=="disk", \
+  SUBSYSTEM=="block", \
+  KERNEL=="nvme*", \
+{% for attribute, value in (beegfs_ha_eseries_nvme_attributes.items() | list) %}
+  ATTR{ {{- attribute -}} }="{{ value }}"{% if not loop["last"] %}, \{% endif %}
+
+{% endfor %}
+
+# SSD Devices
+ACTION=="add|change", \
+  KERNEL=="sd[a-z]*", \
+  ENV{DEVTYPE}=="disk", \
+  SUBSYSTEM=="block", \
+  ATTRS{model}=="INF-01-00*", \
+  ATTR{queue/rotational}=="0", \
+{% for attribute, value in (beegfs_ha_eseries_ssd_attributes.items() | list) %}
+  ATTR{ {{- attribute -}} }="{{ value }}"{% if not loop["last"] %}, \{% endif %}
+
+{% endfor %}
+
+ACTION=="add|change", \
+  KERNEL=="dm-*", \
+  ENV{DEVTYPE}=="disk", \
+  SUBSYSTEM=="block", \
+  ATTR{queue/rotational}=="0", \
+  RUN+="/bin/bash -c ' \
+    export DEV=`/bin/basename $env{DEVNAME} || /usr/bin/basename $env{DEVNAME}`; \
+    if grep INF-01-00 /sys/block/$DEV/slaves/sd*/device/model && [[ -f /sys$env{DEVPATH}/queue/scheduler ]]; then \
+{% for attribute, value in (beegfs_ha_eseries_ssd_attributes.items() | list) %}
+      echo {{ value }} > /sys$env{DEVPATH}/{{ attribute }} \
+{% endfor %}
+    fi'"
+
+# HDD Devices
+ACTION=="add|change", \
+  KERNEL=="sd[a-z]*", \
+  ENV{DEVTYPE}=="disk", \
+  SUBSYSTEM=="block", \
+  ATTRS{model}=="INF-01-00*", \
+  ATTR{queue/rotational}=="1", \
+{% for attribute, value in (beegfs_ha_eseries_hdd_attributes.items() | list) %}
+  ATTR{ {{- attribute -}} }="{{ value }}"
+
+{% endfor %}
+
+ACTION=="add|change", \
+  KERNEL=="dm-*", \
+  ENV{DEVTYPE}=="disk", \
+  SUBSYSTEM=="block", \
+  ATTR{queue/rotational}=="0", \
+  RUN+="/bin/bash -c ' \
+    export DEV=`/bin/basename $env{DEVNAME} || /usr/bin/basename $env{DEVNAME}`; \
+    if grep INF-01-00 /sys/block/$DEV/slaves/sd*/device/model && [[ -f /sys$env{DEVPATH}/queue/scheduler ]]; then \
+{% for attribute, value in (beegfs_ha_eseries_hdd_attributes.items() | list) %}
+      echo {{ value }} > /sys$env{DEVPATH}/{{ attribute }} \
+{% endfor %}
+    fi'"
+
+{% if beegfs_ha_sysfs_devpath_device_attributes is defined %}
+# Set devpath device attributes
+{% for path in beegfs_ha_sysfs_devpath_device_attributes if beegfs_ha_sysfs_devpath_device_attributes[path] is mapping and beegfs_ha_sysfs_devpath_device_attributes[path] | length > 0 %}
+ACTION=="add|change", \
+  ENV{DEVPATH}=="{{ path }}", \
+{% for attribute, value in (beegfs_ha_sysfs_devpath_device_attributes[path].items() | list) %}
+  ATTR{attribute}="{{ value }}"{% if not loop["last"] %}, \{% endif %}
+
+{% endfor %}
+{% endfor %}
+{% endif %}

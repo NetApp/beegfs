@@ -1,0 +1,38 @@
+- name: Ensure the BeeGFS management package is uninstalled (RedHat/CentOS - Management).
+  ansible.builtin.yum:
+    state: absent
+    name: beegfs-mgmtd
+  when: '"management" in node_info["services"]'
+  become: true
+
+- name: Ensure the BeeGFS metadata package is uninstalled (RedHat/CentOS - Metadata).
+  ansible.builtin.yum:
+    state: absent
+    name: beegfs-meta
+  when: '"metadata" in node_info["services"]'
+  become: true
+
+- name: Ensure the BeeGFS storage package is uninstalled (RedHat/CentOS - Storage).
+  ansible.builtin.yum:
+    state: absent
+    name: beegfs-storage
+  when: '"storage" in node_info["services"]'
+  become: true
+
+- name: Ensure the BeeGFS infiniband package is uninstalled (RedHat/CentOS - Metadata/Storage).
+  ansible.builtin.yum:
+    state: absent
+    name: libbeegfs-ib
+  when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and node_info["service_configuration_options"]["connUseRDMA"] | default(true)'
+  become: true
+
+- name: Ensure the required HA packages are uninstalled (RedHat/CentOS - Management/Metadata/Storage).
+  ansible.builtin.yum:
+    state: absent
+    name:
+      - corosync
+      - pacemaker
+      - pcs
+      - fence-agents-all
+    autoremove: true
+  become: true

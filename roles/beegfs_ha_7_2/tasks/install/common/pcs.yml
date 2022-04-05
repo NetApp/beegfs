@@ -1,0 +1,37 @@
+- name: Set pcs cluster password.
+  ansible.builtin.user:
+    name: "{{ beegfs_ha_cluster_username }}"
+    password: "{{ beegfs_ha_cluster_password | password_hash('sha512', beegfs_ha_cluster_password_sha512_salt) }}"
+    create_home: false
+  register: pcs_cluster_password
+  become: true
+
+- name: "Ensure {{ beegfs_ha_pcsd_path }} directory exists"
+  ansible.builtin.file:
+    state: directory
+    path: "{{ beegfs_ha_pcsd_path }}"
+    mode: 0700
+  become: true
+
+- name: Ensure pcs_user.conf file is correct on all cluster and remote nodes
+  ansible.builtin.template:
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pcs_users_conf.j2') }}"
+    dest: "{{ beegfs_ha_pcsd_path }}pcs_users.conf"
+    mode: 0644
+  register: pcs_users_conf
+  become: true
+
+- name: Create PCS known_hosts file is correct on all cluster and remote nodes
+  ansible.builtin.template:
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pcs_known_hosts.j2') }}"
+    dest: "{{ beegfs_ha_pcsd_path }}known-hosts"
+    mode: 0644
+  register: pcs_known_hosts
+  become: true
+
+- name: Ensure pcsd daemon is running and enabled.
+  ansible.builtin.systemd:
+    name: pcsd
+    state: '{%- if pcs_cluster_password["changed"] == true or pcs_users_conf["changed"] == true or pcs_known_hosts["changed"] == true -%}restarted{%- else -%}started{% endif %}'
+    enabled: true
+  become: true

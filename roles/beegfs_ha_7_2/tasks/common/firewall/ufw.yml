@@ -1,0 +1,3 @@
+- name: Warning! ufw has not been implemented.
+  debug:
+    msg: "Sorry, allowing ports for has not been implemented yet for ufw. Either manually open required ports or use firewalld instead."

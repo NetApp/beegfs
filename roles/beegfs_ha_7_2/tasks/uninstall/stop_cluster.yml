@@ -1,0 +1,19 @@
+- name: Collect facts about systemd services.
+  service_facts:
+  become: true
+
+- name: Stop and disable pacemaker service.
+  ansible.builtin.systemd:
+    state: stopped
+    enabled: false
+    name: pacemaker
+  when: ansible_facts['services']['pacemaker.service'] is defined
+  become: true
+
+- name: Stop and disable corosync service.
+  ansible.builtin.systemd:
+    state: stopped
+    enabled: false
+    name: corosync
+  when: ansible_facts['services']['corosync.service'] is defined
+  become: true

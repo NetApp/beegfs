@@ -1,0 +1,30 @@
+- name: Ensure configuration destination directory exists.
+  ansible.builtin.file:
+    state: directory
+    path: /etc/systemd/journald.conf.d/
+    mode: "0644"
+  become: true
+
+- name: Ensure journald log destination directory exists.
+  ansible.builtin.file:
+    state: directory
+    path: /var/log/journal/
+    mode: "2755"
+  become: true
+
+- name: Ensure journald configuration options are configured.
+  netapp_eseries.beegfs.update_conf:
+    src: /etc/systemd/journald.conf
+    dest: /etc/systemd/journald.conf.d/eseries_beegfs_ha.conf
+    options: "{{ beegfs_ha_journald_options }}"
+    pattern: "^#?([A-Za-z0-9_-]+)( *= *)(.*)$"
+    padding: false
+    mode: "0644"
+  register: journald_conf
+  become: true
+
+- name: Restart journald
+  ansible.builtin.systemd:
+    name: systemd-journald.service
+    state: '{% if journald_conf["changed"] %}restarted{% else %}started{% endif %}'
+  become: true
