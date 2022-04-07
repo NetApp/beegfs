@@ -131,8 +131,8 @@ beegfs_client_mounts:
     mount_point: /mnt/beegfs   
     beegfs_client_config:
       connMaxInternodeNum: 128 # Maximum number of simultaneous connections to the same node (BeeGFS Client Default: 12).
-      connRDMABufNum: 36 # Allocates the number of buffers for transferring IO (BeeGFS Client Default: 8192).
-      connRDMABufSize: 65536 # Size of each allocated RDMA buffer (BeeGFS Client Default: 70).
+      connRDMABufNum: 36 # Allocates the number of buffers for transferring IO (BeeGFS Client Default: 70).
+      connRDMABufSize: 65536 # Size of each allocated RDMA buffer (BeeGFS Client Default: 8192).
 ```
 
 BeeGFS commands
