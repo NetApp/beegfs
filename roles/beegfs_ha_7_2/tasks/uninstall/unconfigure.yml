@@ -1,18 +1,6 @@
 - name: Stop cluster.
   ansible.builtin.include_tasks: stop_cluster.yml
 
-- name: Ensure InfiniBand IPoIB is unconfigured.
-  ansible.builtin.include_role:
-    name: netapp_eseries.host.ipoib
-    tasks_from: uninstall.yml
-  when: eseries_ipoib_interfaces is defined
-
-- name: Ensure host-storage communications are uninstalled.
-  ansible.builtin.include_role:
-    name: netapp_eseries.host.storage_setup
-    tasks_from: uninstall.yml
-  when: beegfs_ha_uninstall_storage_setup
-
 - name: Delete mount point directories for all management, metadata, and storage volumes.
   ansible.builtin.file:
     state: absent
@@ -86,7 +74,7 @@
     path: "{{ beegfs_ha_pacemaker_cib_path }}"
   become: true
 
-- name: Purge BeeGFS service overides.
+- name: Purge BeeGFS service overrides.
   ansible.builtin.file:
     state: absent
     path: "/etc/systemd/system/beegfs-{{ item }}.service"
@@ -94,9 +82,4 @@
   become: true
 
 - name: Ensure the required firewall ports are closed.
-  include_tasks: ../common/firewall/uninstall.yml
-
-- name: Reboot nodes
-  ansible.builtin.reboot:
-  when: beegfs_ha_uninstall_reboot
-  become: true
+  ansible.builtin.include_tasks: ../common/firewall/uninstall.yml
