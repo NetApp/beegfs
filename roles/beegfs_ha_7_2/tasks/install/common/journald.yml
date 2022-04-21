@@ -13,7 +13,7 @@
   become: true
 
 - name: Ensure journald configuration options are configured.
-  netapp_eseries.beegfs.update_conf:
+  netapp_eseries.host.update_conf:
     src: /etc/systemd/journald.conf
     dest: /etc/systemd/journald.conf.d/eseries_beegfs_ha.conf
     options: "{{ beegfs_ha_journald_options }}"

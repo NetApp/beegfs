@@ -83,7 +83,7 @@
       register: mgmtd_filter_conf
 
     - name: Ensure beegfs-mgmtd.conf file is configured.
-      netapp_eseries.beegfs.update_conf:
+      netapp_eseries.host.update_conf:
         src: "{{ beegfs_ha_beegfs_mgmtd_conf_path }}"
         dest: "{{ mgmt_config_path }}beegfs-mgmtd.conf"
         options: "{{ item['service_configuration_options'] | combine(beegfs_ha_beegfs_mgmtd_conf_required_options) }}"

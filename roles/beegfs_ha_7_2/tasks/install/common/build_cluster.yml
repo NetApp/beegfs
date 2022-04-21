@@ -124,7 +124,7 @@
   run_once: true
 
 - name: Ensure pacemaker.service file with niceness specified.
-  netapp_eseries.beegfs.update_conf:
+  netapp_eseries.host.update_conf:
     src: /usr/lib/systemd/system/pacemaker.service
     dest: /etc/systemd/system/pacemaker.service
     options:

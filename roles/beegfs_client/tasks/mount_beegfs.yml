@@ -14,7 +14,7 @@
         when: item['beegfs_client_config']['connClientPortUDP'] is defined
 
       - name: Ensure BeeGFS client service is configured.
-        netapp_eseries.beegfs.update_conf:
+        netapp_eseries.host.update_conf:
           src: /etc/beegfs/beegfs-client.conf
           dest: "{{ beegfs_client_conf_path }}"
           options: |-
