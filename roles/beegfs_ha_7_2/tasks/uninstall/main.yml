@@ -49,8 +49,9 @@
 
 - name: Reboot nodes
   ansible.builtin.command: reboot now
+  changed_when: false
   when: beegfs_ha_uninstall_reboot and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-  register: reboot
+  register: reboot_task
   async: 30
   poll: 0
   become: true
@@ -70,3 +71,10 @@
     timeout: 1200
     sleep: 10
   delegate_to: localhost
+
+- name: Cleanup async reboot cache file.
+  ansible.builtin.async_status:
+    jid: "{{ reboot_task.ansible_job_id }}"
+    mode: cleanup
+  when: beegfs_ha_uninstall_reboot and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  become: true
