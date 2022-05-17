@@ -34,10 +34,47 @@
     eseries_unmount_unmap: "{{ beegfs_ha_uninstall_unmap_volumes or beegfs_ha_uninstall_delete_volumes or beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
     eseries_unmount_wipe_format_signatures: "{{ beegfs_ha_uninstall_wipe_format_volumes }}" 
     eseries_unmount_delete: "{{ beegfs_ha_uninstall_delete_volumes or beegfs_ha_uninstall_delete_storage_pools_and_host_mappings }}"
-    
+
+- name: Ensure host-storage communications are uninstalled.
+  ansible.builtin.include_role:
+    name: netapp_eseries.host.storage_setup
+    tasks_from: uninstall.yml
+  when: beegfs_ha_uninstall_storage_setup and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+
+- name: Ensure InfiniBand IPoIB is unconfigured.
+  ansible.builtin.include_role:
+    name: netapp_eseries.host.ipoib
+    tasks_from: uninstall.yml
+  when: eseries_ipoib_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+
+- name: Reboot nodes
+  ansible.builtin.command: reboot now
+  changed_when: false
+  when: beegfs_ha_uninstall_reboot and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  register: reboot_task
+  async: 30
+  poll: 0
+  become: true
+
 - name: Ensure storage has been removed for hosts.
-  include_role:
+  ansible.builtin.include_role:
     name: netapp_eseries.santricity.nar_santricity_host
   when: beegfs_ha_uninstall_delete_storage_pools_and_host_mappings and inventory_hostname in groups[beegfs_ha_ansible_storage_group]
   vars:
     eseries_remove_all_configuration: true
+
+- name: Finish waiting for cluster nodes to reboot.
+  ansible.builtin.wait_for:
+    state: started
+    host: "{{ ansible_host }}"
+    port: 22
+    timeout: 1200
+    sleep: 10
+  delegate_to: localhost
+
+- name: Cleanup async reboot cache file.
+  ansible.builtin.async_status:
+    jid: "{{ reboot_task.ansible_job_id }}"
+    mode: cleanup
+  when: beegfs_ha_uninstall_reboot and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  become: true
