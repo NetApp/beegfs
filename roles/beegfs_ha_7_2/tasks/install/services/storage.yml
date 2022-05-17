@@ -105,7 +105,7 @@
   become: true
 
 - name: Ensure beegfs-storage.conf file is configured.
-  netapp_eseries.beegfs.update_conf:
+  netapp_eseries.host.update_conf:
     src: "{{ beegfs_ha_beegfs_storage_conf_path }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config/beegfs-storage.conf"
     options: |-

@@ -83,7 +83,7 @@
   become: true
 
 - name: Ensure beegfs-meta.conf file is configured.
-  netapp_eseries.beegfs.update_conf:
+  netapp_eseries.host.update_conf:
     src: "{{ beegfs_ha_beegfs_meta_conf_path }}"
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/metadata_config/beegfs-meta.conf"
     options: |-
