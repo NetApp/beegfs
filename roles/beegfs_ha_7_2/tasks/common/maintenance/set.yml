@@ -63,3 +63,4 @@
       run_once: true
   when: 'crm_mon_status["rc"] != 2 or crm_mon_status["stderr"] | regex_search("crm_mon.*", ignorecase=true)'
   become: true
+  ignore_errors: true
