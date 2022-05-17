@@ -129,7 +129,6 @@
     dest: /etc/systemd/system/pacemaker.service
     options:
       ExecStart: nice -n {{ beegfs_ha_pacemaker_service_niceness }} /usr/sbin/pacemakerd -f
-    padding: false
     mode: "0644"
   register: pacemaker_niceness
   become: true

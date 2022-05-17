@@ -17,8 +17,6 @@
     src: /etc/systemd/journald.conf
     dest: /etc/systemd/journald.conf.d/eseries_beegfs_ha.conf
     options: "{{ beegfs_ha_journald_options }}"
-    pattern: "^#?([A-Za-z0-9_-]+)( *= *)(.*)$"
-    padding: false
     mode: "0644"
   register: journald_conf
   become: true
