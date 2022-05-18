@@ -1,3 +1,7 @@
+- name: Set global variables.
+  ansible.builtin.set_fact:
+    eseries_common_firewall_configure: "{{ beegfs_ha_firewall_configure }}"
+
 - name: Ensure BeeGFS HA cluster is installed.
   import_tasks: install/main.yml
 

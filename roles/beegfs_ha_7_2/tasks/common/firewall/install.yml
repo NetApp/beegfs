@@ -15,3 +15,4 @@
       vars:
         allow_ports: true
   become: true
+  when: beegfs_ha_firewall_configure == true
