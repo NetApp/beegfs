@@ -9,6 +9,9 @@
 
     - name: "Wait for cluster to stabilize."
       ansible.builtin.command: "crm_resource --wait"
+      changed_when: false
+      ignore_errors: true
+      timeout: 30
   become: true
 
 # Move resources back to their preferred nodes.
@@ -25,6 +28,9 @@
 
     - name: "Wait for cluster to stabilize."
       ansible.builtin.command: "crm_resource --wait"
+      changed_when: false
+      ignore_errors: true
+      timeout: 30
 
     - name : "Clear resource move constraints."
       ansible.builtin.command: "crm_resource --resource {{ item['key'] }}-monitor --clear"

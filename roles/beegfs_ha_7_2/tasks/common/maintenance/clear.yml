@@ -12,6 +12,9 @@
 
     - name: "Wait for cluster to stabilize."
       ansible.builtin.command: "crm_resource --wait"
+      changed_when: false
+      ignore_errors: true
+      timeout: 30
   when: maintenance_query["rc"] in [0, 105] and maintenance_query["stdout"] | regex_search(".*value=(true|on|y|1)", ignorecase=true)
   become: true
 

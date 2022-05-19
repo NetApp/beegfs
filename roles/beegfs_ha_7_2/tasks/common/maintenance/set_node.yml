@@ -1,11 +1,18 @@
-- name: Check whether node is in maintenance-mode or the cluster is stopped on the node.
+- name: "Check whether {{ cluster_node }} is in maintenance-mode or the cluster is stopped on the node."
   ansible.builtin.command: "crm_attribute --node {{ cluster_node }} --name maintenance --query"
   register: maintenance_query
   failed_when: false
   changed_when: false
   become: true
 
-- name: Ensure BeeGFS HA cluster nodes are in maintenance.
+- name: "Ensure {{ cluster_node }} are in maintenance."
   ansible.builtin.command: "crm_attribute --node {{ cluster_node }} --name maintenance --update true"
-  when: maintenance_query["rc"] in [0, 105] and maintenance_query["stdout"] | regex_search(".*value=(?!true|on|y|1)", ignorecase=true)
+  when: maintenance_query["rc"] == 105 or (maintenance_query["rc"] == 0 and maintenance_query["stdout"] | regex_search(".*value=(?!true|on|y|1)", ignorecase=true))
+  failed_when: node_maintenance_mode["rc"] != 0
+  register: node_maintenance_mode
   become: true
+
+- name: "Check whether {{ cluster_node }} was placed in maintenance mode."
+  ansible.builtin.pause:
+    prompt: "WARNING! Identified the cluster is at least partially deployed, but was unable to put {{ cluster_node }} into maintenance mode. If you are still in the process of deploying the cluster this can be safely ignored. If you are attempting to make changes to an existing cluster, continuing may temporarily disrupt filesystem operations, but will likely correct any outstanding issues with the cluster. Press enter to continue, Ctrl+C to interrupt"
+  when: node_maintenance_mode["failed"] | default(false)
