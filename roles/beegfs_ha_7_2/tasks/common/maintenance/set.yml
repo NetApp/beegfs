@@ -45,16 +45,6 @@
               loop_control:
                 loop_var: cluster_node
 
-            - name: Determine whether any nodes failed to be placed into maintenance mode.
-              ansible.builtin.set_fact:
-                maintenance_mode_failed: |-
-                  {%- set scratch = {"maintenance_mode": false} -%}
-                  {%- for cluster_node in groups[beegfs_ha_ansible_cluster_group]
-                      if hostvars[inventory_hostname][cluster_node~"_maintenance_mode"]["failed"] | default(false) -%}
-                    {%- if scratch.update({"maintenance_mode": true }) -%}{%- endif -%}
-                  {%- endfor -%}
-                  {{- scratch["maintenance_mode"] -}}
-
             - name: Wait for cluster changes to stabilize if the cluster is started.
               ansible.builtin.command: "crm_resource --wait"
               changed_when: false
