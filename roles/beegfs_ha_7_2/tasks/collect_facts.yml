@@ -408,9 +408,9 @@
       {{- resource_group_info -}}
   run_once: true
 
-- name: Determine preferred management node.
+- name: Determine cluster automation node used to run any tasks that should only run on a single node in the cluster.
   set_fact:
-    preferred_management_node: |-
+    cluster_automation_node: |-
       {%- set nodes = [] -%}
       {%- for group, info in resource_group_info.items() if not nodes -%}
         {%- if nodes.extend(info["preferred_node_order"]) -%}{%- endif -%}
