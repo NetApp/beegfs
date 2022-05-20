@@ -40,7 +40,6 @@
           block:
             - name: Move cluster nodes into maintenance mode.
               ansible.builtin.include_tasks: set_node.yml
-              register: node_maintenance_mode
               loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
               loop_control:
                 loop_var: cluster_node
