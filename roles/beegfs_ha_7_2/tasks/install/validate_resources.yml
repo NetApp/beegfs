@@ -3,7 +3,7 @@
   register: pacemaker_resources_status
   changed_when: false
   failed_when: false
-  delegate_to: "{{ preferred_management_node }}"
+  delegate_to: "{{ cluster_automation_node }}"
   run_once: true
   become: true
 
@@ -54,7 +54,7 @@
           delay: 1
           retries: 15
           until: crm_resource_cleanup['rc'] == 0
-          delegate_to: "{{ preferred_management_node }}"
+          delegate_to: "{{ cluster_automation_node }}"
           run_once: true
       when: 1 < (resources_not_started_retries | int) < 3 # Second attempt
       become: true
@@ -67,7 +67,7 @@
           changed_when: false
           ignore_errors: true
           timeout: 30
-          delegate_to: "{{ preferred_management_node }}"
+          delegate_to: "{{ cluster_automation_node }}"
           run_once: true
           become: true
 

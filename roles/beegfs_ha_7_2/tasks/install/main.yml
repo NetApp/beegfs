@@ -16,7 +16,7 @@
       block:
         - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
           ansible.builtin.include_tasks: ../common/maintenance/set.yml
-      when: inventory_hostname == preferred_management_node
+      when: inventory_hostname == cluster_automation_node
       tags:
         - beegfs_ha_configure_resource
         - beegfs_ha_configure
@@ -150,7 +150,7 @@
       block:
         - name: Ensure BeeGFS HA cluster resources are correct.
           ansible.builtin.include_tasks: resources.yml
-          when: inventory_hostname == preferred_management_node
+          when: inventory_hostname == cluster_automation_node
       tags:
         - beegfs_ha_configure_resource
         - beegfs_ha_configure
@@ -254,7 +254,7 @@
         - name: Enable fencing since cluster is fully started.
           ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update True
           when: stonith_enabled["stdout"] | bool
-      when: inventory_hostname == preferred_management_node
+      when: inventory_hostname == cluster_automation_node
       become: true
       tags:
         - beegfs_ha_move_all_to_preferred
@@ -285,7 +285,7 @@
       block:
         - name: Backup current BeeGFS HA configuration.
           ansible.builtin.include_tasks: ../backup.yml
-          when: inventory_hostname == preferred_management_node
+          when: inventory_hostname == cluster_automation_node
       tags:
         - beegfs_ha_configure_resource
         - beegfs_ha_configure
