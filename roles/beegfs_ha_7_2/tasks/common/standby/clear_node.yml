@@ -14,6 +14,8 @@
     - name: "Wait for {{ cluster_node }} changes to stabilize."
       ansible.builtin.command: "crm_resource --wait"
       changed_when: false
+      ignore_errors: true
+      timeout: 30
   when: standby_query["stdout"] | regex_search(".*value=(true|on|y|1)", ignorecase=true)
   become: true
 

@@ -47,6 +47,8 @@
             - name: Wait for cluster changes to stabilize if the cluster is started.
               ansible.builtin.command: "crm_resource --wait"
               changed_when: false
+              ignore_errors: true
+              timeout: 30
           when: maintenance_mode_query["stdout"] | regex_search(".*value=(?!true|on|y|1)", ignorecase=true)
       when: crm_mon_status["rc"] == 0
       run_once: true
@@ -55,10 +57,18 @@
       block:
         - name: Move cluster into maintenance mode.
           ansible.builtin.command: "crm_attribute --name maintenance-mode --update true"
+          register: global_maintenance_mode
+
+        - name: Check whether cluster was placed in maintenance mode.
+          ansible.builtin.pause:
+            prompt: "WARNING! Identified the cluster is at least partially deployed, but was unable to put the cluster into maintenance mode. If you are still in the process of deploying the cluster this can be safely ignored. If you are attempting to make changes to an existing cluster, continuing may temporarily disrupt filesystem operations, but will likely correct any outstanding issues with the cluster. Press enter to continue, Ctrl+C to interrupt"
+          when: global_maintenance_mode["rc"] != 0
 
         - name: Wait for cluster changes to stabilize if the cluster is started.
           ansible.builtin.command: "crm_resource --wait"
           changed_when: false
+          ignore_errors: true
+          timeout: 30
       when: crm_mon_status["rc"] != 0
       run_once: true
   when: 'crm_mon_status["rc"] != 2 or crm_mon_status["stderr"] | regex_search("crm_mon.*", ignorecase=true)'

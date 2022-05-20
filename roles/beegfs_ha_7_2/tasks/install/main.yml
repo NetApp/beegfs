@@ -182,9 +182,20 @@
 
     - name: Attempt to return cluster to an optimal state.
       block:
+        - name: Determine whether fencing is enabled.
+          ansible.builtin.command: crm_attribute --name stonith-enabled --quiet
+          register: stonith_enabled
+          changed_when: false
+
+        - name: Disable fencing until cluster is fully started.
+          ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update False
+          when: stonith_enabled["stdout"] | bool
+
         - name: Wait for cluster to stabilize.
           ansible.builtin.command: crm_resource --wait
           changed_when: false
+          ignore_errors: true
+          timeout: 30
 
         - name: Cleanup cluster resource failures.
           ansible.builtin.command: crm_resource --cleanup
@@ -193,6 +204,8 @@
         - name: Wait for cluster to stabilize.
           ansible.builtin.command: crm_resource --wait
           changed_when: false
+          ignore_errors: true
+          timeout: 30
 
         - name: Ensure BeeGFS HA cluster nodes are out of standby mode.
           ansible.builtin.include_tasks: ../common/standby/clear.yml
@@ -237,6 +250,10 @@
                   {%- endfor -%}
                   {{- resources -}}
           when: beegfs_ha_force_resource_move
+
+        - name: Enable fencing since cluster is fully started.
+          ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update True
+          when: stonith_enabled["stdout"] | bool
       when: inventory_hostname == preferred_management_node
       become: true
       tags:
