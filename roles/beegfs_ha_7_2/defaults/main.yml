@@ -152,6 +152,9 @@ beegfs_ha_required_sysctl_entries:
   net.ipv4.conf.all.arp_filter: 1
   net.ipv4.conf.all.arp_announce: 2
   net.ipv4.conf.all.arp_ignore: 2
+  net.ipv4.neigh.default.gc_thresh1: 256 # The gc_thresh settings may need to be further increased in very large networks. Do not decrease without reviewing ESOLA-241.
+  net.ipv4.neigh.default.gc_thresh2: 1024
+  net.ipv4.neigh.default.gc_thresh3: 2048
 
 # BeeGFS management service configuration
 beegfs_ha_beegfs_mgmtd_conf_path: /etc/beegfs/beegfs-mgmtd.conf   # Default BeeGFS management service configuration file path.
