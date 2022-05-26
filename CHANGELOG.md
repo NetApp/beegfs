@@ -1,6 +1,20 @@
 # Changelog
 Notable changes to the BeeGFS collection will be documented in this file.
 
+[3.0.1] - 2022-05-26
+--------------------
+### Added
+- Increase default threshold for IP neighbor garbage collection.
+- Improve uninstall task ordering and make reboot asynchronous with storage system tasks.
+- Increase Ansible version requirement to 2.10 or later.
+
+### Fixed
+- Increase beegfs-monitor timeout to 120 seconds to allow monitor operation to complete under extremely high loads.
+- Allow automation to continue after maintenance mode fails to be set which resolves issues such as when deployments
+  were stopped before configuring corosync.
+- Handle scenarios where the node running the BeeGFS management service is not listed first in the inventory file and
+  used as the preferred management node for the cluster.
+
 [3.0.0] - 2022-04-05
 --------------------
  ### Added
