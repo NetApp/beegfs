@@ -4,6 +4,7 @@ Notable changes to the BeeGFS collection will be documented in this file.
 [3.0.1] - 2022-05-26
 --------------------
 ### Added
+- Added beegfs_ha_firewall_configure variable to control whether the firewall is configured.
 - Increase default threshold for IP neighbor garbage collection.
 - Improve uninstall task ordering and make reboot asynchronous with storage system tasks.
 - Increase Ansible version requirement to 2.10 or later.
