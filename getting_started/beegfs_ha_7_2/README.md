@@ -8,7 +8,7 @@ generated files filling in necessary details and changing default values where n
 
 Requirements
 ------------
-- Ansible control node with Ansible 2.9 or later and the following dependencies installed:
+- Ansible control node with Ansible 2.10 or later and the following dependencies installed:
   - NetApp E-Series Ansible Collections:
     - netappeseries.santricity 1.2 or later.
     - netappeseries.host 1.0 or later.

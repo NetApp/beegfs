@@ -28,7 +28,7 @@
 
 Ensure the following conditions are met:
 - Ansible control node has the following installed:
-  - Ansible 2.9 or later
+  - Ansible 2.10 or later
   - Python 3.6 or later
     - The Ansible version above may have a minimum required Python version 
   - NetApp E-Series Ansible Collections:
