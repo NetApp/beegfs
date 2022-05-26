@@ -1,4 +1,4 @@
-# eseries_storage_systems Ansible group inventory file. Place all default/common variables for BeeGFS HA clients below.
+# eseries_storage_systems Ansible group inventory file. Place all default/common variables for E-Series storage systems below.
 
 # Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
 
@@ -7,5 +7,20 @@ ansible_connection: local    # DO NOT CHANGE. E-Series storage system modules an
 
 eseries_volume_size_unit: pct             # Volume size unit which is a percentage of storage pool size.
 
+# Global Configuration Defaults
+eseries_system_cache_block_size: 32768
+eseries_system_cache_flush_threshold: 80
+eseries_system_default_host_type: linux dm-mp
+eseries_system_autoload_balance: disabled
+eseries_system_host_connectivity_reporting: disabled
+eseries_system_controller_shelf_id: 99
+
+# Storage Provisioning Defaults
+eseries_volume_size_unit: pct
+eseries_volume_read_cache_enable: true
+eseries_volume_read_ahead_enable: false
+eseries_volume_write_cache_enable: true
+eseries_volume_write_cache_mirror_enable: true
+eseries_volume_cache_without_batteries: false
 # The following option allows drive selection order. The common delineated list can either be specified in <TRAY>:<SLOT> or <TRAY>:<DRAWER>:<SLOT> form.
 #eseries_storage_pool_usable_drives: "99:0,99:23,99:1,99:22,99:2,99:21,99:3,99:20,99:4,99:19,99:5,99:18,99:6,99:17,99:7,99:16,99:8,99:15,99:9,99:14,99:10,99:13,99:11,99:12"

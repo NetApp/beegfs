@@ -15,3 +15,75 @@ eseries_initiator_protocol: {% if beegfs_storage_protocol['user_input'] == "1" %
                             {%- elif beegfs_storage_protocol['user_input'] == "7" %}nvme_roce
                             {%- elif beegfs_storage_protocol['user_input'] == "8" %}sas
                             {%- else %}<PROTOCOL>{% endif %}  # Communication's protocol between storage and hosts. Choices: fc, ib_iser, ib_srp, iscsi, nvme_fc, nvme_ib, nvme_roce
+
+{% if beegfs_storage_protocol['user_input'] == "1" %}
+
+# No additional configuration required for FC.
+# See https://github.com/netappeseries/santricity/blob/master/roles/nar_santricity_host/README.md for all available parameters.
+
+{%- elif beegfs_storage_protocol['user_input'] == "2" %}
+
+eseries_controller_ib_iser_port:
+  controller_a:    # Ordered list of controller A channel address definition.
+    -              # Port IPv4 address for channel 1
+    - (...)        # So on and so forth
+  controller_b:    # Ordered list of controller B channel address definition.
+
+# See https://github.com/netappeseries/santricity/blob/master/roles/nar_santricity_host/README.md for all available parameters.
+
+{%- elif beegfs_storage_protocol['user_input'] == "3" %}
+
+# No additional configuration required for SRP. 
+# See https://github.com/netappeseries/santricity/blob/master/roles/nar_santricity_host/README.md for all available parameters.
+
+{%- elif beegfs_storage_protocol['user_input'] == "4" %}
+
+eseries_controller_iscsi_port:
+  controller_a:         # Ordered list of controller A channel definition.
+    - state:            # Whether the port should be enabled. Choices: enabled, disabled
+      config_method:    # Port configuration method Choices: static, dhcp
+      address:          # Port IPv4 address
+      gateway:          # Port IPv4 gateway
+      subnet_mask:      # Port IPv4 subnet_mask
+      mtu:              # Port IPv4 mtu
+  controller_b:         # Ordered list of controller B channel definition.
+    - (...)             # Same as controller A but for controller B
+{%- elif beegfs_storage_protocol['user_input'] == "5" %}
+
+# No additional configuration required for NVMe FC. 
+# See https://github.com/netappeseries/santricity/blob/master/roles/nar_santricity_host/README.md for all available parameters.
+
+{%- elif beegfs_storage_protocol['user_input'] == "6" %}
+
+eseries_controller_nvme_ib_port:
+  controller_a:    # Ordered list of controller A channel address definition.
+    -              # Port IPv4 address for channel 1
+    - (...)        # So on and so forth
+  controller_b:    # Ordered list of controller B channel address definition.
+
+# See https://github.com/netappeseries/santricity/blob/master/roles/nar_santricity_host/README.md for all available parameters.
+    
+{%- elif beegfs_storage_protocol['user_input'] == "7" %}
+
+eseries_controller_nvme_roce_port:
+  controller_a:         # Ordered list of controller A channel definition.
+    - state:            # Whether the port should be enabled.
+      config_method:    # Port configuration method Choices: static, dhcp
+      address:          # Port IPv4 address
+      subnet_mask:      # Port IPv4 subnet_mask
+      gateway:          # Port IPv4 gateway
+      mtu:              # Port IPv4 mtu
+      speed:            # Port IPv4 speed
+  controller_b:         # Ordered list of controller B channel definition.
+    - (...)             # Same as controller A but for controller B
+
+# See https://github.com/netappeseries/santricity/blob/master/roles/nar_santricity_host/README.md for all available parameters.
+
+{%- elif beegfs_storage_protocol['user_input'] == "8" %}sas
+
+# No additional configuration required for SAS.
+# See https://github.com/netappeseries/santricity/blob/master/roles/nar_santricity_host/README.md for all available parameters.
+
+{%- else %}<PROTOCOL>{% endif %} 
+
+# See https://github.com/netappeseries/santricity/blob/master/README.md for all parameters that can be configured on E-Series storage systems.

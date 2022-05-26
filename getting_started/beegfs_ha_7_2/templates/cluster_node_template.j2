@@ -9,14 +9,23 @@ ansible_become_password: <SSH_PASSWORD>
 
 {% if item['item'] in groups[beegfs_ha_ansible_cluster_group] %}
 
+{%- if protocol == "1" %}
+# FCP storage communication protocol information
+# No required variables!
+# Reference https://github.com/netappeseries/host/blob/master/roles/fc/README.md for other available options.
+
 {%- if protocol == "2" %}
 # InfiniBand iSER storage communication protocol information
 eseries_ib_iser_interfaces:
   - name: ib0                       # Host interface name used to communicate with E-Series storage system.
     address: 192.168.1.100/24       # Host interface address and subnet (i.e. 192.168.1.100/24)
 
+# Reference https://github.com/netappeseries/host/blob/master/roles/ib_iser/README.md for other available options.
+
 {%- elif protocol == "3" %}
 # InfiniBand SRP storage communication protocol information
+# No required variables!
+# Reference https://github.com/netappeseries/host/blob/master/roles/ib_srp/README.md for other available options.
 
 {%- elif protocol == "4" %}
 # iSCSI storage communication protocol information
@@ -24,8 +33,12 @@ eseries_iscsi_interfaces:
   - name: eth0                     # Host interface name used to communicate with E-Series storage system.
     address: 192.168.1.100/24      # Host interface address and subnet (i.e. 192.168.1.100/24)
 
+# Reference https://github.com/netappeseries/host/blob/master/roles/iscsi/README.md for other available options.
+
 {%- elif protocol == "5" %}
 # NVMe over Fibre Channel storage communication protocol information
+# No required variables!
+# Reference https://github.com/netappeseries/host/blob/master/roles/nvme_fc/README.md for other available options.
 
 {%- elif protocol == "6" %}
 # NVMe over InfiniBand storage communication protocol information
@@ -33,8 +46,16 @@ eseries_nvme_ib_interfaces:
   - name: ib0                       # Host interface name used to communicate with E-Series storage system.
     address: 192.168.1.100/24       # Host interface address and subnet (i.e. 192.168.1.100/24)
 
+# Reference https://github.com/netappeseries/host/blob/master/roles/nvme_ib/README.md for other available options.
+
 {%- elif protocol == "7" %}
-# NVMe RoCE storage communication protocol information - NOT IMPLEMENTED YET!
+# NVMe RoCE storage communication protocol information
+
+eseries_nvme_roce_interfaces:
+  - name: eth0                      # Host interface name used to communicate with E-Series storage system.
+    address: 192.168.1.100/24       # Host interface address and subnet (i.e. 192.168.1.100/24)
+  
+# Reference https://github.com/netappeseries/host/blob/master/roles/nvme_roce/README.md for other available options.
 
 {%- else %}
 ## InfiniBand iSER - Uncomment section to utilize InfiniBand iSER communication protocol with E-Series storage.
@@ -43,18 +64,28 @@ eseries_nvme_ib_interfaces:
 #    address: 192.168.1.100/24      # Host interface address and subnet (i.e. 192.168.1.100/24)
 
 # InfiniBand SRP storage communication protocol information
+# No configuration required!
 
-## iSCSI - Uncomment section to utilize iSCSI communication protocol with E-Sersies storage.
+## iSCSI - Uncomment section to utilize iSCSI communication protocol with E-Series storage.
 #eseries_iscsi_interfaces:
 #  - name: eth0                     # Host interface name used to communicate with E-Series storage system.
 #    address: 192.168.1.100/24      # Host interface address and subnet (i.e. 192.168.1.100/24)
 
 # NVMe over Fibre Channel storage communication protocol information
+# No configuration required!
 
 # NVMe over InfiniBand storage communication protocol information
 
-eseries_nvme_ib_interfaces:
-  - name: ib0                       # Host interface name used to communicate with E-Series storage system.
-    address: 192.168.1.100/24       # Host interface address and subnet (i.e. 192.168.1.100/24)
+# NVMe IB - Uncomment section to utilize NVMe IB communication protocol with E-Series storage.
+# eseries_nvme_ib_interfaces:
+#   - name: ib0                       # Host interface name used to communicate with E-Series storage system.
+#     address: 192.168.1.100/24       # Host interface address and subnet (i.e. 192.168.1.100/24)
+
+# NVMe RoCE - Uncomment section to utilize NVMe RoCE communication protocol with E-Series storage.
+# eseries_nvme_roce_interfaces:
+#   - name: eth0                      # Host interface name used to communicate with E-Series storage system.
+#     address: 192.168.1.100/24       # Host interface address and subnet (i.e. 192.168.1.100/24)
+
+# Reference https://github.com/netappeseries/host/blob/master/README.md for all supported protocols and their configuration. 
 {% endif %}
 
