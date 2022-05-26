@@ -4,8 +4,25 @@
 # This is a generic template for BeeGFS HA resource groups. You are seeing this for a resource due to not provided a beegfs service or an invalid one during the
 #   create_inventory_structure.yml playbook runtime. Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
 
-port: <SERVICE_PORT>                        # BeeGFS HA resource service port. Each BeeGFS HA service resource must have a unique port number. The default BeeGFS
-                                            #    service port is 8008 for management, 8005 for metadata, and 8012 for storage.
+### IMPORTANT: Choose one of the below beegfs_ha_beegfs_[mgmtd|meta|storage]_conf_resource_group_options and delete the others:
+
+beegfs_ha_beegfs_mgmtd_conf_resource_group_options:
+ connMgmtdPortTCP: 8008 # BeeGFS HA resource service port. 8008 is the default BeeGFS management service port number.
+ connMgmtdPortUDP: 8008
+
+beegfs_ha_beegfs_meta_conf_resource_group_options:
+  connMetaPortTCP: <UNIQUE_PORT_NUMBER> # BeeGFS HA resource service port. 8005 is the default BeeGFS metadata service port number; Each BeeGFS HA metadata
+  connMetaPortUDP: <UNIQUE_PORT_NUMBER> #   service resource must have a unique port number
+  tuneBindToNumaZone: <NUMA_NODE>       # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be applied whenever and
+                                        #   wherever the BeeGFS service resides. This can provide significant performance increases by avoiding the cache misses between NUMA nodes.
+
+beegfs_ha_beegfs_storage_conf_resource_group_options:
+  connStoragePortTCP: <UNIQUE_PORT_NUMBER> # BeeGFS HA resource service port. 8012 is the default BeeGFS storage service port number; Each BeeGFS HA
+  connStoragePortUDP: <UNIQUE_PORT_NUMBER> #   storage service resource must have a unique port number.
+  tuneBindToNumaZone: <NUMA_NODE>          # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be applied whenever and
+                                           #   wherever the BeeGFS service resides. This can provide significant performance increases by avoiding the cache misses between NUMA nodes.
+
+### IMPORTANT: Choose one of the above beegfs_ha_beegfs_[mgmtd|meta|storage]_conf_resource_group_options and delete the others.
 
 floating_ips:                               # List of floating IP definitions in the form host_interface:ip_address/cidr_subnet_mask (i.e. eth0:192.168.2.102/24).
   - <INTERFACE:ADDRESS/CIDR_SUBNET_MASK>     #   This information is used to communicate with the BeeGFS management service. Therefore, these definitions must

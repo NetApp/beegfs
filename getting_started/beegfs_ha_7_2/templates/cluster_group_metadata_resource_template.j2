@@ -1,10 +1,14 @@
 {%- set iface = example_interface -%}
 # {{ item['item']['item'] }} - BeeGFS HA Metadata Resource Group
 
-# This is a template for BeeGFS HA metadata resource groups. Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+# This is a template for BeeGFS HA metadata resource group. Review all comments and update with all expected values.
+# IMPORTANT: All capitalized words in angled brackets must be updated.
 
-port: <UNIQUE_PORT_NUMBER>                            # BeeGFS HA resource service port. 8005 is the default BeeGFS metadata service port number; Each BeeGFS HA metadata
-                                            #   service resource must have a unique port number
+beegfs_ha_beegfs_meta_conf_resource_group_options:
+  connMetaPortTCP: <UNIQUE_PORT_NUMBER> # BeeGFS HA resource service port. 8005 is the default BeeGFS metadata service port number; Each BeeGFS HA metadata
+  connMetaPortUDP: <UNIQUE_PORT_NUMBER> #   service resource must have a unique port number
+  tuneBindToNumaZone: <NUMA_NODE>       # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be applied whenever and
+                                        #   wherever the BeeGFS service resides. This can provide significant performance increases by avoiding the cache misses between NUMA nodes.
 
 floating_ips:                               # List of metadata floating IP definitions in the form host_interface:ip_address/cidr_subnet_mask (i.e. {{ iface }}:192.168.1.10/24).
   - <IFACE>:<IP_ADDRESS>/<CIDR_MASK>                     #   This information is used to communicate with the BeeGFS management resource. Therefore, these definitions must
@@ -32,6 +36,3 @@ beegfs_targets:                             # Dictionary of E-Series storage sys
 
         volumes:                            # BeeGFS metadata service requires only one volume.
           - size: 90                        # Size of the BeeGFS metadata service volume in percentage of total storage pool capacity.
-
-beegfs_ha_numa: <NUMA_NODE>                 # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be applied whenever and
-                                            #   wherever the BeeGFS service resides. This can provide significant performance increases by avoiding the cache misses between NUMA nodes.
