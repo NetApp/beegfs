@@ -1,6 +1,6 @@
 namespace: "netapp_eseries"
 name: "beegfs"
-version: "3.0.0"
+version: "3.0.1"
 readme: "README.md"
 authors:
   - "Joe McCormick (@iamjoemccormick)"
