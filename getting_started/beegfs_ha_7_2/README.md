@@ -23,7 +23,7 @@ Step 1) Get the `beegfs_ha_7_2` example directory to you Ansible control node.
 
     mkdir <your_project_directory>
     cd <your_project_directory>
-    git clone -b release-3.0.0 --single-branch https://github.com/netappeseries/beegfs.git && cp -r beegfs/examples/beegfs_ha_7_2/* . && rm -rf beegfs
+    git clone -b release-3.0.0 --single-branch https://github.com/netappeseries/beegfs.git && cp -r beegfs/getting_started/beegfs_ha_7_2/* . && rm -rf beegfs
 
 Step 2) Modify the `beegfs_ha_inventory.yml` file. In this step, you'll define BeeGFS HA cluster resource groups, and 
 storage targets.
