@@ -14,7 +14,7 @@ ansible_become_password: <SSH_PASSWORD>
 # No required variables!
 # Reference https://github.com/netappeseries/host/blob/master/roles/fc/README.md for other available options.
 
-{%- if protocol == "2" %}
+{%- elif protocol == "2" %}
 # InfiniBand iSER storage communication protocol information
 eseries_ib_iser_interfaces:
   - name: ib0                       # Host interface name used to communicate with E-Series storage system.
@@ -88,4 +88,4 @@ eseries_nvme_roce_interfaces:
 
 # Reference https://github.com/netappeseries/host/blob/master/README.md for all supported protocols and their configuration. 
 {% endif %}
-
+{% endif %}
