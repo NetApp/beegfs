@@ -38,32 +38,32 @@ beegfs_ha_cluster_crm_config_options:
   stonith-enabled: True # Determines if fencing (STONITH) is globally enabled or disabled.
 
 # OPTION 1: To enable fencing using APC Power Distribution Units (PDUs): 
-# beegfs_ha_fencing_agents:
-#  fence_apc:
-#    - ipaddr: <PDU_IP_ADDRESS>
-#      login: <PDU_USERNAME>
-#      passwd: <PDU_PASSWORD>
-#      pcmk_host_map: "<HOSTNAME>:<PDU_PORT>,<PDU_PORT>;<HOSTNAME>:<PDU_PORT>,<PDU_PORT>"
+#beegfs_ha_fencing_agents:
+# fence_apc:
+#   - ipaddr: <PDU_IP_ADDRESS>
+#     login: <PDU_USERNAME>
+#     passwd: <PDU_PASSWORD>
+#     pcmk_host_map: "<HOSTNAME>:<PDU_PORT>,<PDU_PORT>;<HOSTNAME>:<PDU_PORT>,<PDU_PORT>"
 
 # OPTION 2: To enable fencing using the Redfish APIs provided by the Lenovo XCC (and other BMCs):
-# redfish: &fence_credentials
-#   username: <BMC_USERNAME>
-#   password: <BMC_PASSWORD>
-#   ssl_insecure: 1
+#redfish: &redfish
+#  username: <BMC_USERNAME>
+#  password: <BMC_PASSWORD>
+#  ssl_insecure: 1
 # 
-# beegfs_ha_fencing_agents:
-#   fence_redfish:
-#     - pcmk_host_list: <HOSTNAME>
-#       ip: <BMC_IP_ADDRESS>
-#       <<: *redfish
-#     - pcmk_host_list: <HOSTNAME>
-#       ip: <BMC_IP_ADDRESS>
-#       <<: *redfish
+#beegfs_ha_fencing_agents:
+#  fence_redfish:
+#    - pcmk_host_list: <HOSTNAME>
+#      ip: <BMC_IP_ADDRESS>
+#      <<: *redfish
+#    - pcmk_host_list: <HOSTNAME>
+#      ip: <BMC_IP_ADDRESS>
+#      <<: *redfish
 #
 # OPTION 3: Define an alternative fencing agent: 
-# beegfs_ha_fencing_agents: # Fencing agent definitions. This variable takes a dictionary of fence agent types with a list of fence definitions.
-#   fence_<AGENT>:
-#     - <STDIN_PARAMETERS>
+#beegfs_ha_fencing_agents: # Fencing agent definitions. This variable takes a dictionary of fence agent types with a list of fence definitions.
+#  fence_<AGENT>:
+#    - <STDIN_PARAMETERS>
 #
 # To discover the fencing agent parameters:
 #   1) Search the BeeGFS HA node's package manager for fence- for your device and install it.
