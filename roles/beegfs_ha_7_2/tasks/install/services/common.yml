@@ -8,34 +8,63 @@
   loop: "{{ lookup('dict', beegfs_ha_required_sysctl_entries) }}"
   become: true
 
-- name: Determine all BeeGFS services.
+- name: Determine all BeeGFS HA services.
   ansible.builtin.service_facts:
   changed_when: false
   become: true
 
-- name: Ensure SELinux is configured to be disabled.
-  ansible.builtin.lineinfile:
-    path: /etc/selinux/config
-    regexp: '^SELINUX='
-    line: SELINUX=disabled
-  become: true
-
 - name: Check whether SELinux is be enforced.
-  ansible.builtin.command: getenforce
+  ansible.builtin.shell: getenforce
   register: getenforce
   changed_when: false
+  failed_when: getenforce["rc"] not in [0, 127]  # Don't fail when getenforce is successful or does not exist.
   become: true
 
-- name: Restart cluster nodes to apply SELinux configuration changes.
+- name: Determine which cluster nodes that have SELinux enabled.
+  ansible.builtin.set_fact:
+    selinux_enabled_nodes: |-
+      {%- set nodes = [] -%}
+      {%- for node in ansible_play_hosts if hostvars[node]["getenforce"] is defined -%}
+        {%- if hostvars[node]["getenforce"]["rc"] == 0 and hostvars[node]["getenforce"]["stdout"] != "Disabled" -%}
+          {%- if nodes.append(node) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- nodes -}}
+  run_once: true
+
+- name: Warn user before rebooting nodes when BeeGFS HA cluster is running.
+  ansible.builtin.pause:
+    prompt: "WARNING! Identified the cluster is running and SELinux is about to be disabled and requires a reboot. If you are still in the process of deploying the cluster this can be safely ignored. If you are attempting to make changes to an existing cluster, continuing will disrupt filesystem operations. What would you like to do (continue, skip)? Ctrl+C to stop"
+  delay: 0
+  register: cluster_running_warning_prompt
+  until: cluster_running_warning_prompt['user_input'] | regex_search("(continue|skip){1}", ignorecase=True)
+  when: cluster_nodes_running | length > 0
+  vars:
+    cluster_nodes_running: |-
+      {%- set cluster_nodes = [] -%}
+      {%- for node in selinux_enabled_nodes if hostvars[node]["services"]["pacemaker.service"]["state"] | default("") == "running" -%}
+        {%- if cluster_nodes.append(node) -%}{%- endif -%}
+      {%- endfor -%}
+      {{- cluster_nodes -}}
+
+- name: Determine whether to continue disabling SELinux.
+  ansible.builtin.set_fact:
+    selinux_disable_and_reboot: |-
+      {%- set scratch = {"continue": False} -%}
+      {%- for node in ansible_play_hosts if hostvars[node]["cluster_running_warning_prompt"]["user_input"] is defined and
+            hostvars[node]["cluster_running_warning_prompt"]["user_input"] | regex_search("continue", ignorecase=True) -%}
+        {%- if scratch.update({"continue": True}) -%}{%- endif -%}
+      {%- endfor -%}
+      {{- scratch["continue"] -}}
+  run_once: true
+
+- name: Disable SELinux and reboot nodes to apply changes.
   block:
-    - name: Wait for user to continue before rebooting since BeeGFS HA cluster is running.
-      ansible.builtin.pause:
-        prompt: "WARNING! Identified the cluster is running and SELinux has been disabled and requires a reboot. If you are still in the process of deploying the cluster this can be safely ignored. If you are attempting to make changes to an existing cluster, continuing will disrupt filesystem operations. What would you like to do (continue, skip)? Ctrl+C to stop"
-      delay: 0
-      register: cluster_running_warning
-      until: cluster_running_warning['user_input'] | regex_search("(continue|skip){1}", ignorecase=True)
-      when: 'ansible_facts["services"]["pacemaker.service"]["state"] == "running"'
-      run_once: true
+    - name: Ensure SELinux is configured to be disabled.
+      ansible.builtin.lineinfile:
+        path: /etc/selinux/config
+        regexp: '^SELINUX='
+        line: SELINUX=disabled
 
     - name: Reboot host to apply SELinux configuration changes.
       ansible.builtin.include_role:
@@ -44,11 +73,9 @@
         apply:
           vars:
             eseries_common_allow_host_reboot_reason: "SELinux configuration changed. Reboot is required."
-      when: cluster_running_warning["user_input"] | regex_search("continue", ignorecase=True)
-
-    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
-      ansible.builtin.include_tasks: ../common/maintenance/set.yml
-      when: inventory_hostname == cluster_automation_node
-  when: getenforce["stdout"] != "disabled"
+  when: selinux_disable_and_reboot and inventory_hostname in selinux_enabled_nodes
   become: true
- 
+
+- name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+  ansible.builtin.include_tasks: ../common/maintenance/set.yml
+  when: inventory_hostname == cluster_automation_node
