@@ -18,23 +18,37 @@
     path: /etc/selinux/config
     regexp: '^SELINUX='
     line: SELINUX=disabled
-  register: disable_selinux
+  become: true
+
+- name: Check whether SELinux is be enforced.
+  ansible.builtin.command: getenforce
+  register: getenforce
+  changed_when: false
   become: true
 
 - name: Restart cluster nodes to apply SELinux configuration changes.
   block:
-    - name: Shutdown cluster
-      ansible.builtin.systemd:
-        state: stopped
-        name: "{{ item }}"
-      loop: ["pacemaker", "corosync"]
+    - name: Wait for user to continue before rebooting since BeeGFS HA cluster is running.
+      ansible.builtin.pause:
+        prompt: "WARNING! Identified the cluster is running and SELinux has been disabled and requires a reboot. If you are still in the process of deploying the cluster this can be safely ignored. If you are attempting to make changes to an existing cluster, continuing will disrupt filesystem operations. What would you like to do (continue, skip)? Ctrl+C to stop"
+      delay: 0
+      register: cluster_running_warning
+      until: cluster_running_warning['user_input'] | regex_search("(continue|skip){1}", ignorecase=True)
+      when: 'ansible_facts["services"]["pacemaker.service"]["state"] == "running"'
+      run_once: true
 
-    - name: Reboot nodes to apply SELinux configuration changes.
-      ansible.builtin.reboot:
+    - name: Reboot host to apply SELinux configuration changes.
+      ansible.builtin.include_role:
+        name: netapp_eseries.host.common
+        tasks_from: reboot.yml
+        apply:
+          vars:
+            eseries_common_allow_host_reboot_reason: "SELinux configuration changed. Reboot is required."
+      when: cluster_running_warning["user_input"] | regex_search("continue", ignorecase=True)
 
     - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
       ansible.builtin.include_tasks: ../common/maintenance/set.yml
       when: inventory_hostname == cluster_automation_node
-  when: disable_selinux["changed"]
+  when: getenforce["stdout"] != "disabled"
   become: true
  
