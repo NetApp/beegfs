@@ -33,7 +33,6 @@ beegfs_targets:                                     # Dictionary of E-Series sto
 
         criteria_drive_count: 2                     # Total drive count for the storage pool. RAID 1 requires even number of drives. If this storage pool is shared with
                                                     #   other services this value must be the same on all definitions.
-        criteria_reserve_free_capacity_pct: 0.0     # Percent of reserve free space capacity to leave when creating the criteria_volume_count volumes.
 
         volumes:                                    # BeeGFS management service requires only one volume.
           - size: 10                                # Size of the BeeGFS management service volume in percentage of total storage pool capacity.
