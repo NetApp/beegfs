@@ -52,3 +52,4 @@ beegfs_targets:                             # Dictionary of E-Series storage sys
                                             #   other services this value must be the same on all definitions.
         volumes:                            # BeeGFS metadata service requires only one volume.
           - size: <VOLUME_SIZE_PCT>         # Size of the BeeGFS metadata service volume specified in percentage of total storage pool capacity.
+                                            # Depending on your configuration, adjust the percentage to account for overprovisioning.
