@@ -199,6 +199,58 @@
   run_once: true
   #when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
+
+# Ask important questions at the beginning of the automation to avoid possible questions in the middle of it.
+- name: Ask user whether to allow reboots.
+  ansible.builtin.pause:
+    prompt: "
+      The variable eseries_common_allow_host_reboot has not been defined and can be added to your inventory to avoid
+      this message in the future. Reboot(s) maybe required during this deployment. Would you allow the cluster nodes
+      to reboot [yes/no/ctrl-c to stop]"
+  register: allow_host_reboots_prompt
+  delegate_to: localhost
+  delay: 0
+  retries: 10
+  until: allow_host_reboots_prompt['user_input'] | lower in ["yes", "no"]
+  when: eseries_common_allow_host_reboot is not defined
+
+- name: Ask user whether to disable SELinux or not.
+  ansible.builtin.pause:
+    prompt: "
+      The variable eseries_beegfs_ha_disable_selinux has not been defined and can be added to your inventory to avoid
+      this message in the future. SELinux may result in known issues. Would you like to disable
+      SELinux [yes/no/ctrl-c to stop]"
+  register: disable_selinux_prompt
+  delegate_to: localhost
+  delay: 0
+  retries: 10
+  until: disable_selinux_prompt['user_input'] | lower in ["yes", "no"]
+  when: eseries_beegfs_ha_disable_selinux is not defined
+  tags:
+    - beegfs_ha_configure  # These are the tags that require this variable.
+    - beegfs_ha
+
+- name: Determine whether to continue disabling SELinux.
+  ansible.builtin.set_fact:
+    eseries_common_allow_host_reboot: |-
+      {%- set scratch = {"allow_reboot": False} -%}
+      {%- if eseries_common_allow_host_reboot is defined -%}
+        {%- if scratch.update({"allow_reboot": eseries_common_allow_host_reboot}) -%}{%- endif -%}
+      {%- else -%}
+        {%- if scratch.update({"allow_reboot": allow_host_reboots_prompt["user_input"] | default("no") | lower == "yes"}) -%}{%- endif -%}
+      {%- endif -%}
+      {{- scratch["allow_reboot"] -}}
+    eseries_beegfs_ha_disable_selinux: |-
+      {%- set scratch = {"allow_reboot": False} -%}
+      {%- if eseries_beegfs_ha_disable_selinux is defined -%}
+        {%- if scratch.update({"allow_reboot": eseries_beegfs_ha_disable_selinux}) -%}{%- endif -%}
+      {%- else -%}
+        {%- if scratch.update({"allow_reboot": disable_selinux_prompt["user_input"] | default("no") | lower == "yes"}) -%}{%- endif -%}
+      {%- endif -%}
+      {{- scratch["allow_reboot"] -}}
+  delegate_to: localhost
+  run_once: true
+
 # Determine and create resource groups to map volumes.
 - name: Create resource group information in each host inventory.
   set_fact:

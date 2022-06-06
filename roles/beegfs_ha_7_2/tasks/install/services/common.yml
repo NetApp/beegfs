@@ -15,53 +15,21 @@
 
 - name: Check whether SELinux is be enforced.
   ansible.builtin.shell: getenforce
-  register: getenforce
+  register: selinux_getenforce
   changed_when: false
-  failed_when: getenforce["rc"] not in [0, 127]  # Don't fail when getenforce is successful or does not exist.
+  failed_when: selinux_getenforce["rc"] not in [0, 127]  # Don't fail when getenforce is successful or does not exist.
   become: true
 
 - name: Determine which cluster nodes that have SELinux enabled.
   ansible.builtin.set_fact:
     selinux_enabled_nodes: |-
       {%- set nodes = [] -%}
-      {%- for node in ansible_play_hosts if hostvars[node]["getenforce"] is defined -%}
-        {%- if hostvars[node]["getenforce"]["rc"] == 0 and hostvars[node]["getenforce"]["stdout"] != "Disabled" -%}
+      {%- for node in ansible_play_hosts if hostvars[node]["selinux_getenforce"] is defined -%}
+        {%- if hostvars[node]["selinux_getenforce"]["rc"] == 0 and hostvars[node]["selinux_getenforce"]["stdout"] != "Disabled" -%}
           {%- if nodes.append(node) -%}{%- endif -%}
         {%- endif -%}
       {%- endfor -%}
       {{- nodes -}}
-  run_once: true
-
-- name: Warn user before rebooting nodes when BeeGFS HA cluster is running.
-  ansible.builtin.pause:
-    prompt: |
-      WARNING! Identified the cluster is running and SELinux is about to be disabled and requires a reboot. If 
-      you are still in the process of deploying the cluster this can be safely ignored. If you are attempting to make 
-      changes to an existing cluster, continuing will disrupt filesystem operations. What would you like to do 
-      (continue, skip)? Ctrl+C to stop
-  delay: 0
-  register: cluster_running_warning_prompt
-  until: cluster_running_warning_prompt['user_input'] | regex_search("(continue|skip){1}", ignorecase=True)
-  when: cluster_nodes_running | length > 0
-  vars:
-    cluster_nodes_running: |-
-      {%- set cluster_nodes = [] -%}
-      {%- for node in selinux_enabled_nodes
-            if hostvars[node]["services"]["pacemaker.service"]["state"] | default("") == "running" -%}
-        {%- if cluster_nodes.append(node) -%}{%- endif -%}
-      {%- endfor -%}
-      {{- cluster_nodes -}}
-
-- name: Determine whether to continue disabling SELinux.
-  ansible.builtin.set_fact:
-    selinux_disable: |-
-      {%- set scratch = {"continue": True} -%}
-      {%- for node in ansible_play_hosts
-            if (hostvars[node]["cluster_running_warning_prompt"]["user_input"] is defined and
-                hostvars[node]["cluster_running_warning_prompt"]["user_input"] | regex_search("skip", ignorecase=True)) -%}
-        {%- if scratch.update({"continue": False}) -%}{%- endif -%}
-      {%- endfor -%}
-      {{- scratch["continue"] -}}
   run_once: true
 
 - name: Disable SELinux and reboot nodes to apply changes.
@@ -72,6 +40,11 @@
         regexp: '^SELINUX='
         line: SELINUX=disabled
 
+    - name: Fail when SELinux is disabled and a reboot is required but not permitted.
+      ansible.builtin.fail:
+        msg: SELinux configuration had been disabled but requires a reboot to apply the new configuration (eseries_common_allow_host_reboot == false)! Please reboot and rerun the automation.
+      when: inventory_hostname in selinux_enabled_nodes and not eseries_common_allow_host_reboot
+
     - name: Reboot host to apply SELinux configuration changes.
       ansible.builtin.include_role:
         name: netapp_eseries.host.common
@@ -80,9 +53,9 @@
           vars:
             eseries_common_allow_host_reboot_reason: "SELinux configuration changed. Reboot is required."
       when: inventory_hostname in selinux_enabled_nodes
-  when: selinux_disable
-  become: true
 
-- name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
-  ansible.builtin.include_tasks: ../common/maintenance/set.yml
-  when: inventory_hostname == cluster_automation_node
+    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+      ansible.builtin.include_tasks: ../common/maintenance/set.yml
+      when: inventory_hostname == cluster_automation_node and selinux_enabled_nodes | length > 0
+  when: eseries_beegfs_ha_disable_selinux
+  become: true
