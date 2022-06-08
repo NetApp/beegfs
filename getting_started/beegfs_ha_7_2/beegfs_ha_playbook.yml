@@ -1,6 +1,6 @@
 - hosts: all
   gather_facts: false
-  any_errors_fatal: true. #Fail on any error
+  any_errors_fatal: true  #Fail on any error
   collections:
     - netapp_eseries.beegfs
   tasks:
