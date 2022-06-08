@@ -226,11 +226,8 @@
   retries: 10
   until: disable_selinux_prompt['user_input'] | lower in ["yes", "no"]
   when: eseries_beegfs_ha_disable_selinux is not defined
-  tags:
-    - beegfs_ha_configure  # These are the tags that require this variable.
-    - beegfs_ha
 
-- name: Determine whether to continue disabling SELinux.
+- name: Set variables based on user responses.
   ansible.builtin.set_fact:
     eseries_common_allow_host_reboot: |-
       {%- set scratch = {"allow_reboot": False} -%}
@@ -241,13 +238,13 @@
       {%- endif -%}
       {{- scratch["allow_reboot"] -}}
     eseries_beegfs_ha_disable_selinux: |-
-      {%- set scratch = {"allow_reboot": False} -%}
+      {%- set scratch = {"disable_selinux": False} -%}
       {%- if eseries_beegfs_ha_disable_selinux is defined -%}
-        {%- if scratch.update({"allow_reboot": eseries_beegfs_ha_disable_selinux}) -%}{%- endif -%}
+        {%- if scratch.update({"disable_selinux": eseries_beegfs_ha_disable_selinux}) -%}{%- endif -%}
       {%- else -%}
-        {%- if scratch.update({"allow_reboot": disable_selinux_prompt["user_input"] | default("no") | lower == "yes"}) -%}{%- endif -%}
+        {%- if scratch.update({"disable_selinux": disable_selinux_prompt["user_input"] | default("no") | lower == "yes"}) -%}{%- endif -%}
       {%- endif -%}
-      {{- scratch["allow_reboot"] -}}
+      {{- scratch["disable_selinux"] -}}
   delegate_to: localhost
   run_once: true
 

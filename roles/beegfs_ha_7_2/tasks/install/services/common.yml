@@ -13,27 +13,27 @@
   changed_when: false
   become: true
 
-- name: Check whether SELinux is be enforced.
-  ansible.builtin.shell: getenforce
-  register: selinux_getenforce
-  changed_when: false
-  failed_when: selinux_getenforce["rc"] not in [0, 127]  # Don't fail when getenforce is successful or does not exist.
-  become: true
-
-- name: Determine which cluster nodes that have SELinux enabled.
-  ansible.builtin.set_fact:
-    selinux_enabled_nodes: |-
-      {%- set nodes = [] -%}
-      {%- for node in ansible_play_hosts if hostvars[node]["selinux_getenforce"] is defined -%}
-        {%- if hostvars[node]["selinux_getenforce"]["rc"] == 0 and hostvars[node]["selinux_getenforce"]["stdout"] != "Disabled" -%}
-          {%- if nodes.append(node) -%}{%- endif -%}
-        {%- endif -%}
-      {%- endfor -%}
-      {{- nodes -}}
-  run_once: true
-
 - name: Disable SELinux and reboot nodes to apply changes.
   block:
+    - name: Check whether SELinux is enforced.
+      ansible.builtin.shell: getenforce
+      register: selinux_getenforce
+      changed_when: false
+      failed_when: selinux_getenforce["rc"] not in [0, 127]
+
+    - name: Determine which cluster nodes that have SELinux enabled.
+      ansible.builtin.set_fact:
+        selinux_enabled_nodes: |-
+          {%- set nodes = [] -%}
+          {%- for node in ansible_play_hosts if hostvars[node]["selinux_getenforce"] is defined -%}
+            {%- if hostvars[node]["selinux_getenforce"]["rc"] == 0
+                   and hostvars[node]["selinux_getenforce"]["stdout"] != "Disabled" -%}
+              {%- if nodes.append(node) -%}{%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{- nodes -}}
+      run_once: true
+
     - name: Ensure SELinux is configured to be disabled.
       ansible.builtin.lineinfile:
         path: /etc/selinux/config
@@ -42,7 +42,8 @@
 
     - name: Fail when SELinux is disabled and a reboot is required but not permitted.
       ansible.builtin.fail:
-        msg: SELinux configuration had been disabled but requires a reboot to apply the new configuration (eseries_common_allow_host_reboot == false)! Please reboot and rerun the automation.
+        msg: "SELinux configuration had been disabled but requires a reboot to apply the new configuration
+          (eseries_common_allow_host_reboot == false)! Please reboot and rerun the automation."
       when: inventory_hostname in selinux_enabled_nodes and not eseries_common_allow_host_reboot
 
     - name: Reboot host to apply SELinux configuration changes.
