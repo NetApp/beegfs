@@ -31,6 +31,6 @@ beegfs_targets:                             # Dictionary of E-Series storage sys
 
         volumes:                            # BeeGFS storage service volume list. In order to get the best performance it is recommended that you use a minimum
           - size: 25                        #   of four volumes per storage service. Size of each BeeGFS storage service volume in percentage of total storage pool capacity.
-          - size: 25
+          - size: 25                        # This percentage is shown as an example.  Depending on your configuration, adjust the percentage to account for overprovisioning.
           - size: 25
           - size: 25

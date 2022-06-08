@@ -5,7 +5,6 @@
 ansible_connection: local    # DO NOT CHANGE. E-Series storage system modules and roles interact with E-Series storage systems using SANtricity Web Services REST
                              #   API. The REST API commands are issued from the localhost.
 
-eseries_volume_size_unit: pct             # Volume size unit which is a percentage of storage pool size.
 
 # Global Configuration Defaults
 eseries_system_cache_block_size: 32768
@@ -16,7 +15,7 @@ eseries_system_host_connectivity_reporting: disabled
 eseries_system_controller_shelf_id: 99
 
 # Storage Provisioning Defaults
-eseries_volume_size_unit: pct
+eseries_volume_size_unit: pct             # Volume size unit which is a percentage of storage pool size.
 eseries_volume_read_cache_enable: true
 eseries_volume_read_ahead_enable: false
 eseries_volume_write_cache_enable: true

@@ -7,6 +7,11 @@ ansible_host: <SSH_IP_ADDRESS_OR_HOSTNAME>
 ansible_ssh_user: <SSH_USERNAME>
 ansible_become_password: <SSH_PASSWORD>
 
+beegfs_ha_cluster_node_ips:
+ - <PRIMARY_IP_ADDRESS>             # Defines an order list of IP addresses or hostnames with the first having the
+ - <SECONDARY_IP_ADDRESS>           #  highest priority. When there are no listed IPs then node name will be used.
+ - <ADDITIONAL_IP_ADDRESS>          #  Node names are defined in /etc/hosts.
+
 {% if item['item'] in groups[beegfs_ha_ansible_cluster_group] %}
 
 {%- if protocol == "1" %}
