@@ -73,4 +73,4 @@ all:
 
         # Define all E-Series storage targets here used by the BeeGFS cluster.
         eseries_storage_system_01:
-        eseries_storage_system_02:
+        #eseries_storage_system_0X: # Any additional storage targets in use by the BeeGFS cluster.
