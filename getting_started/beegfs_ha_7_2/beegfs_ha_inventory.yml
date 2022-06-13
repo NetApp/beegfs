@@ -18,7 +18,7 @@ all:
         #   dictionary containing the cluster node names you wish to be included in the resource group.
 
         # Notes:
-        #   - The resource group's name must be less than 12 characters because the resource group is used to name the floating ip resource iflabel.
+        #   - The resource group's name can only be a maximum of 15 characters (including the interface name) because the resource group is used to name the floating ip resource iflabel.
         #     * Step 3 in beegfs_ha_7_2 readme will prompt you to select the BeeGFS service (management, metadata, storage) you'd like the resource group to
         #         manage. Note that there can only be one management group.
         #   - The host names are used for the BeeGFS HA cluster node names (i.e. node_mm1, node_mm2). These names can be changed to whatever you'd like the nodes to be named.
@@ -36,14 +36,14 @@ all:
 
         # BeeGFS HA Metadata Resource Groups - List all the BeeGFS HA metadata resource groups in this section.
         # ----------------------------------
-        meta_01:  # Metadata resource group. meta_01 will be used to define a Pacemaker resource group.
+        md_01:  # Metadata resource group. meta_01 will be used to define a Pacemaker resource group.
                   #    Metadata resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
           hosts:
             node_mm1:   # Most preferred BeeGFS metadata node. If everything is running correctly then your BeeGFS metadata service (meta_01) will be running on node_mm1.
             node_mm2:   # Next preferred node. If something happens to node_mm1 then Pacemaker will migrate the BeeGFS metadata service (meta_01) to node_mm2.
             #node_mmX:  # Any additional nodes you add to this list will only have the BeeGFS metadata service (meta_01) if all its preceding nodes fail.
 
-        meta_02:  # Refer to comments in meta_01 resource.
+        md_02:  # Refer to comments in meta_01 resource.
           hosts:
             node_mm2:
             node_mm1:
@@ -53,14 +53,14 @@ all:
 
         # BeeGFS HA Storage Resource Groups - List all the BeeGFS HA storage resource groups in this section.
         # ---------------------------------
-        stor_01:  # Storage resource group. stor_01 will be used to define a Pacemaker resource group.
+        st_01:  # Storage resource group. stor_01 will be used to define a Pacemaker resource group.
                   #    Storage resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
           hosts:
             node_ss1:   # Most preferred BeeGFS storage node. If everything is running correctly then your BeeGFS storage service (stor_01) will be running on node_ss1.
             node_ss2:   # Next preferred node. If something happens to node_mm1 then Pacemaker will migrate the BeeGFS storage service (stor_01) to node_ss2.
             #node_ssX:  # Any additional nodes you add to this list will only have the BeeGFS storage service (stor_01) if all its preceding nodes fail.
 
-        stor_02:  # Refer to comments in stor_01 resource.
+        st_02:  # Refer to comments in stor_01 resource.
           hosts:
             node_ss2:
             node_ss1:
@@ -73,3 +73,4 @@ all:
 
         # Define all E-Series storage targets here used by the BeeGFS cluster.
         eseries_storage_system_01:
+        eseries_storage_system_02:
