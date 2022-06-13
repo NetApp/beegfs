@@ -36,36 +36,36 @@ all:
 
         # BeeGFS HA Metadata Resource Groups - List all the BeeGFS HA metadata resource groups in this section.
         # ----------------------------------
-        md_01:  # Metadata resource group. meta_01 will be used to define a Pacemaker resource group.
+        md_01:  # Metadata resource group. md_01 will be used to define a Pacemaker resource group.
                   #    Metadata resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
           hosts:
             node_mm1:   # Most preferred BeeGFS metadata node. If everything is running correctly then your BeeGFS metadata service (meta_01) will be running on node_mm1.
             node_mm2:   # Next preferred node. If something happens to node_mm1 then Pacemaker will migrate the BeeGFS metadata service (meta_01) to node_mm2.
-            #node_mmX:  # Any additional nodes you add to this list will only have the BeeGFS metadata service (meta_01) if all its preceding nodes fail.
+            #node_mmX:  # Any additional nodes you add to this list will only have the BeeGFS metadata service (md_01) if all its preceding nodes fail.
 
-        md_02:  # Refer to comments in meta_01 resource.
+        md_02:  # Refer to comments in md_01 resource.
           hosts:
             node_mm2:
             node_mm1:
 
-        # Add any additional metadata resource groups here (i.e. meta_03, ..., meta_xx)
+        # Add any additional metadata resource groups here (i.e. md_03, ..., md_xx)
 
 
         # BeeGFS HA Storage Resource Groups - List all the BeeGFS HA storage resource groups in this section.
         # ---------------------------------
-        st_01:  # Storage resource group. stor_01 will be used to define a Pacemaker resource group.
+        st_01:  # Storage resource group. st_01 will be used to define a Pacemaker resource group.
                   #    Storage resource names must end with and underscore followed by the nodeNumID that is designated for the service resource.
           hosts:
-            node_ss1:   # Most preferred BeeGFS storage node. If everything is running correctly then your BeeGFS storage service (stor_01) will be running on node_ss1.
-            node_ss2:   # Next preferred node. If something happens to node_mm1 then Pacemaker will migrate the BeeGFS storage service (stor_01) to node_ss2.
-            #node_ssX:  # Any additional nodes you add to this list will only have the BeeGFS storage service (stor_01) if all its preceding nodes fail.
+            node_ss1:   # Most preferred BeeGFS storage node. If everything is running correctly then your BeeGFS storage service (st_01) will be running on node_ss1.
+            node_ss2:   # Next preferred node. If something happens to node_mm1 then Pacemaker will migrate the BeeGFS storage service (st_01) to node_ss2.
+            #node_ssX:  # Any additional nodes you add to this list will only have the BeeGFS storage service (st_01) if all its preceding nodes fail.
 
-        st_02:  # Refer to comments in stor_01 resource.
+        st_02:  # Refer to comments in st_01 resource.
           hosts:
             node_ss2:
             node_ss1:
 
-        # Add any additional metadata resource groups here (i.e. stor_03, ..., stor_xx)
+        # Add any additional metadata resource groups here (i.e. st_03, ..., st_xx)
 
     # NetApp E-Series storage systems Ansible group
     eseries_storage_systems:
