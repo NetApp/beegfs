@@ -178,7 +178,9 @@ beegfs_ha_beegfs_meta_conf_default_options:                     # Default metada
   connMetaPortUDP: 8005
   connMgmtdPortTCP: 8008
   connMgmtdPortUDP: 8008
-  tuneNumWorkers: 32
+  tuneNumWorkers: "0" # Default value - will result in a number of workers equal to twice the number of CPU cores. 
+                      # Increase to quadruple the number of cores if you are seeing poor metadata performance.
+                      # Check beegfs-ctl --serverstats --nodetype=meta for high numbers under qlen or bsy.
   connUseRDMA: "true"
   sysTargetOfflineTimeoutSecs: 900 # This is required to avoid the mgmt service prematurely placing targets offline if the preferred meta/storage interface fails (ESOLA-116).
 
