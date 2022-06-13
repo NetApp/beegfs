@@ -80,7 +80,7 @@
       {%- set ports = [] -%}
 
       {#- Determine the beegfs_ha_cluster_node_ips IP interfaces -#}
-      {%- for node_ip in beegfs_ha_cluster_node_ips -%}
+      {%- for node_ip in beegfs_ha_cluster_node_ips or [inventory_hostname] -%}
         {%- for line in network_configuration["stdout_lines"] if line | regex_search(node_ip ~ "/") -%}
           {%- if interfaces.append(line.split(" ")[0]) -%}{%- endif -%}
         {%- endfor -%}
