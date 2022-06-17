@@ -29,6 +29,8 @@ eseries_ib_iser_interfaces:
 #eseries_ib_iser_udev_rules:                              # Maps interface PCI slots to interface names for ensuring
 #  "0000:82:00.1": i4a                                    #  persistent interface names. This information can be polled 
 #  "0000:82:00.0": i4b                                    #  with "lshw -class network -businfo"
+                                                          #  NOTE: The interface name here + resource name specified in
+                                                          #  beegfs_ha_inventory.yml must be less than 15 characters.
 
 # Reference https://github.com/netappeseries/host/blob/master/roles/ib_iser/README.md for other available options.
 
@@ -47,6 +49,8 @@ eseries_iscsi_interfaces:
 #eseries_iscsi_udev_rules:                                # Maps interface PCI slots to interface names for ensuring
 #  "0000:82:00.1": i4a                                    #  persistent interface names. This information can be polled 
 #  "0000:82:00.0": i4b                                    #  with "lshw -class network -businfo"
+                                                          #  NOTE: The interface name here + resource name specified in
+                                                          #  beegfs_ha_inventory.yml must be less than 15 characters.
 
 # Reference https://github.com/netappeseries/host/blob/master/roles/iscsi/README.md for other available options.
 
@@ -65,6 +69,8 @@ eseries_nvme_ib_interfaces:
 #eseries_nvme_ib_udev_rules:                              # Maps interface PCI slots to interface names for ensuring
 #  "0000:82:00.1": i4a                                    #  persistent interface names. This information can be polled 
 #  "0000:82:00.0": i4b                                    #  with "lshw -class network -businfo"
+                                                          #  NOTE: The interface name here + resource name specified in
+                                                          #  beegfs_ha_inventory.yml must be less than 15 characters.
 
 # Reference https://github.com/netappeseries/host/blob/master/roles/nvme_ib/README.md for other available options.
 
@@ -79,6 +85,8 @@ eseries_nvme_roce_interfaces:
 #eseries_nvme_roce_udev_rules:                            # Maps interface PCI slots to interface names for ensuring
 #  "0000:82:00.1": i4a                                    #  persistent interface names. This information can be polled 
 #  "0000:82:00.0": i4b                                    #  with "lshw -class network -businfo"
+                                                          #  NOTE: The interface name here + resource name specified in
+                                                          #  beegfs_ha_inventory.yml must be less than 15 characters.
 
 # Reference https://github.com/netappeseries/host/blob/master/roles/nvme_roce/README.md for other available options.
 
@@ -100,6 +108,8 @@ eseries_nvme_roce_interfaces:
 #eseries_iscsi_udev_rules:                                # Maps interface PCI slots to interface names for ensuring
 #  "0000:82:00.1": i4a                                    #  persistent interface names. This information can be polled 
 #  "0000:82:00.0": i4b                                    #  with "lshw -class network -businfo"
+                                                          #  NOTE: The interface name here + resource name specified in
+                                                          #  beegfs_ha_inventory.yml must be less than 15 characters.
 
 # NVMe over Fibre Channel storage communication protocol information
 # No configuration required!
@@ -113,6 +123,8 @@ eseries_nvme_roce_interfaces:
 #eseries_nvme_ib_udev_rules:                              # Maps interface PCI slots to interface names for ensuring
 #  "0000:82:00.1": i4a                                    #  persistent interface names. This information can be polled 
 #  "0000:82:00.0": i4b                                    #  with "lshw -class network -businfo"
+                                                          #  NOTE: The interface name here + resource name specified in
+                                                          #  beegfs_ha_inventory.yml must be less than 15 characters.
 
 # NVMe RoCE - Uncomment section to utilize NVMe RoCE communication protocol with E-Series storage.
 # eseries_nvme_roce_interfaces:
@@ -123,6 +135,8 @@ eseries_nvme_roce_interfaces:
 #eseries_nvme_roce_udev_rules:                            # Maps interface PCI slots to interface names for ensuring
 #  "0000:82:00.1": i4a                                    #  persistent interface names. This information can be polled 
 #  "0000:82:00.0": i4b                                    #  with "lshw -class network -businfo"
+                                                          #  NOTE: The interface name here + resource name specified in
+                                                          #  beegfs_ha_inventory.yml must be less than 15 characters.
 
 # Reference https://github.com/netappeseries/host/blob/master/README.md for all supported protocols and their configuration. 
 {% endif %}
