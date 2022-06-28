@@ -5,5 +5,5 @@
     - netapp_eseries.beegfs
   tasks:
     - name: Ensure BeeGFS HA cluster is setup.
-      import_role:
+      ansible.builtin.import_role:
         name: beegfs_ha_7_2

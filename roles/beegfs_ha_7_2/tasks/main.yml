@@ -1,6 +1,8 @@
+# These tasks need to be import_tasks statement; otherwise the tags will not be recognized in task files.
 - name: Ensure BeeGFS HA cluster is installed.
-  import_tasks: install/main.yml
+  ansible.builtin.import_tasks: install/main.yml
+  when: not beegfs_ha_uninstall
 
 - name: Ensure BeeGFS HA cluster is uninstalled.
-  include_tasks: uninstall/main.yml
-  when: beegfs_ha_uninstall == True
+  ansible.builtin.import_tasks: uninstall/main.yml
+  when: beegfs_ha_uninstall

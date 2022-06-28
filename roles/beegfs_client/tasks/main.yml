@@ -11,11 +11,11 @@
 
   - name: Install and configure BeeGFS Client packages (All).
     block:
-      - import_tasks: packages/redhat_packages.yml
+      - ansible.builtin.include_tasks: packages/redhat_packages.yml
         when: ansible_facts['os_family'] | lower == 'redhat'
-      - import_tasks: packages/suse_packages.yml
+      - ansible.builtin.include_tasks: packages/suse_packages.yml
         when: ansible_facts['os_family'] | lower == 'suse'
-      - import_tasks: packages/debian_packages.yml
+      - ansible.builtin.include_tasks: packages/debian_packages.yml
         when: ansible_facts['os_family'] | lower == 'debian'
 
       - name: Ensure beegfs-helperd is started/enabled.

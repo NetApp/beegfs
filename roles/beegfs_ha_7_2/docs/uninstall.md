@@ -37,7 +37,7 @@ provisioned storage is retained. This file would be created as `uninstall_beegfs
         - netapp_eseries.beegfs
       tasks:
         - name: Ensure BeeGFS HA cluster is uninstalled.
-          import_role:
+          ansible.builtin.import_role:
             name: beegfs_ha_7_2
           vars:
             beegfs_ha_uninstall: true
