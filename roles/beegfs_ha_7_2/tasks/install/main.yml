@@ -1,9 +1,45 @@
+# eseries_mount_force_format will only have value when defined globally or the first executing node.
 - name: Prompt for force data format override.
   ansible.builtin.pause:
-    prompt: "WARNING! eseries_mount_force_format is set to true. This will result in wiping all target file systems as part of this deployment. Are you sure you want to continue (y/N)?"
+    prompt: "
+      WARNING! eseries_mount_force_format is set to true. This will result in wiping all target file systems as part
+      of this deployment. Are you sure you want to continue (yes/no)?"
   register: force_file_system
-  failed_when: force_file_system["user_input"] != "y"
+  run_once: true
+  delay: 0
+  retries: 10
+  until: force_file_system['user_input'] | lower in ["yes", "no"]
+  failed_when: force_file_system["user_input"] | lower == "no"
   when: eseries_mount_force_format is defined and eseries_mount_force_format
+  tags: always
+
+- name: Ask user whether to disable SELinux or not.
+  ansible.builtin.pause:
+    prompt: "
+      The variable eseries_beegfs_ha_disable_selinux has not been defined for {{ item }} and can be added to your
+      inventory to avoid this message in the future. SELinux may result in known issues. Would you like to disable
+      SELinux [yes/no/ctrl-c to stop]"
+  register: disable_selinux_prompt
+  when: hostvars[item]["eseries_beegfs_ha_disable_selinux"] is not defined
+  loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+  run_once: true
+  delay: 0
+  retries: 10
+  until: disable_selinux_prompt['user_input'] | lower in ["yes", "no"]
+  tags:
+    - beegfs_ha_configure
+    - beegfs_ha
+
+- name: Set eseries_beegfs_ha_disable_selinux variable based on user responses.
+  ansible.builtin.set_fact:
+    eseries_beegfs_ha_disable_selinux: |-
+      {%- for result in disable_selinux_prompt["results"] if inventory_hostname == result["item"] -%}
+        {{- result["user_input"] | lower == "yes" -}}
+      {%- endfor -%}
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and eseries_beegfs_ha_disable_selinux is not defined
+  tags:
+    - beegfs_ha_configure
+    - beegfs_ha
 
 - name: Collect NetApp E-Series volume information (Always).
   ansible.builtin.include_tasks:
