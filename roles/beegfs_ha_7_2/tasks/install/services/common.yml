@@ -19,7 +19,6 @@
       ansible.builtin.include_role:
         name: netapp_eseries.host.selinux
 
-    # It's important to ensure the cluster is started and in maintenance mode after a potential reboot.
-    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+    - name: Ensure BeeGFS HA cluster nodes are started and in maintenance mode.
       ansible.builtin.include_tasks: ../common/maintenance/set.yml
   when: eseries_beegfs_ha_disable_selinux
