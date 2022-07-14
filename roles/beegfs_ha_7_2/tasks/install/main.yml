@@ -14,29 +14,33 @@
   tags: always
 
 - name: Ask user whether to disable SELinux or not.
-  ansible.builtin.pause:
-    prompt: "
-      The variable eseries_beegfs_ha_disable_selinux has not been defined for {{ item }} and can be added to your
-      inventory to avoid this message in the future. SELinux may result in known issues. Would you like to disable
-      SELinux [yes/no/ctrl-c to stop]"
-  register: disable_selinux_prompt
-  when: hostvars[item]["eseries_beegfs_ha_disable_selinux"] is not defined
-  loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
-  run_once: true
-  delay: 0
-  retries: 10
-  until: disable_selinux_prompt['user_input'] | lower in ["yes", "no"]
-  tags:
-    - beegfs_ha_configure
-    - beegfs_ha
+  block:
+    - name: Ask user whether to disable SELinux or not.
+      ansible.builtin.pause:
+        prompt: "
+          The variable eseries_beegfs_ha_disable_selinux has not been defined for {{ item }} and can be added to your
+          inventory to avoid this message in the future. SELinux may result in known issues. Would you like to disable
+          SELinux [yes/no/ctrl-c to stop]"
+      register: disable_selinux_prompt
+      when: hostvars[item]["eseries_beegfs_ha_disable_selinux"] is not defined
+      loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+      run_once: true
+      delay: 0
+      retries: 10
+      until: disable_selinux_prompt['user_input'] | lower in ["yes", "no"]
 
-- name: Set eseries_beegfs_ha_disable_selinux variable based on user responses.
-  ansible.builtin.set_fact:
-    eseries_beegfs_ha_disable_selinux: |-
-      {%- for result in disable_selinux_prompt["results"] if inventory_hostname == result["item"] -%}
-        {{- result["user_input"] | lower == "yes" -}}
-      {%- endfor -%}
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and eseries_beegfs_ha_disable_selinux is not defined
+    - name: Set eseries_beegfs_ha_disable_selinux variable based on user responses.
+      ansible.builtin.set_fact:
+        eseries_beegfs_ha_disable_selinux: |-
+          {%- for result in disable_selinux_prompt["results"] if inventory_hostname == result["item"] -%}
+            {{- result["user_input"] | lower == "yes" -}}
+          {%- endfor -%}
+      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and eseries_beegfs_ha_disable_selinux is not defined
+
+    - name: Set eseries_selinux_state to disabled.
+      ansible.builtin.set_fact:
+        eseries_selinux_state: disabled
+      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and eseries_beegfs_ha_disable_selinux
   tags:
     - beegfs_ha_configure
     - beegfs_ha
