@@ -299,6 +299,3 @@ beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.6/gpg
 #   resources to be available on multiple hosts these patterns help select what information is used.
 beegfs_ha_top_level_variable_exclusion_pattern: "^ansible.*"
 beegfs_ha_top_level_variable_inclusion_pattern: "^(beegfs|eseries).*"
-
-# netapp_eseries.host collection defaults.
-eseries_common_force_skip_uninstall: True

@@ -48,8 +48,6 @@
       ansible.builtin.include_role:
         name: netapp_eseries.host.storage_setup
       when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
-      vars:
-        eseries_common_force_skip_uninstall: true
   tags:
     - storage_communication
     - storage
@@ -63,7 +61,6 @@
       vars:
         eseries_mount_volumes: []   # This ensures that no volumes get mounted
         eseries_mount_skip_unmount: true
-        eseries_common_force_skip_uninstall: true
   tags:
     - storage_format
     - storage
