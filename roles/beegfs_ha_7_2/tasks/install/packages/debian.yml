@@ -78,3 +78,9 @@
     name: numactl
   when: '"metadata" in node_info["services"] or "storage" in node_info["services"]'
   become: true
+
+- name: Ensure bc is installed (Debian/Ubuntu).
+  ansible.builtin.apt:
+    state: present
+    name: bc
+  become: true
