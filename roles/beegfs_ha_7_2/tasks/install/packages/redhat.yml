@@ -75,3 +75,9 @@
     name: numactl
   when: '"metadata" in node_info["services"] or "storage" in node_info["services"]'
   become: true
+
+- name: Ensure bc is installed (RedHat/CentOS).
+  ansible.builtin.yum:
+    state: present
+    name: bc
+  become: true
