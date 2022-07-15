@@ -5,291 +5,288 @@
   failed_when: force_file_system["user_input"] != "y"
   when: eseries_mount_force_format is defined and eseries_mount_force_format
 
-- name: Ensure BeeGFS HA cluster is installed.
+- name: Collect NetApp E-Series volume information (Always).
+  ansible.builtin.include_tasks:
+    file: ../collect_facts.yml
+    apply:
+      tags: always
+  tags: always
+
+- name: Ensure BeeGFS HA cluster nodes are in maintenance mode if cluster is available.
   block:
-    - name: Collect NetApp E-Series volume information (Always).
-      import_tasks: ../collect_facts.yml
-      tags:
-        - always
+    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+      ansible.builtin.include_tasks: ../common/maintenance/set.yml
+  when: inventory_hostname == cluster_automation_node
+  tags:
+    - beegfs_ha_configure_resource
+    - beegfs_ha_configure
+    - beegfs_ha
 
-    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode if cluster is available.
-      block:
-        - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
-          ansible.builtin.include_tasks: ../common/maintenance/set.yml
-      when: inventory_hostname == cluster_automation_node
-      tags:
-        - beegfs_ha_configure_resource
-        - beegfs_ha_configure
-        - beegfs_ha
-
+- name: Ensure InfiniBand IPoIB is configured.
+  block:
     - name: Ensure InfiniBand IPoIB is configured.
-      block:
-        - name: Ensure InfiniBand IPoIB is configured.
-          include_role:
-            name: netapp_eseries.host.ipoib
-          when: eseries_ipoib_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-      tags:
-        - beegfs_ha_configure
-        - beegfs_ha
+      ansible.builtin.include_role:
+        name: netapp_eseries.host.ipoib
+      when: eseries_ipoib_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  tags:
+    - beegfs_ha_configure
+    - beegfs_ha
 
+- name: Ensure storage has been provisioned for hosts.
+  block:
     - name: Ensure storage has been provisioned for hosts.
-      block:
-        - name: Ensure storage has been provisioned for hosts.
-          include_role:
-            name: netapp_eseries.santricity.nar_santricity_host
-          when: inventory_hostname in groups[beegfs_ha_ansible_storage_group]
-      tags:
-        - storage_provision
-        - storage
+      ansible.builtin.include_role:
+        name: netapp_eseries.santricity.nar_santricity_host
+      when: inventory_hostname in groups[beegfs_ha_ansible_storage_group]
+  tags:
+    - storage_provision
+    - storage
 
+- name: Ensure multipath and protocol are setup.
+  block:
     - name: Ensure multipath and protocol are setup.
-      block:
-        - name: Ensure multipath and protocol are setup.
-          include_role:
-            name: netapp_eseries.host.storage_setup
-          when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
-          vars:
-            eseries_common_force_skip_uninstall: true
-      tags:
-        - storage_communication
-        - storage
-
-    - name: Ensure volumes are formatted but not mounted.
-      block:
-        - name: Ensure volumes are formatted but not mounted.
-          include_role:
-            name: netapp_eseries.host.mount
-          when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
-          vars:
-            eseries_mount_volumes: []   # This ensures that no volumes get mounted
-            eseries_mount_skip_unmount: true
-            eseries_common_force_skip_uninstall: true
-      tags:
-        - storage_format
-        - storage
-
-    - name: Ensure journald configuration options are configured.
-      block:
-        - name: Ensure journald configuration options are configured.
-          include_tasks: common/journald.yml
-      when: beegfs_ha_journald_allow_changes and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-      become: true
-      tags:
-        - journald
-
-    - name: Update volume path information.
-      import_tasks: ../update_facts.yml
-      tags:
-        - beegfs_ha_configure_resource
-        - beegfs_ha_configure
-        - beegfs_ha
-
-    - name: Ensure expected BeeGFS and HA packages are installed
-      block:
-        - name: Ensure expected BeeGFS and HA packages are installed
-          ansible.builtin.include_tasks: packages.yml
-      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-      tags:
-        - beegfs_ha_package
-        - beegfs_ha
-
-    - name: Setup and configure Pacemaker resources on hosts.
-      block:
-        - name: Ensure E-Series BeeGFS HA resources agents are installed.
-          ansible.builtin.include_tasks: resource_agents.yml
+      ansible.builtin.include_role:
+        name: netapp_eseries.host.storage_setup
       when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
-      tags:
-        - beegfs_ha_resource_agent
-        - beegfs_ha_configure
-        - beegfs_ha_package
-        - beegfs_ha
+  tags:
+    - storage_communication
+    - storage
 
-    - name: Configure performance tuning.
-      block:
-        - name: BeeGFS performance tuning (Storage/Metadata).
-          ansible.builtin.include_tasks: performance_tuning.yml
-          when: 'beegfs_ha_enable_performance_tuning == True and (inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and
-                                                                  ("metadata" in node_info["services"] or "storage" in node_info["services"]))'
-      tags:
-        - beegfs_ha
-        - beegfs_ha_performance_tuning
+- name: Ensure volumes are formatted but not mounted.
+  block:
+    - name: Ensure volumes are formatted but not mounted.
+      ansible.builtin.include_role:
+        name: netapp_eseries.host.mount
+      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
+      vars:
+        eseries_mount_volumes: []   # This ensures that no volumes get mounted
+        eseries_mount_skip_unmount: true
+  tags:
+    - storage_format
+    - storage
 
+- name: Ensure journald configuration options are configured.
+  block:
+    - name: Ensure journald configuration options are configured.
+      ansible.builtin.include_tasks: common/journald.yml
+  when: beegfs_ha_journald_allow_changes and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  become: true
+  tags:
+    - journald
+
+- name: Update volume path information.
+  block:
+    - name: Update volume path information.
+      ansible.builtin.include_tasks: ../update_facts.yml
+  tags:
+    - beegfs_ha_configure_resource
+    - beegfs_ha_configure
+    - beegfs_ha
+
+- name: Ensure expected BeeGFS and HA packages are installed
+  block:
+    - name: Ensure expected BeeGFS and HA packages are installed
+      ansible.builtin.include_tasks: packages.yml
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  tags:
+    - beegfs_ha_package
+    - beegfs_ha
+
+- name: Setup and configure Pacemaker resources on hosts.
+  block:
+    - name: Ensure E-Series BeeGFS HA resources agents are installed.
+      ansible.builtin.include_tasks: resource_agents.yml
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
+  tags:
+    - beegfs_ha_resource_agent
+    - beegfs_ha_configure
+    - beegfs_ha_package
+    - beegfs_ha
+
+- name: Configure performance tuning.
+  block:
+    - name: BeeGFS performance tuning (Storage/Metadata).
+      ansible.builtin.include_tasks: performance_tuning.yml
+      when: 'beegfs_ha_enable_performance_tuning == True and (inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and
+                                                              ("metadata" in node_info["services"] or "storage" in node_info["services"]))'
+  tags:
+    - beegfs_ha
+    - beegfs_ha_performance_tuning
+
+- name: Ensure common BeeGFS HA tasks are applied to all cluster nodes.
+  block:
     - name: Ensure common BeeGFS HA tasks are applied to all cluster nodes.
-      block:
-        - name: Ensure common BeeGFS HA tasks are applied to all cluster nodes.
-          ansible.builtin.include_tasks: common.yml
-      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-      tags:
-        - beegfs_ha_configure_resource
-        - beegfs_ha_configure
-        - beegfs_ha
+      ansible.builtin.include_tasks: common.yml
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  tags:
+    - beegfs_ha_configure_resource
+    - beegfs_ha_configure
+    - beegfs_ha
 
-    - name: Ensure BeeGFS services are configured on cluster nodes.
-      block:
-        - name: Ensure common BeeGFS HA service tasks are configured.
-          ansible.builtin.include_tasks: services/common.yml
-          when: node_info["services"] | length > 0
+- name: Ensure BeeGFS services are configured on cluster nodes.
+  block:
+    - name: Ensure common BeeGFS HA service tasks are configured.
+      ansible.builtin.include_tasks: services/common.yml
+      when: node_info["services"] | length > 0
 
-        - name: Ensure BeeGFS HA management resource group is configured.
-          ansible.builtin.include_tasks: services/management.yml
-          when: '"management" in node_info["services"]'
+    - name: Ensure BeeGFS HA management resource group is configured.
+      ansible.builtin.include_tasks: services/management.yml
+      when: '"management" in node_info["services"]'
 
-        - name: Ensure BeeGFS HA metadata resource group is configured.
-          ansible.builtin.include_tasks: services/metadata.yml
-          when: '"metadata" in node_info["services"]'
+    - name: Ensure BeeGFS HA metadata resource group is configured.
+      ansible.builtin.include_tasks: services/metadata.yml
+      when: '"metadata" in node_info["services"]'
 
-        - name: Ensure BeeGFS HA storage resource group is configured.
-          ansible.builtin.include_tasks: services/storage.yml
-          when: '"storage" in node_info["services"]'
-      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-      tags:
-        - beegfs_ha_configure
-        - beegfs_ha
+    - name: Ensure BeeGFS HA storage resource group is configured.
+      ansible.builtin.include_tasks: services/storage.yml
+      when: '"storage" in node_info["services"]'
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  tags:
+    - beegfs_ha_configure
+    - beegfs_ha
 
+- name: Ensure BeeGFS HA cluster resources are correct.
+  block:
     - name: Ensure BeeGFS HA cluster resources are correct.
-      block:
-        - name: Ensure BeeGFS HA cluster resources are correct.
-          ansible.builtin.include_tasks: resources.yml
-          when: inventory_hostname == cluster_automation_node
-      tags:
-        - beegfs_ha_configure_resource
-        - beegfs_ha_configure
-        - beegfs_ha
+      ansible.builtin.include_tasks: resources.yml
+      when: inventory_hostname == cluster_automation_node
+  tags:
+    - beegfs_ha_configure_resource
+    - beegfs_ha_configure
+    - beegfs_ha
 
-    - name: Ensure pacemaker services are started and enabled.
-      block:
-        - name: Ensure pacemaker_remote is enabled and started on remote nodes.
-          ansible.builtin.systemd:
-            state: started
-            enabled: true
-            name: pacemaker_remote
-          when: not beegfs_ha_pacemaker_cluster_node
+- name: Ensure pacemaker services are started and enabled.
+  block:
+    - name: Ensure pacemaker_remote is enabled and started on remote nodes.
+      ansible.builtin.systemd:
+        state: started
+        enabled: true
+        name: pacemaker_remote
+      when: not beegfs_ha_pacemaker_cluster_node
 
-        - name: Ensure cluster nodes have joined the cluster.
-          ansible.builtin.systemd:
-            state: started
-            enabled: "{{ beegfs_ha_pacemaker_enabled }}"
-            name: "{{ item }}"
-          when: beegfs_ha_pacemaker_cluster_node
-          loop: ["corosync", "pacemaker"]
-      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+    - name: Ensure cluster nodes have joined the cluster.
+      ansible.builtin.systemd:
+        state: started
+        enabled: "{{ beegfs_ha_pacemaker_enabled }}"
+        name: "{{ item }}"
+      when: beegfs_ha_pacemaker_cluster_node
+      loop: ["corosync", "pacemaker"]
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  become: true
+  tags:
+    - beegfs_ha_move_all_to_preferred
+    - beegfs_ha_configure_resource
+    - beegfs_ha_configure
+    - beegfs_ha
+
+- name: Attempt to return cluster to an optimal state.
+  block:
+    - name: Determine whether fencing is enabled.
+      ansible.builtin.command: crm_attribute --name stonith-enabled --quiet
+      register: stonith_enabled
+      changed_when: false
+
+    - name: Disable fencing until cluster is fully started.
+      ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update False
+      when: stonith_enabled["stdout"] | bool
+
+    - name: Wait for cluster to stabilize.
+      ansible.builtin.command: crm_resource --wait
+      changed_when: false
+      ignore_errors: true
+      timeout: 30
+
+    - name: Cleanup cluster resource failures.
+      ansible.builtin.command: crm_resource --cleanup
+      changed_when: false
+
+    - name: Wait for cluster to stabilize.
+      ansible.builtin.command: crm_resource --wait
+      changed_when: false
+      ignore_errors: true
+      timeout: 30
+
+    - name: Ensure BeeGFS HA cluster nodes are out of standby mode.
+      ansible.builtin.include_tasks: ../common/standby/clear.yml
+
+    - name: Ensure BeeGFS HA cluster nodes are out of maintenance mode.
+      ansible.builtin.include_tasks: ../common/maintenance/clear.yml
+
+    - name: "Wait for cluster nodes to come online"
+      ansible.builtin.command: "crm_mon -1"
+      changed_when: false
+      loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+      register: cluster_node_status
+      delay: 1
+      retries: 30
+      until: 'cluster_node_status["stdout"] | regex_search(".*Online: \[.*" ~ item ~ ".*\]", ignorecase=True)'
       become: true
-      tags:
-        - beegfs_ha_move_all_to_preferred
-        - beegfs_ha_configure_resource
-        - beegfs_ha_configure
-        - beegfs_ha
 
-    - name: Attempt to return cluster to an optimal state.
+    - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
       block:
-        - name: Determine whether fencing is enabled.
-          ansible.builtin.command: crm_attribute --name stonith-enabled --quiet
-          register: stonith_enabled
+        - name: Determine current location of all cluster resources.
+          ansible.builtin.command: crm_mon -r1
+          register: resource_locations
           changed_when: false
-
-        - name: Disable fencing until cluster is fully started.
-          ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update False
-          when: stonith_enabled["stdout"] | bool
-
-        - name: Wait for cluster to stabilize.
-          ansible.builtin.command: crm_resource --wait
-          changed_when: false
-          ignore_errors: true
-          timeout: 30
-
-        - name: Cleanup cluster resource failures.
-          ansible.builtin.command: crm_resource --cleanup
-          changed_when: false
-
-        - name: Wait for cluster to stabilize.
-          ansible.builtin.command: crm_resource --wait
-          changed_when: false
-          ignore_errors: true
-          timeout: 30
-
-        - name: Ensure BeeGFS HA cluster nodes are out of standby mode.
-          ansible.builtin.include_tasks: ../common/standby/clear.yml
-
-        - name: Ensure BeeGFS HA cluster nodes are out of maintenance mode.
-          ansible.builtin.include_tasks: ../common/maintenance/clear.yml
-
-        - name: "Wait for cluster nodes to come online"
-          ansible.builtin.command: "crm_mon -1"
-          changed_when: false
-          loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
-          register: cluster_node_status
-          delay: 1
-          retries: 30
-          until: 'cluster_node_status["stdout"] | regex_search(".*Online: \[.*" ~ item ~ ".*\]", ignorecase=True)'
-          become: true
 
         - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
-          block:
-            - name: Determine current location of all cluster resources.
-              ansible.builtin.command: crm_mon -r1
-              register: resource_locations
-              changed_when: false
-
-            - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
-              ansible.builtin.include_tasks: move.yml
-              loop: "{{ lookup('ansible.builtin.dict', move_resources, wantlist=true) }}"
-              vars:
-                move_resources: |-
-                  {%- set resources = {} -%}
-                  {%- for host in groups[beegfs_ha_ansible_cluster_group] if "node_info" in (hostvars[host].keys() | list) -%}
-                    {%- set node_info = hostvars[host]["node_info"] -%}
-                    {%- for service in node_info["services"] -%}
-                      {%- for resource_group_info in node_info[service] if host == resource_group_info["preferred_node_order"][0] and (resource_group_info["resource_group"] not in resources.keys() | list) -%}
-                        {%- for line in resource_locations["stdout_lines"] if line | regex_search(resource_group_info["resource_group"] ~ "-service.*" ~ host) -%}
-                          {#- DO NOTHING -#}
-                        {%- else -%}
-                          {%- if resources.update({resource_group_info["resource_group"]: resource_group_info["preferred_node_order"][0]}) -%}{%- endif -%}
-                        {%- endfor -%}
-                      {%- endfor -%}
+          ansible.builtin.include_tasks: move.yml
+          loop: "{{ lookup('ansible.builtin.dict', move_resources, wantlist=true) }}"
+          vars:
+            move_resources: |-
+              {%- set resources = {} -%}
+              {%- for host in groups[beegfs_ha_ansible_cluster_group] if "node_info" in (hostvars[host].keys() | list) -%}
+                {%- set node_info = hostvars[host]["node_info"] -%}
+                {%- for service in node_info["services"] -%}
+                  {%- for resource_group_info in node_info[service] if host == resource_group_info["preferred_node_order"][0] and (resource_group_info["resource_group"] not in resources.keys() | list) -%}
+                    {%- for line in resource_locations["stdout_lines"] if line | regex_search(resource_group_info["resource_group"] ~ "-service.*" ~ host) -%}
+                      {#- DO NOTHING -#}
+                    {%- else -%}
+                      {%- if resources.update({resource_group_info["resource_group"]: resource_group_info["preferred_node_order"][0]}) -%}{%- endif -%}
                     {%- endfor -%}
                   {%- endfor -%}
-                  {{- resources -}}
-          when: beegfs_ha_force_resource_move
+                {%- endfor -%}
+              {%- endfor -%}
+              {{- resources -}}
+      when: beegfs_ha_force_resource_move
 
-        - name: Enable fencing since cluster is fully started.
-          ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update True
-          when: stonith_enabled["stdout"] | bool
-      when: inventory_hostname == cluster_automation_node
-      become: true
-      tags:
-        - beegfs_ha_move_all_to_preferred
-        - beegfs_ha_configure_resource
-        - beegfs_ha_configure
-        - beegfs_ha
+    - name: Enable fencing since cluster is fully started.
+      ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update True
+      when: stonith_enabled["stdout"] | bool
+  when: inventory_hostname == cluster_automation_node
+  become: true
+  tags:
+    - beegfs_ha_move_all_to_preferred
+    - beegfs_ha_configure_resource
+    - beegfs_ha_configure
+    - beegfs_ha
 
-    - name: Verify all Pacemaker resources are started.
-      block:
-        - name: Retry until resources are all started
-          ansible.builtin.include_tasks: validate_resources.yml
+- name: Verify all Pacemaker resources are started.
+  block:
+    - name: Retry until resources are all started
+      ansible.builtin.include_tasks: validate_resources.yml
 
-        - name: Warn when resources are not all started.
-          fail:
-            msg: "Warning! The following cluster resources are not running: {{ resources_not_started }}"
-          when: resources_not_started | length > 0
-          ignore_errors: true
-          run_once: true
-      when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("management" in node_info["services"] or
-                                                                                "metadata" in node_info["services"] or "storage" in node_info["services"])'
-      tags:
-        - beegfs_ha_validation
-        - beegfs_ha_configure_resource
-        - beegfs_ha_configure
-        - beegfs_ha
+    - name: Warn when resources are not all started.
+      ansible.builtin.fail:
+        msg: "Warning! The following cluster resources are not running: {{ resources_not_started }}"
+      when: resources_not_started | length > 0
+      ignore_errors: true
+      run_once: true
+  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("management" in node_info["services"] or
+                                                                            "metadata" in node_info["services"] or "storage" in node_info["services"])'
+  tags:
+    - beegfs_ha_validation
+    - beegfs_ha_configure_resource
+    - beegfs_ha_configure
+    - beegfs_ha
 
+- name: Backup current BeeGFS HA configuration.
+  block:
     - name: Backup current BeeGFS HA configuration.
-      block:
-        - name: Backup current BeeGFS HA configuration.
-          ansible.builtin.include_tasks: ../backup.yml
-          when: inventory_hostname == cluster_automation_node
-      tags:
-        - beegfs_ha_configure_resource
-        - beegfs_ha_configure
-        - beegfs_ha_backup
-        - beegfs_ha
-
-  when: beegfs_ha_uninstall == False
+      ansible.builtin.include_tasks: ../backup.yml
+      when: inventory_hostname == cluster_automation_node
+  tags:
+    - beegfs_ha_configure_resource
+    - beegfs_ha_configure
+    - beegfs_ha_backup
+    - beegfs_ha

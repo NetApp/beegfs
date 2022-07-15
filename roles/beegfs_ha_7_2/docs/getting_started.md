@@ -76,11 +76,12 @@ This file would be created as `beegfs_ha_playbook.yml`:
 
     - hosts: all
       gather_facts: false
+      any_errors_fatal: true
       collections:
         - netapp_eseries.beegfs
       tasks:
         - name: Ensure BeeGFS HA cluster is setup.
-          import_role:
+          ansible.builtin.import_role:  # import_role is required for tag availability.
             name: beegfs_ha_7_2
 
 <a name="example-inventory-file"></a>
