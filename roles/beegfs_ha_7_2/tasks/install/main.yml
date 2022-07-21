@@ -62,7 +62,7 @@
     - beegfs_ha_configure
     - beegfs_ha
 
-- name: Ensure InfiniBand IPoIB is configured.
+- name: Ensure BeeGFS service communications are configured.
   block:
     - name: Ensure InfiniBand IPoIB is configured.
       ansible.builtin.include_role:
