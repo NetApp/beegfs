@@ -68,6 +68,11 @@
       ansible.builtin.include_role:
         name: netapp_eseries.host.ipoib
       when: eseries_ipoib_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+
+    - name: Ensure RoCE is configured.
+      ansible.builtin.include_role:
+        name: netapp_eseries.host.roce
+      when: eseries_roce_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   tags:
     - beegfs_ha_configure
     - beegfs_ha
