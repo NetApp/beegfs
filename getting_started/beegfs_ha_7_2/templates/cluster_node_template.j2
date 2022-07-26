@@ -12,6 +12,9 @@ beegfs_ha_cluster_node_ips:
  - <SECONDARY_IP_ADDRESS>           #  highest priority. When there are no listed IPs then node name will be used.
  - <ADDITIONAL_IP_ADDRESS>          #  Node names are defined in /etc/hosts.
 
+# If the interfaces used for BeeGFS client connections are different than the connections used for the backend E-Series
+#  storage, then be sure to define them below as well, with the appropriate protocol.  Use the same convention as the
+#  storage communication protocol information.
 {% if item['item'] in groups[beegfs_ha_ansible_cluster_group] %}
 
 {%- if protocol == "1" %}
