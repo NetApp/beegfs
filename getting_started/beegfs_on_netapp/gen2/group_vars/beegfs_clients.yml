@@ -1,0 +1,1 @@
+# Configuration that should apply to all BeeGFS clients can be optionally specified in this file instead of client_inventory.yml.

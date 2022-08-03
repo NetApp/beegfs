@@ -1,0 +1,23 @@
+# meta_13 - BeeGFS HA Metadata Resource Group
+beegfs_ha_beegfs_meta_conf_resource_group_options:
+  connMetaPortTCP: 8055
+  connMetaPortUDP: 8055
+  tuneBindToNumaZone: 0
+
+floating_ips:
+  - i1b:100.127.101.13/16
+  - i2b:100.128.102.13/16
+
+beegfs_service: metadata
+
+beegfs_targets:
+  ictad22a03:
+    eseries_storage_pool_configuration:
+      - name: beegfs_m9_m10_m13_m14
+        raid_level: raid1
+        criteria_drive_count: 4
+        common_volume_configuration:
+          segment_size_kb: 128
+        volumes:
+          - size: 21.5
+            owning_controller: A          

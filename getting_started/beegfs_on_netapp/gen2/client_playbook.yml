@@ -1,0 +1,16 @@
+# BeeGFS client playbook.
+- hosts: beegfs_clients
+  any_errors_fatal: true
+  gather_facts: true
+  collections:
+    - netapp_eseries.beegfs
+    - netapp_eseries.host
+  tasks:
+    # OPTIONAL: If you want to use the NetApp E-Series Host Collection’s IPoIB role to configure InfiniBand interfaces for clients to connect to BeeGFS file systems:
+    - name: Ensure IPoIB is configured
+      import_role:
+        name: ipoib
+    # REQUIRED: Install the BeeGFS client and mount the BeeGFS file system.
+    - name: Verify the BeeGFS clients are configured.
+      import_role:
+        name: beegfs_client
