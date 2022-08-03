@@ -1,0 +1,22 @@
+# mgmt - BeeGFS HA Management Resource Group
+# OPTIONAL: Override default BeeGFS management configuration:
+# beegfs_ha_beegfs_mgmtd_conf_resource_group_options:
+#  <beegfs-mgmt.conf:key>:<beegfs-mgmt.conf:value>
+
+floating_ips:
+  - i1b:100.127.101.0/16
+  - i2b:100.128.102.0/16
+
+beegfs_service: management      
+
+beegfs_targets:
+  ictad22a01:
+    eseries_storage_pool_configuration:
+      - name: beegfs_m1_m2_m5_m6
+        raid_level: raid1
+        criteria_drive_count: 4
+        common_volume_configuration:                
+          segment_size_kb: 128
+        volumes:
+          - size: 1
+            owning_controller: A

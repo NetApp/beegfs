@@ -1,0 +1,130 @@
+### ha_cluster Ansible group inventory file. 
+# Place all default/common variables for BeeGFS HA cluster resources below.
+
+### Cluster node defaults
+ansible_ssh_user: root
+ansible_become_password: <PASSWORD>
+eseries_ipoib_default_hook_templates:
+  - 99-multihoming.j2 # This is required when configuring additional static IPs (for example cluster IPs) when multiple IB ports are in the same IPoIB subnet.
+
+# If the following options are specified, then Ansible will automatically reboot nodes when necessary for changes to take effect: 
+eseries_common_allow_host_reboot: true
+eseries_common_reboot_test_command: "! systemctl status eseries_nvme_ib.service || systemctl --state=exited | grep eseries_nvme_ib.service"
+
+### Cluster information
+
+beegfs_ha_firewall_configure: True
+eseries_beegfs_ha_disable_selinux: True
+eseries_selinux_state: disabled
+
+# The following variables should be adjusted depending on the desired configuration: 
+beegfs_ha_cluster_name: hacluster                  # BeeGFS HA cluster name.
+beegfs_ha_cluster_username: hacluster              # BeeGFS HA cluster username.
+beegfs_ha_cluster_password: hapassword             # BeeGFS HA cluster username's password.
+beegfs_ha_cluster_password_sha512_salt: randomSalt # BeeGFS HA cluster username's password salt.
+beegfs_ha_mgmtd_floating_ip: 100.127.101.0         # BeeGFS management service IP address.
+
+# Email Alerts Configuration
+beegfs_ha_enable_alerts: True
+beegfs_ha_alert_email_list: ["<EMAIL>"]  # E-mail recipient list for notifications when BeeGFS HA resources change or fail.
+beegfs_ha_alert_conf_ha_group_options:             # This dictionary is used to configure postfix service (/etc/postfix/main.cf) which is required to set email alerts.
+      mydomain: <MY_DOMAIN>                        # This parameter specifies the local internet domain name. This is optional when the
+                                                   #    cluster nodes have fully qualified hostnames (i.e. host.example.com)
+beegfs_ha_alert_verbosity: 3
+#  1) high-level node activity
+#  3) high-level node activity + fencing action information + resources (filter on X-monitor)
+#  5) high-level node activity + fencing action information + resources
+
+### Fencing configuration: 
+
+beegfs_ha_cluster_crm_config_options:
+  stonith-enabled: True
+
+# OPTION 1: To enable fencing using APC Power Distribution Units (PDUs): 
+# beegfs_ha_fencing_agents:
+#  fence_apc:
+#    - ipaddr: <PDU_IP_ADDRESS>
+#      login: <PDU_USERNAME>
+#      passwd: <PDU_PASSWORD>
+#      pcmk_host_map: "<HOSTNAME>:<PDU_PORT>,<PDU_PORT>;<HOSTNAME>:<PDU_PORT>,<PDU_PORT>"
+
+# OPTION 2: To enable fencing using the Redfish APIs provided by the Lenovo XCC (and other BMCs):  
+redfish: &redfish
+  username: <BMC_USERNAME>
+  password: <BMC_PASSWORD>
+  ssl_insecure: 1 # If a valid SSL certificate is not available specify “1”.
+
+beegfs_ha_fencing_agents:
+  fence_redfish:
+    - pcmk_host_list: <HOSTNAME>
+      ip: <BMC_IP>
+      <<: *redfish
+    - pcmk_host_list: <HOSTNAME>
+      ip: <BMC_IP>
+      <<: *redfish
+
+# For details on configuring other fencing agents see https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_high_availability_clusters/assembly_configuring-fencing-configuring-and-managing-high-availability-clusters. 
+
+### Performance Configuration:
+beegfs_ha_enable_performance_tuning: True
+
+### OpenSM package and configuration information
+eseries_ib_opensm_allow_upgrades: true
+eseries_ib_opensm_skip_package_validation: true
+eseries_ib_opensm_rhel_packages: []
+eseries_ib_opensm_custom_packages:
+  install:
+    - files:
+        add:
+          "packages/opensm-libs-5.9.0.MLNX20210617.c9f2ade-0.1.54103.x86_64.rpm": "/tmp/"
+          "packages/opensm-5.9.0.MLNX20210617.c9f2ade-0.1.54103.x86_64.rpm": "/tmp/"
+    - packages:
+        add:
+          - /tmp/opensm-5.9.0.MLNX20210617.c9f2ade-0.1.54103.x86_64.rpm
+          - /tmp/opensm-libs-5.9.0.MLNX20210617.c9f2ade-0.1.54103.x86_64.rpm
+  uninstall:
+    - packages:
+        remove:
+          - opensm
+          - opensm-libs
+      files:
+        remove:
+          - /tmp/opensm-5.9.0.MLNX20210617.c9f2ade-0.1.54103.x86_64.rpm
+          - /tmp/opensm-libs-5.9.0.MLNX20210617.c9f2ade-0.1.54103.x86_64.rpm
+
+# These files can be downloaded from:
+#  curl -o packages/opensm-libs-5.9.0.MLNX20210617.c9f2ade-0.1.54103.x86_64.rpm https://linux.mellanox.com/public/repo/mlnx_ofed/5.4-1.0.3.0/rhel8.4/x86_64/opensm-libs-5.9.0.MLNX20210617.c9f2ade-0.1.54103.x86_64.rpm
+#  curl -o packages/opensm-5.9.0.MLNX20210617.c9f2ade-0.1.54103.x86_64.rpm https://linux.mellanox.com/public/repo/mlnx_ofed/5.4-1.0.3.0/rhel8.4/x86_64/opensm-5.9.0.MLNX20210617.c9f2ade-0.1.54103.x86_64.rpm 
+
+eseries_ib_opensm_options:
+  virt_enabled: "2"
+
+### Ensure Consistent Logical IB Port Numbering
+
+# OPTION 1: Lenovo SR665 PCIe address-to-logical IB port mapping:  
+eseries_ipoib_udev_rules:
+  "0000:41:00.0": i1a
+  "0000:41:00.1": i1b
+  "0000:01:00.0": i2a
+  "0000:01:00.1": i2b  
+  "0000:a1:00.0": i3a
+  "0000:a1:00.1": i3b
+  "0000:81:00.0": i4a
+  "0000:81:00.1": i4b
+  
+# Note: At this time no other x86 servers have been qualified. Configuration for future qualified file nodes will be added here.
+
+# How to override default BeeGFS service configuration: 
+#   Except configuration specified elsewhere (sysMgmtdHost, connInterfacesFile, and connNetFilterFile), any options found in the 
+#   beegfs-*.conf files that should apply to all services in the file system can be specified here. Uncomment the options below
+#   and specify the desired configuration (for example `tuneTargetChooser=randomrobin` as `tuneTargetChooser: randomrobin`).
+
+
+# beegfs_ha_beegfs_mgmtd_conf_ha_group_options:
+#   <OPTION>: <VALUE>
+
+# beegfs_ha_beegfs_meta_conf_ha_group_options:
+#   <OPTION>: <VALUE>
+
+# beegfs_ha_beegfs_storage_conf_ha_group_options:
+#   <OPTION>: <VALUE>
