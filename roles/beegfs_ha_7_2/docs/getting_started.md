@@ -7,6 +7,7 @@
 - [Getting Started](#getting-started)
   - [Table of Contents](#table-of-contents)
   - [Requirements](#requirements)
+  - [Tested Ansible Versions](#tested-ansible-versions)
   - [Getting Started Guide](#getting-started-guide)
   - [Example Playbook, Inventory, Group/Host Variables](#example-playbook-inventory-grouphost-variables)
     - [Example BeeGFS HA Playbook File](#example-beegfs-ha-playbook-file)
@@ -28,7 +29,6 @@
 
 Ensure the following conditions are met:
 - Ansible control node has the following installed:
-  - Ansible 2.10 or later
   - Python 3.6 or later
     - The Ansible version above may have a minimum required Python version 
   - NetApp E-Series Ansible Collections:
@@ -42,6 +42,11 @@ Ensure the following conditions are met:
   - HA repositories containing the necessary packages (pacemaker, corosync, fence-agents-all, resource-agents, pcs) are enabled via 
   package manager
     - Enable command example: `subscription-manager repo-override repo=rhel-8-for-x86_64-highavailability-rpms --add=enabled:1`
+
+<a name="tested-ansible-versions"></a>
+## Tested Ansible Versions
+
+Ansible 5.x (ansible-core 2.12)
 
 <a name="getting-started-guide"></a>
 ## Getting Started Guide
