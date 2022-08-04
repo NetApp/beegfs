@@ -8,7 +8,7 @@ generated files filling in necessary details and changing default values where n
 
 Requirements
 ------------
-- Ansible control node with Ansible 2.10 or later and the following dependencies installed:
+- Ansible control node with the following dependencies installed:
   - NetApp E-Series Ansible Collections:
     - netappeseries.santricity 1.2 or later.
     - netappeseries.host 1.0 or later.
@@ -16,6 +16,10 @@ Requirements
     - ipaddr
     - netaddr
 - Passwordless SSH setup from the Ansible control node to all BeeGFS HA nodes.
+
+Tested Ansible Versions
+-----------------------
+  - Ansible 5.x (ansible-core 2.12)
 
 Getting Started
 ---------------
