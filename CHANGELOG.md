@@ -8,6 +8,7 @@ Notable changes to the BeeGFS collection will be documented in this file.
 - Increase default threshold for IP neighbor garbage collection.
 - Improve uninstall task ordering and make reboot asynchronous with storage system tasks.
 - Increase Ansible version requirement to 2.10 or later.
+- Add control variable to skip firewall configuration.
 
 ### Fixed
 - Increase beegfs-monitor timeout to 120 seconds to allow monitor operation to complete under extremely high loads.
