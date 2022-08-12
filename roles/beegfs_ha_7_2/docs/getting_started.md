@@ -42,6 +42,9 @@ Ensure the following conditions are met:
   - HA repositories containing the necessary packages (pacemaker, corosync, fence-agents-all, resource-agents, pcs) are enabled via 
   package manager
     - Enable command example: `subscription-manager repo-override repo=rhel-8-for-x86_64-highavailability-rpms --add=enabled:1`
+  - Ensure files with a shared secret are in place for connection based authentication (for more details and options to configure
+    see [Importance of Connection Authentication](override_beegfs_configuration_defaults.md#importance-of-conn-auth)).
+      - Note: This is optional but **strongly** recommended.
 
 <a name="getting-started-guide"></a>
 ## Getting Started Guide

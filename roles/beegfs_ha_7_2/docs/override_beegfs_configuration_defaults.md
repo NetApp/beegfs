@@ -12,6 +12,7 @@ BeeGFS cluster is installed and operated using a set of configuration settings.
   - [How to Override BeeGFS Configuration Defaults](#how-to-override-beegfs-configuration-defaults)
     - [Resource Group Options Examples](#resource-group-options-examples)
     - [HA Group Options Examples](#ha-group-options-examples)
+    - [Importance of Connection Authentication](#importance-of-conn-auth)
 
 <a name="basic-information-about-the-configuration-settings"></a>
 ## Basic Information About the Configuration Settings
@@ -106,8 +107,8 @@ for all BeeGFS servers and clients that should participate in the file system. T
 `connAuthFile` in all BeeGFS service and client configuration files. 
 
 At this time there isn't a built-in way to use the Ansible BeeGFS roles to distribute the shared secret file to all 
-BeeGFS servers and clients. This can be done manually, or you can add a task to your playbook before importing the
-BeeGFS HA role:
+BeeGFS servers and clients. This can be done manually, or you can add a task similar to the one below to your playbook 
+before importing the BeeGFS HA role:
 
 ```yaml
   [...]
