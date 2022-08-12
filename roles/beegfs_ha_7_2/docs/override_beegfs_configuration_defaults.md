@@ -86,10 +86,57 @@ Note: The [Getting Started](getting_started.md) page has usage examples with one
   ```
   beegfs_ha_beegfs_mgmtd_conf_ha_group_options:
     logStdFile: <log_path>
+    connAuthFile: /etc/beegfs/connAuthFile  # IMPORTANT: See the section on connection based authentication below.
 
   beegfs_ha_beegfs_meta_conf_ha_group_options:
     logStdFile: <log_path>
+    connAuthFile: /etc/beegfs/connAuthFile
 
   beegfs_ha_beegfs_storage_conf_ha_group_options:
     logStdFile: <log_path>
+    connAuthFile: /etc/beegfs/connAuthFile    
   ```
+
+<a name="importance-of-conn-auth"></a>
+### Importance of Connection Based Authentication
+
+BeeGFS strongly recommends enabling connection based authentication to avoid unintended clients or users interacting
+with the file system. This is enabled by distributing a file only readable by the root user containing a shared secret 
+for all BeeGFS servers and clients that should participate in the file system. Then specify the path to this file as 
+`connAuthFile` in all BeeGFS service and client configuration files. 
+
+At this time there isn't a built-in way to use the Ansible BeeGFS roles to distribute the shared secret file to all 
+BeeGFS servers and clients. This can be done manually, or you can add a task to your playbook before importing the
+BeeGFS HA role:
+
+```yaml
+  [...]
+  tasks:
+    - name: Create /etc/beegfs/connAuthFile 
+      ansible.builtin.lineinfile:
+        path: /etc/beegfs/connAuthFile
+        line: "secret"
+        create: yes
+        owner: root
+        group: root
+        mode: '0400'
+      tags:
+        - beegfs_ha
+      when: inventory_hostname not in groups[beegfs_ha_ansible_storage_group]
+
+    - name: Verify the BeeGFS HA cluster is properly deployed.
+      import_role:
+        name: beegfs_ha_7_2
+```
+
+See the [HA Group Options Examples](#ha-group-options-example) section above for how to enable the BeeGFS services
+to use this file when using Ansible to deploy/manage the cluster. 
+
+IMPORTANT: In later versions of BeeGFS a connAuthFile is required by default, or it must be explicitly disabled.
+For better security and to simplify upgrading to future BeeGFS versions, creating a connAuthFile when initially 
+deploying the cluster is recommended.
+
+For more details see:
+
+* https://doc.beegfs.io/latest/advanced_topics/authentication.html
+* https://www.beegfs.io/c/the-importance-of-using-connauthfile-in-beegfs/

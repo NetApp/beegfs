@@ -234,6 +234,27 @@ This file would be created as `group_vars/ha_cluster.yml`:
       "0000:a1:00.1": i3b
       "0000:81:00.0": i4a
       "0000:81:00.1": i4b
+        
+    ### BeeGFS service configuration:
+    # Configuration that should apply to all BeeGFS services can be specified as follows:
+
+    beegfs_ha_beegfs_mgmtd_conf_ha_group_options:
+      connAuthFile: /etc/beegfs/connAuthFile
+
+    beegfs_ha_beegfs_meta_conf_ha_group_options:
+      connAuthFile: /etc/beegfs/connAuthFile
+
+    beegfs_ha_beegfs_storage_conf_ha_group_options:
+      connAuthFile: /etc/beegfs/connAuthFile
+
+IMPORTANT: In later versions of BeeGFS a connAuthFile is required by default, or it must be explicitly disabled. 
+For security and to simplify upgrading to future BeeGFS versions, configuring a connAuthFile when initially deploying 
+the cluster is recommended. At this time a connAuthFile only readable by the root user must be manually distributed 
+to all BeeGFS servers and clients before running the BeeGFS HA role with the above configuration.
+For more information see [Importance of Connection Authentication](override_beegfs_configuration_defaults.md#importance-of-conn-auth)
+
+See [Override BeeGFS Configuration Defaults](docs/override_beegfs_configuration_defaults.md) for more
+details on how to override BeeGFS configuration on a global or per service basis. 
 
 <a name="example-management-group"></a>
 #### Example Management Group
