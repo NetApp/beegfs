@@ -6,6 +6,7 @@
     - name: "Collect {{ cluster_node }} systemd service facts."
       service_facts:
       delegate_to: "{{ cluster_node }}"
+      delegate_facts: true      
       become: true
 
     - name: "Ensure pacemaker services are stopped and disabled on {{ cluster_node }}."
