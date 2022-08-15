@@ -32,8 +32,8 @@ Ensure the following conditions are met:
   - Python 3.6 or later
     - The Ansible version above may have a minimum required Python version 
   - NetApp E-Series Ansible Collections:
-    - netapp_eseries.santricity 1.3 or later.
-    - netapp_eseries.host 1.0 or later.
+    - netapp_eseries.santricity 1.3.1 or later.
+    - netapp_eseries.host 1.2 or later.
   - Python (pip) packages installed:
     - ipaddr
     - netaddr

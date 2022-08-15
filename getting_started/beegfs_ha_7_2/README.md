@@ -10,8 +10,8 @@ Requirements
 ------------
 - Ansible control node with the following dependencies installed:
   - NetApp E-Series Ansible Collections:
-    - netappeseries.santricity 1.2 or later.
-    - netappeseries.host 1.0 or later.
+    - netappeseries.santricity 1.3.1 or later.
+    - netappeseries.host 1.2 or later.
   - Python (pip) packages:
     - ipaddr
     - netaddr
