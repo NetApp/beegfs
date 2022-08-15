@@ -1,7 +1,7 @@
 # Changelog
 Notable changes to the BeeGFS collection will be documented in this file.
 
-[3.0.1] - 2022-08-08
+[3.0.1] - 2022-08-15
 --------------------
 ### Added
 - Added beegfs_ha_firewall_configure variable to control whether the firewall is configured.
