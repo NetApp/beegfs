@@ -24,7 +24,7 @@ of variables and their details.
 <a name="beegfs-os-specific-variables-and-defaults"></a>
 ## BeeGFS OS Specific Variables and Defaults
 
-The variables in `beegfs_ha_7_2/vars/*` are OS specifics. Review the applicable OS files for the list of variables and 
+The variables in `beegfs_ha_7_3/vars/*` are OS-specific variables. Review the applicable OS files for the list of variables and 
 their details.
 
 The OS files have inheritance setup so there will be multiple files that need to be viewed. As such, not only the 

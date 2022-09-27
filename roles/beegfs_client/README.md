@@ -118,7 +118,7 @@ beegfs_client_mounts:
     beegfs_client_config:
       sysSessionChecksEnabled: false 
 ```
-IMPORTANT: To prevent silent data corruption `sysSessionChecksEnabled: false` must only be set when the underlying ext4/xfs filesystems used for the BeeGFS management, metadata and storage targets are mounted using the "sync" option. Mounting the targets in "sync" mode is the default configuration provided by the beegfs_ha_7_2 role provided in this collection, but could be overridden.
+IMPORTANT: To prevent silent data corruption `sysSessionChecksEnabled: false` must only be set when the underlying ext4/xfs filesystems used for the BeeGFS management, metadata and storage targets are mounted using the "sync" option. Mounting the targets in "sync" mode is the default configuration provided by the beegfs_ha* roles provided in this collection, but could be overridden.
 
 Tuning recommendations when mounting BeeGFS
 -------------------------------------------
