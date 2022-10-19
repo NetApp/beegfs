@@ -109,7 +109,7 @@
       {%- for resource_name in cluster_resource_groups -%}
         {%- if resource_name | regex_search("^[A-Za-z0-9]+_[0-9]+$") -%}
           {#- DO NOTHING - METADATA/STORAGE RESOURCE GROUP -#}
-        {%- elif resource_name | regex_search("^[A-Za-z]+$") and scratch["management_found"] == False -%}
+        {%- elif resource_name | regex_search("^[A-Za-z0-9]+$") and scratch["management_found"] == False -%}
           {%- if scratch.update({"management_found": True}) -%}{%- endif -%}
         {%- else -%}
           {%- if invalid_names.append(resource_name) -%}{%- endif -%}
