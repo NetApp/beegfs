@@ -7,15 +7,15 @@
 ## General Configuration Defaults
 beegfs_ha_ansible_cluster_group: ha_cluster               # Name for the pacemaker cluster.
 beegfs_ha_ansible_storage_group: eseries_storage_systems  # Name of the Ansible E-Series storage group
-beegfs_ha_cluster_name: hacluster                         # Pacemaker cluster group (a.k.a., BeeGFS HA cluster) name
+beegfs_ha_cluster_name: hacluster                         # Pacemaker cluster group name
 beegfs_ha_cluster_username: hacluster                     # BeeGFS HA cluster username
 beegfs_ha_cluster_password: hapassword                    # BeeGFS HA cluster username's password
 beegfs_ha_cluster_password_sha512_salt: randomSalt        # BeeGFS HA cluster username's password salt
 beegfs_ha_mgmtd_group: mgmt                               # BeeGFS HA management resource group name
 # beegfs_ha_mgmtd_floating_ip:                            # (Required) BeeGFS HA management service IP address.
-beegfs_ha_cluster_node_ips: []                            # Defines an ordered list of IP addresses or hostnames with 
+beegfs_ha_cluster_node_ips: []                            # Defines an ordered list of IP addresses or hostnames with
                                                           #   the first having the highest priority. When
-                                                          #   there are no IPs listed then the node names will be used. 
+                                                          #   there are no IPs listed then the node names will be used.
                                                           #   Node names are defined in /etc/hosts.
 
 
@@ -23,8 +23,8 @@ beegfs_ha_cluster_node_ips: []                            # Defines an ordered l
 beegfs_ha_firewall_configure: true          # True to configure the firewall when either firewalld or
                                             #   ufw service is installed; otherwise, false.
 beegfs_ha_firewall_start_and_enable: true   # True to allow firewalld service to start.
-                                            #   This is required to create persistent port allowances. 
-                                            #   If the service is not running, then it will be started 
+                                            #   This is required to create persistent port allowances.
+                                            #   If the service is not running, then it will be started
                                             #   and stopped when the configuration is set or removed.
 beegfs_ha_firewall_allow_required_ports: true  # This allows all known and required ports.
 beegfs_ha_firewall_zone: beegfs             # Default firewall zone for BeeGFS communications.
@@ -32,8 +32,8 @@ beegfs_ha_firewall_required_ha_ports:
  - [2224, tcp]      # pcs daemon
  - [3121, tcp]      # Pacemaker Remote nodes
  - [5405, udp]      # Corosync clustering; required on all corosync nodes (needed by corosync)
-#  - [5403, udp]      # Corosync quorum - Required on the quorum device host when using a 
-                      #   quorum device with corosync-qnetd. The default value can be changed 
+#  - [5403, udp]      # Corosync quorum - Required on the quorum device host when using a
+                      #   quorum device with corosync-qnetd. The default value can be changed
                       #   with the -p option of the corosync-qnetd command.
 #  - [5404, udp]      # Corosync multicast - Required on corosync nodes if corosync is configured
                       #   for multicast UDP
@@ -78,7 +78,7 @@ beegfs_ha_alert_sender: noreply
 beegfs_ha_alert_timestamp_format: "%Y-%m-%d %H:%M:%S.%06N"
 beegfs_ha_alert_verbosity: 3  # These are the value definitions:
                               #   1) high-level node activity
-                              #   3) high-level node activity + fencing action information + resources 
+                              #   3) high-level node activity + fencing action information + resources
                               #      (filter on X-monitor)
                               #   5) high-level node activity + fencing action information + resources
 beegfs_ha_cluster_crm_config_options: {}  # Dictionary for overriding or adding to the
@@ -87,14 +87,14 @@ beegfs_ha_cluster_crm_config_defaults: # WARNING! These defaults are required fo
   symmetric-cluster: false  # Opt-in architecture
   fence-reaction: panic     # Allows cluster nodes with a fence resource to fence itself by forcing a kernel panic.
   concurrent-fencing: false # Allows cluster nodes to be fenced concurrently.
-  cluster-ipc-limit: 5500   # The maximum IPC message backlog before one cluster daemon will disconnect another. 
-                            #   This is of use in large clusters, for which a good value is the number of resources 
+  cluster-ipc-limit: 5500   # The maximum IPC message backlog before one cluster daemon will disconnect another.
+                            #   This is of use in large clusters, for which a good value is the number of resources
                             #   in the cluster multiplied by the number of nodes.
   start-failure-is-fatal: false # Whether a failure to start a resource on a particular node prevents further start
                                 #   attempts on that node?
   stonith-action: "off"     # Action the fencing agent to take when stonith-enabled is set to true
                             #   (Options: off, reboot).
-  stonith-enabled: true     # When stonith-enabled is set to false then beegfs-monitor monitoring 
+  stonith-enabled: true     # When stonith-enabled is set to false then beegfs-monitor monitoring
                             #   operation's on-fail action will be set to standby instead of fence.
 
 
@@ -118,8 +118,8 @@ beegfs_ha_force_resource_move: true   # Forces node and resource changes to migr
 
 ## BeeGFS pacemaker resource configuration defaults
 beegfs_ha_resource_agent_path: /usr/lib/ocf/resource.d/
-beegfs_ha_resource_monitor_monitor_interval: 10s    # BeeGFS monitoring service monitor interval - Time interval 
-                                                    #   from end of monitor action call to the start of another 
+beegfs_ha_resource_monitor_monitor_interval: 10s    # BeeGFS monitoring service monitor interval - Time interval
+                                                    #   from end of monitor action call to the start of another
                                                     #   monitor action call.
 beegfs_ha_resource_monitor_monitor_timeout: 120s    # BeeGFS monitoring service monitor timeout - Maximum time
                                                     #   allowed for the monitor action call before failing.
@@ -205,24 +205,24 @@ beegfs_ha_required_sysctl_entries:
   net.ipv4.conf.all.arp_filter: 1
   net.ipv4.conf.all.arp_announce: 2
   net.ipv4.conf.all.arp_ignore: 2
-  net.ipv4.neigh.default.gc_thresh1: 256  # The gc_thresh settings may need to be further 
-                                          #   increased in very large networks. Do not decrease 
+  net.ipv4.neigh.default.gc_thresh1: 256  # The gc_thresh settings may need to be further
+                                          #   increased in very large networks. Do not decrease
                                           #   without reviewing ESOLA-241.
   net.ipv4.neigh.default.gc_thresh2: 1024
   net.ipv4.neigh.default.gc_thresh3: 2048
 
 
 ## BeeGFS management service configuration
-beegfs_ha_beegfs_mgmtd_conf_path: /etc/beegfs/beegfs-mgmtd.conf   # Default BeeGFS management service 
+beegfs_ha_beegfs_mgmtd_conf_path: /etc/beegfs/beegfs-mgmtd.conf   # Default BeeGFS management service
                                                                   #   configuration file path.
-beegfs_ha_beegfs_mgmtd_conf_resource_group_options: {}            # Ansible resource group specific options. 
-                                                                  #   For BeeGFS management resource specific 
+beegfs_ha_beegfs_mgmtd_conf_resource_group_options: {}            # Ansible resource group specific options.
+                                                                  #   For BeeGFS management resource specific
                                                                   #   configuration.
 beegfs_ha_beegfs_mgmtd_conf_ha_group_options: {}                  # Ansible cluster group specific options. For all
-                                                                  #    common or expected management configuration 
+                                                                  #    common or expected management configuration
                                                                   #    defaults.
 beegfs_ha_beegfs_mgmtd_conf_default_options:                      # Default management configuration options.
-  storeAllowFirstRunInit: "false"     # The quotes prevent the value from being treated like a boolean 
+  storeAllowFirstRunInit: "false"     # The quotes prevent the value from being treated like a boolean
                                       #   which converts to True/False.
   connMgmtdPortTCP: 8008
   connMgmtdPortUDP: 8008
@@ -231,11 +231,11 @@ beegfs_ha_beegfs_mgmtd_conf_default_options:                      # Default mana
 
 
 ## BeeGFS metadata service configuration
-beegfs_ha_beegfs_meta_conf_path: /etc/beegfs/beegfs-meta.conf   # Default BeeGFS metadata service configuration 
+beegfs_ha_beegfs_meta_conf_path: /etc/beegfs/beegfs-meta.conf   # Default BeeGFS metadata service configuration
                                                                 #   file path.
 beegfs_ha_beegfs_meta_conf_resource_group_options: {}     # Ansible resource group specific options. For BeeGFS
                                                           #   metadata resource specific configuration.
-beegfs_ha_beegfs_meta_conf_ha_group_options: {}           # Ansible cluster group specific options. For all common 
+beegfs_ha_beegfs_meta_conf_ha_group_options: {}           # Ansible cluster group specific options. For all common
                                                           #   or expected metadata configuration defaults.
 beegfs_ha_beegfs_meta_conf_default_options:               # Default metadata configuration options.
   storeAllowFirstRunInit: "false"
@@ -245,21 +245,21 @@ beegfs_ha_beegfs_meta_conf_default_options:               # Default metadata con
   connMetaPortUDP: 8005
   connMgmtdPortTCP: 8008
   connMgmtdPortUDP: 8008
-  tuneNumWorkers: "0" # Default value - will result in a number of workers equal to twice the number of CPU cores. 
+  tuneNumWorkers: "0" # Default value - will result in a number of workers equal to twice the number of CPU cores.
                       # Increase to quadruple the number of cores if you are seeing poor metadata performance.
                       # Check beegfs-ctl --serverstats --nodetype=meta for high numbers under qlen or bsy.
   connUseRDMA: "true"
-  sysTargetOfflineTimeoutSecs: 900    # This is required to avoid the mgmt service prematurely 
+  sysTargetOfflineTimeoutSecs: 900    # This is required to avoid the mgmt service prematurely
                                       #   placing targets offline if the preferred meta/storage
                                       #   interface fails (ESOLA-116).
 
 
 ## BeeGFS storage service configuration
-beegfs_ha_beegfs_storage_conf_path: /etc/beegfs/beegfs-storage.conf   # Default BeeGFS storage service configuration 
+beegfs_ha_beegfs_storage_conf_path: /etc/beegfs/beegfs-storage.conf   # Default BeeGFS storage service configuration
                                                                       #  file path.
 beegfs_ha_beegfs_storage_conf_resource_group_options: {}      # Ansible resource group specific options. For BeeGFS
                                                               #   storage resource specific configuration.
-beegfs_ha_beegfs_storage_conf_ha_group_options: {}            # Ansible cluster group specific options. For all common 
+beegfs_ha_beegfs_storage_conf_ha_group_options: {}            # Ansible cluster group specific options. For all common
                                                               #   or expected storage configuration defaults.
 beegfs_ha_beegfs_storage_conf_default_options:                # Default storage configuration options.
   storeAllowFirstRunInit: "false"
@@ -349,8 +349,8 @@ beegfs_ha_uninstall_delete_storage_pools_and_host_mappings: false   # **WARNING!
                                                                     #   created for BeeGFS HA solution. Be aware that
                                                                     #   removing storage pools/volume groups and host/
                                                                     #   host group mappings will effect any volumes or
-                                                                    #   host mappings dependent on them.  
-beegfs_ha_uninstall_storage_setup: false        # Determines whether to remove configuration that allows storage to be 
+                                                                    #   host mappings dependent on them.
+beegfs_ha_uninstall_storage_setup: false        # Determines whether to remove configuration that allows storage to be
                                                 #   accessible to the BeeGFS HA node.
 beegfs_ha_uninstall_reboot: true                # Determines whether to reboot after uninstallation.
 
