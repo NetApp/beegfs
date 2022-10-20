@@ -116,7 +116,7 @@ beegfs_ha_storage_system_hostgroup_prefix: beegfs
 beegfs_ha_force_resource_move: true   # Forces node and resource changes to migrate services to preferred nodes.
 
 
-## BeeGFS pacemaker resource configuration defaults
+## BeeGFS pacemaker Resource Configuration Defaults
 beegfs_ha_resource_agent_path: /usr/lib/ocf/resource.d/
 beegfs_ha_resource_monitor_monitor_interval: 10s    # BeeGFS monitoring service monitor interval - Time interval
                                                     #   from end of monitor action call to the start of another
@@ -146,7 +146,7 @@ beegfs_ha_resource_systemd_stor_stop_timeout: 95s   # Currently meta/storage ser
 beegfs_ha_resource_systemd_migration_threshold: 3   # BeeGFS service failures before migrating away from failed node.
 
 
-## Cluster's Niceness Configuration Defaults
+## Cluster Niceness Configuration
 beegfs_ha_pacemaker_service_niceness: -12
 beegfs_ha_beegfs_mgmtd_service_niceness: -3
 beegfs_ha_beegfs_meta_service_niceness: -2
@@ -155,7 +155,7 @@ beegfs_ha_beegfs_monitor_niceness: -10
 beegfs_ha_beegfs_filesystem_niceness: -15
 
 
-## Performance tuning defaults
+## Performance Tuning Defaults
 beegfs_ha_enable_performance_tuning: false
 beegfs_ha_eseries_nvme_attributes:
   queue/scheduler: none
@@ -189,7 +189,7 @@ beegfs_ha_sysfs_devpath_device_attributes:  # Set any path attributes relative t
   kernel/mm/transparent_hugepage:
     defrag: always
 
-# Performance sysctl options
+# Performance sysctl Options
 beegfs_ha_performance_sysctl_entries:
   vm.dirty_background_ratio: 1
   vm.dirty_ratio: 75
@@ -199,7 +199,7 @@ beegfs_ha_performance_sysctl_entries:
   vm.watermark_scale_factor: 1000
 
 
-## Required sysctl options
+## Required sysctl Options
 beegfs_ha_required_sysctl_entries:
   net.ipv4.conf.all.rp_filter: 1
   net.ipv4.conf.all.arp_filter: 1
@@ -212,7 +212,7 @@ beegfs_ha_required_sysctl_entries:
   net.ipv4.neigh.default.gc_thresh3: 2048
 
 
-## BeeGFS management service configuration
+## BeeGFS Management Service Configuration
 beegfs_ha_beegfs_mgmtd_conf_path: /etc/beegfs/beegfs-mgmtd.conf   # Default BeeGFS management service
                                                                   #   configuration file path.
 beegfs_ha_beegfs_mgmtd_conf_resource_group_options: {}            # Ansible resource group specific options.
@@ -230,7 +230,7 @@ beegfs_ha_beegfs_mgmtd_conf_default_options:                      # Default mana
                                       #   offline if the preferred meta/storage interface fails (ESOLA-116).
 
 
-## BeeGFS metadata service configuration
+## BeeGFS Metadata Service Configuration
 beegfs_ha_beegfs_meta_conf_path: /etc/beegfs/beegfs-meta.conf   # Default BeeGFS metadata service configuration
                                                                 #   file path.
 beegfs_ha_beegfs_meta_conf_resource_group_options: {}     # Ansible resource group specific options. For BeeGFS
@@ -254,7 +254,7 @@ beegfs_ha_beegfs_meta_conf_default_options:               # Default metadata con
                                       #   interface fails (ESOLA-116).
 
 
-## BeeGFS storage service configuration
+## BeeGFS Storage Service Configuration
 beegfs_ha_beegfs_storage_conf_path: /etc/beegfs/beegfs-storage.conf   # Default BeeGFS storage service configuration
                                                                       #  file path.
 beegfs_ha_beegfs_storage_conf_resource_group_options: {}      # Ansible resource group specific options. For BeeGFS
@@ -279,8 +279,8 @@ beegfs_ha_beegfs_storage_conf_default_options:                # Default storage 
                                       #   interface fails (ESOLA-116).
 
 
-## Journald logging defaults
-beegfs_ha_journald_allow_changes: True      # Allows changes to be made to journald configuration changes.
+## Journald Logging Defaults
+beegfs_ha_journald_allow_changes: true      # Allows changes to be made to journald configuration changes.
 beegfs_ha_journald_options:                 # Default journald configuration options. These key-value pairs
                                             #   will be applied to the journal.conf file.
   Storage: persistent
@@ -291,7 +291,7 @@ beegfs_ha_journald_options:                 # Default journald configuration opt
   SystemMaxFiles: 2000
 
 
-## NTP configuration defaults
+## NTP Configuration Defaults
 beegfs_ha_ntp_configuration_file: /etc/ntp.conf
 beegfs_ha_chrony_configuration_file: /etc/chrony.conf
 beegfs_ha_chrony_driftfile_file: /var/lib/chrony/drift
@@ -303,7 +303,7 @@ beegfs_ha_ntp_restricts:
   - ::1
 
 
-## Pacemaker defaults
+## Pacemaker Defaults
 beegfs_ha_pacemaker_path: /etc/pacemaker/
 beegfs_ha_pacemaker_authkey_path: /etc/pacemaker/authkey
 beegfs_ha_pacemaker_config_path: /etc/sysconfig/pacemaker
@@ -311,20 +311,20 @@ beegfs_ha_pacemaker_cib_path: /var/lib/pacemaker/cib/
 beegfs_ha_pacemaker_ipc_buffer_bytes: 131072
 
 
-## Corosync defaults
+## Corosync Defaults
 beegfs_ha_corosync_authkey_path: /etc/corosync/authkey
 beegfs_ha_corosync_conf_path: /etc/corosync/corosync.conf
 beegfs_ha_corosync_log_path: /var/log/corosync.log
 
 
-## Pcs defaults
+## Pcs Defaults
 beegfs_ha_pcsd_path: /var/lib/pcsd/
 
 
-## Package version defaults
+## HA Package Version Defaults
 beegfs_ha_force_upgrade: false
 # beegfs_ha_beegfs_version:     # By default the BeeGFS version will be selected based
-                                #   on the repository url (beegfs_ha_X_repository_base_url).
+                                #   on the repository url below (beegfs_ha_X_repository_base_url).
 beegfs_ha_corosync_version: 3.1.0
 beegfs_ha_pacemaker_version: 2.0.5
 beegfs_ha_pacemaker_remote_version: 2.0.5
@@ -370,26 +370,27 @@ beegfs_ha_service_volume_configuration:
   storage:
     format_type: xfs
     format_options: "-d su=VOLUME_SEGMENT_SIZE_KBk,sw=VOLUME_STRIPE_COUNT -l version=2,su=256k"
-    mount_options: "sync,noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k"  # Note that nobarrier does not work on newer versions of XFS (ie. RHEL8)
+    # Note for mount_options: nobarrier does not work on newer versions of XFS (ie. RHEL8)
+    mount_options: "sync,noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k"
     mount_dir: /mnt/
 
-# Debian / Ubuntu repository defaults
+
+## Repository Defaults
+# Debian / Ubuntu Repository
 beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.6
 beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.6/gpg/GPG-KEY-beegfs
 
-
-# RedHat / CentOS repository defaults
+# RedHat / CentOS Repository
 beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.6/dists/rhel8
 beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.6/gpg/GPG-KEY-beegfs
 
-
-# SUSE repository defaults
+# SUSE Repository
 beegfs_ha_suse_allow_unsupported_module: true
 beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.6/dists/sles15
 beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.6/gpg/GPG-KEY-beegfs
 
 
-## Patterns Defaults
+## Pattern Defaults
 # Patterns for top-level variables collected from cluster group inventory to be added to each resource inventory.
 #   The resource inventories are generated at the beginning of the role's execution. High-availability requires
 #   resources to be available on multiple hosts these patterns help select what information is used.
