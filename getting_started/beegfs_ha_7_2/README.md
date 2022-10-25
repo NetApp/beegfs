@@ -19,7 +19,7 @@ Requirements
 
 Tested Ansible Versions
 -----------------------
-  - Ansible 5.x (ansible-core 2.12)
+  - Ansible 6.x (ansible-core 2.13)
 
 Getting Started
 ---------------

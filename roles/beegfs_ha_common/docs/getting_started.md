@@ -49,7 +49,7 @@ Ensure the following conditions are met:
 <a name="tested-ansible-versions"></a>
 ## Tested Ansible Versions
 
-Ansible 5.x (ansible-core 2.12)
+Ansible 6.x (ansible-core 2.13)
 
 <a name="getting-started-guide"></a>
 ## Getting Started Guide

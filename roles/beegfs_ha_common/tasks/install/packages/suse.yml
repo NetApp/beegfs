@@ -66,7 +66,7 @@
 
 - name: Ensure the BeeGFS infiniband package is installed (SUSE - Metadata/Storage).
   block:
-    - name: Ensure the BeeGFS infiniband package is removed when metadata/storage packages are installed/upgraded to avoid potential conflicts (SUSE - Metadata/Storage).
+    - name: Remove BeeGFS infiniband package to avoid potential conflicts (SUSE - Metadata/Storage).
       community.general.zypper:
         state: absent
         name: libbeegfs-ib
@@ -75,7 +75,8 @@
       community.general.zypper:
         state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
         name: libbeegfs-ib
-  when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and node_info["service_configuration_options"]["connUseRDMA"] | default(true)'
+  when: '("metadata" in node_info["services"] or "storage" in node_info["services"])
+    and node_info["service_configuration_options"]["connUseRDMA"] | default(true)'
   become: true
 
 - name: Ensure the numactl package is installed (SUSE - Metadata/Storage).
