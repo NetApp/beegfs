@@ -1,0 +1,31 @@
+- name: Ask user whether to allow reboots.
+  ansible.builtin.pause:
+    prompt: "
+      The variable eseries_common_allow_host_reboot has not been defined for {{ item }} and can be added to your
+      inventory to avoid this message in the future. Reboot(s) maybe required during this deployment. Would you allow
+      the cluster nodes to reboot [yes/no/ctrl-c to stop]"
+  register: allow_host_reboots_prompt
+  when: hostvars[item]["eseries_common_allow_host_reboot"] is not defined
+  loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+  run_once: true
+  delay: 0
+  retries: 10
+  until: allow_host_reboots_prompt['user_input'] | lower in ["yes", "no"]
+  tags: always
+
+- name: Set eseries_common_allow_host_reboot variable based on user responses.
+  ansible.builtin.set_fact:
+    eseries_common_allow_host_reboot: |-
+      {%- for result in allow_host_reboots_prompt["results"] if inventory_hostname == result["item"] -%}
+        {{- result["user_input"] | lower == "yes" -}}
+      {%- endfor -%}
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and eseries_common_allow_host_reboot is not defined
+  tags: always
+
+- name: Ensure BeeGFS HA cluster is installed.
+  ansible.builtin.import_tasks: install/main.yml
+  when: not beegfs_ha_uninstall
+
+- name: Ensure BeeGFS HA cluster is uninstalled.
+  ansible.builtin.import_tasks: uninstall/main.yml
+  when: beegfs_ha_uninstall

@@ -24,7 +24,7 @@ The `beegfs_ha_chrony_enabled` variable is used to configure the Chrony service.
 for the operating systems that support it, otherwise it is set to false. See the OS specific defaults under the `vars` 
 folder (i.e., centos_8.yml).
 
-The template used to generate the /etc/chrony.keys file can be found at `roles/beegfs_ha_7_2/templates/common/chrony_conf.j2`.
+The template used to generate the /etc/chrony.keys file can be found at `roles/beegfs_ha_common/templates/common/chrony_conf.j2`.
 Depending on the security policies of your organization, you way wish to adjust the default configuration by overriding 
 the template (`chrony_conf.j2`). See [Override Default Templates](override_default_templates.md) for instructions.
 
@@ -38,7 +38,7 @@ The `beegfs_ha_ntp_enabled` variable is used to configure the ntpd service. The 
 for the operating systems that support it, otherwise it is set to false. See the OS specific defaults under the `vars`
 folder (i.e., centos_7.yml).
 
-The template used to generate the /etc/ntp.conf file can be found at `roles/beegfs_ha_7_2/templates/common/ntp_conf.j2`.
+The template used to generate the /etc/ntp.conf file can be found at `roles/beegfs_ha_common/templates/common/ntp_conf.j2`.
 Depending on the security policies of your organization, you way wish to adjust the default configuration by overriding
 the template (`ntp_conf.j2`). See [Override Default Templates](override_default_templates.md) for instructions.
 

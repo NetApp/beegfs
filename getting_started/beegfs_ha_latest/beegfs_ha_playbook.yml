@@ -6,4 +6,4 @@
   tasks:
     - name: Ensure BeeGFS HA cluster is setup.
       ansible.builtin.import_role:
-        name: beegfs_ha_7_2
+        name: beegfs_ha_7_3

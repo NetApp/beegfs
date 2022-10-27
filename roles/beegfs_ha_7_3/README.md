@@ -1,10 +1,9 @@
-netappeseries.beegfs.beegfs_ha_7_2 Role (Deprecated)
-====================================================
+netappeseries.beegfs.beegfs_ha_7_3 Role
+=======================================
 This role is a complete end-to-end deployment of the [NetApp E-Series BeeGFS HA (High-Availability) solution](https://blog.netapp.com/high-availability-beegfs). 
 This role utilizes the NetApp E-Series SANtricity, Host, and BeeGFS collections which allows users to not only configure 
 the BeeGFS file system with HA but also provision, map storage and ensure the cluster storage is ready for use.
 
-Note that this role has been deprecated and will be removed in a future release. Please upgrade to beegfs_ha_7_3 at your earliest convenience.
 
 ## Table of Contents
 

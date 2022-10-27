@@ -377,17 +377,17 @@ beegfs_ha_service_volume_configuration:
 
 ## Repository Defaults
 # Debian / Ubuntu Repository
-beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.8
-beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.8/gpg/GPG-KEY-beegfs
+beegfs_ha_debian_repository_base_url: https://www.beegfs.io/release/beegfs_7.3.2
+beegfs_ha_debian_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.3.2/gpg/GPG-KEY-beegfs
 
 # RedHat / CentOS Repository
-beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.8/dists/rhel8
-beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.8/gpg/GPG-KEY-beegfs
+beegfs_ha_rhel_repository_base_url: https://www.beegfs.io/release/beegfs_7.3.2/dists/rhel8
+beegfs_ha_rhel_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.3.2/gpg/GPG-KEY-beegfs
 
 # SUSE Repository
 beegfs_ha_suse_allow_unsupported_module: true
-beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7.2.8/dists/sles15
-beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.2.8/gpg/GPG-KEY-beegfs
+beegfs_ha_suse_repository_base_url: https://www.beegfs.io/release/beegfs_7.3.2/dists/sles15
+beegfs_ha_suse_repository_gpgkey: https://www.beegfs.io/release/beegfs_7.3.2/gpg/GPG-KEY-beegfs
 
 
 ## Pattern Defaults

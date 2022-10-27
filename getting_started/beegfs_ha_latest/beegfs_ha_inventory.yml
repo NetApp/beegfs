@@ -20,7 +20,7 @@ all:
         # Notes:
         #   - The resource group's name is used to generate the resource's floating IP labels which can be a maximum of 15 characters and are in the 
         #         form <iface>:<resource_group_name><interface_index> (i.e. i1a:stor_01_1).
-        #     * Step 3 in beegfs_ha_7_2 readme will prompt you to select the BeeGFS service (management, metadata, storage) you'd like the resource group to
+        #     * Step 3 in beegfs_ha_7_3 readme will prompt you to select the BeeGFS service (management, metadata, storage) you'd like the resource group to
         #         manage. Note that there can only be one management group.
         #   - The host names are used for the BeeGFS HA cluster node names (i.e. node_mm1, node_mm2). These names can be changed to whatever you'd like the nodes to be named.
         #   - The order of the cluster nodes in the hosts dictionary determines the resource's preference for the host, starting with the highest preference.

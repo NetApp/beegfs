@@ -66,10 +66,18 @@
   become: true
 
 - name: Ensure the BeeGFS infiniband package is installed (Debian/Ubuntu - Metadata/Storage).
-  ansible.builtin.apt:
-    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
-    name: libbeegfs-ib
-  when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and node_info["service_configuration_options"]["connUseRDMA"] | default(true)'
+  block:
+    - name: Remove BeeGFS infiniband package to avoid potential conflicts (Debian/Ubuntu - Metadata/Storage).
+      ansible.builtin.apt:
+        state: absent
+        name: libbeegfs-ib
+      when: beegfs_meta_package['changed'] or beegfs_storage_package['changed']
+    - name: Ensure the BeeGFS infiniband package is installed (Debian/Ubuntu - Metadata/Storage).
+      ansible.builtin.apt:
+        state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+        name: libbeegfs-ib
+  when: '("metadata" in node_info["services"] or "storage" in node_info["services"])
+    and node_info["service_configuration_options"]["connUseRDMA"] | default(true)'
   become: true
 
 - name: Ensure the numactl package is installed (Debian/Ubuntu - Metadata/Storage).
