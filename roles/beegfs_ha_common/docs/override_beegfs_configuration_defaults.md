@@ -26,7 +26,7 @@ Refer to BeeGFS documentation for more information on the different configuratio
 cluster.
 
 The locations of each configuration files (management, metadata, storage) are denoted using the below variables in
-`beegfs_ha_7_3/defaults/main.yml`:
+`beegfs_ha_<VERSION>/defaults/main.yml`:
 - `beegfs_ha_beegfs_mgmtd_conf_path`
 - `beegfs_ha_beegfs_meta_conf_path`
 - `beegfs_ha_beegfs_storage_conf_path`
@@ -127,7 +127,7 @@ before importing the BeeGFS HA role:
 
     - name: Verify the BeeGFS HA cluster is properly deployed.
       import_role:
-        name: beegfs_ha_7_3
+        name: beegfs_ha_<VERSION>
 ```
 
 See the [HA Group Options Examples](#ha-group-options-example) section above for how to enable the BeeGFS services

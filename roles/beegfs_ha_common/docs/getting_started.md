@@ -58,9 +58,9 @@ Build the inventory and playbook files for on your BeeGFS cluster requirements. 
 For security reasons these passwords should not be stored in plain text and, instead, should use [Ansible Vault](https://docs.ansible.com/ansible/latest/user_guide/vault.html).
 
 There are two ways to build the necessary files:
-1. Define the inventory and run the `create_inventory_structure.yml` playbook from the `getting_started/beegfs_ha_7_3` folder. This is the recommended 
+1. Define the inventory and run the `create_inventory_structure.yml` playbook from the `getting_started/beegfs_ha_latest` folder. This is the recommended 
 way to get started with the BeeGFS HA role.
-   * Refer to the readme from [beegfs_ha_7_3 getting_started project](../../../getting_started/beegfs_ha_7_3/README.md) 
+   * Refer to the readme from [beegfs_ha_latest getting_started project](../../../getting_started/beegfs_ha_latest/README.md) 
      for details. 
 2. Create the inventory and playbook using the examples and variables found in the below sections.
 
@@ -90,7 +90,7 @@ This file would be created as `beegfs_ha_playbook.yml`:
       tasks:
         - name: Ensure BeeGFS HA cluster is setup.
           ansible.builtin.import_role:  # import_role is required for tag availability.
-            name: beegfs_ha_7_3
+            name: beegfs_ha_<VERSION>
 
 <a name="example-inventory-file"></a>
 ### Example Inventory File

@@ -1,5 +1,5 @@
-Getting Started Project for netappeseries.beegfs.beegfs_ha_7_2 Role 
-=========================================================
+Getting Started Project for latest netappeseries.beegfs.beegfs_ha_X Roles
+=========================================================================
 The files in this directory expedite getting started with the role by having users fill in a few details about their 
 environment in the `beegfs_ha_inventory.yml` file. This is run against the `create_inventory_structure.yml` playbook 
 which will ask for details about the desired deployment and generate a full skeleton inventory. Lastly users review the 
@@ -23,11 +23,11 @@ Tested Ansible Versions
 
 Getting Started
 ---------------
-Step 1) Get the `beegfs_ha_7_2` example directory to you Ansible control node.
+Step 1) Get the `beegfs_ha_<VERSION>` example directory to you Ansible control node.
 
     mkdir <your_project_directory>
     cd <your_project_directory>
-    git clone -b release-3.1.0 --single-branch https://github.com/netappeseries/beegfs.git && cp -r beegfs/getting_started/beegfs_ha_7_2/* . && rm -rf beegfs
+    git clone -b release-3.1.0 --single-branch https://github.com/netappeseries/beegfs.git && cp -r beegfs/getting_started/beegfs_ha_latest/* . && rm -rf beegfs
 
 Step 2) Modify the `beegfs_ha_inventory.yml` file. In this step, you'll define BeeGFS HA cluster resource groups, and 
 storage targets.
@@ -86,7 +86,7 @@ storage for BeeGFS management and metadata services.
         common_volume_configuration:               # Any option that can be specified at the volume level can be generalized here at the storage pool level.
         volumes:                                   # List of volumes associated the storage pool.
           - state:                                 # Specifies whether the volume should exist (present, absent)
-            name:                                  # DO NOT SPECIFY! THIS IS WILL BE GENERATED AT RUNTIME BY THE beegfs_ha_7_2 ROLE.
+            name:                                  # DO NOT SPECIFY! THIS IS WILL BE GENERATED AT RUNTIME BY THE beegfs_ha_X ROLE.
             host:                                  # host or host group for the volume should be mapped to.
             host_type:                             # Only required when using something other than Linux kernel 3.10 or later with DM-MP (Linux DM-MP),
                                                    #    non-clustered Windows (Windows), or the storage system default host type is incorrect.
