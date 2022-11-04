@@ -122,6 +122,7 @@
       {%- endif -%}
       {{- item["service_configuration_options"] | combine(required_options) -}}
     mode: "0644"
+    timestamp_backup: true
   loop: "{{ node_info['storage'] }}"
   register: storage_service_conf
   when: inventory_hostname == item['preferred_node_order'][0]

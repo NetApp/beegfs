@@ -100,6 +100,7 @@
         dest: "{{ mgmt_config_path }}beegfs-mgmtd.conf"
         options: "{{ item['service_configuration_options'] | combine(beegfs_ha_beegfs_mgmtd_conf_required_options) }}"
         mode: "0644"
+        timestamp_backup: true
       loop: "{{ node_info['management'] }}"
       register: mgmtd_service_conf
 
