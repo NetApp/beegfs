@@ -1,0 +1,5 @@
+- name: Stop pacemaker and corosync on all cluster nodes.
+  ansible.builtin.include_tasks: common/stop/all.yml
+
+- name: Start corosync and pacemaker on all cluster nodes.
+  ansible.builtin.include_tasks: common/start/all.yml

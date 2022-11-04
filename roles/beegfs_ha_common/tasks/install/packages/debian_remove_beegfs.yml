@@ -1,0 +1,27 @@
+- name: Ensure the BeeGFS management package is uninstalled (Debian/Ubuntu - Management).
+  ansible.builtin.apt:
+    state: absent
+    name: beegfs-mgmtd
+  when: '"management" in node_info["services"]'
+  become: true
+
+- name: Ensure the BeeGFS metadata package is uninstalled (Debian/Ubuntu - Metadata).
+  ansible.builtin.apt:
+    state: absent
+    name: beegfs-meta
+  when: '"metadata" in node_info["services"]'
+  become: true
+
+- name: Ensure the BeeGFS storage package is uninstalled (Debian/Ubuntu - Storage).
+  ansible.builtin.apt:
+    state: absent
+    name: beegfs-storage
+  when: '"storage" in node_info["services"]'
+  become: true
+
+- name: Ensure the BeeGFS infiniband package is uninstalled (Debian/Ubuntu - Metadata/Storage).
+  ansible.builtin.apt:
+    state: absent
+    name: libbeegfs-ib
+  when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and node_info["service_configuration_options"]["connUseRDMA"] | default(true)'
+  become: true

@@ -3,6 +3,7 @@
   register: maintenance_query
   failed_when: false
   changed_when: false
+  delegate_to: "{{ cluster_automation_node }}"
   become: true
 
 - name: Move {{ cluster_node }} out of maintenance mode.
@@ -15,6 +16,7 @@
       ansible.builtin.command: "crm_resource --wait"
       changed_when: false
       ignore_errors: true
-      timeout: 30
+      timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
   become: true
-  when: maintenance_query["stdout"] | regex_search(".*value=(true|on|y|1)", ignorecase=true)
+  delegate_to: "{{ cluster_automation_node }}"
+  when: maintenance_query["stdout"] | regex_search(beegfs_ha_common_pacemaker_true_regex, ignorecase=true)

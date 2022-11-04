@@ -11,7 +11,8 @@
       ansible.builtin.command: "crm_resource --wait"
       changed_when: false
       ignore_errors: true
-      timeout: 30
+      timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
+  delegate_to: "{{ cluster_automation_node }}"
   become: true
 
 # Move resources back to their preferred nodes.
@@ -19,6 +20,7 @@
   ansible.builtin.command: "crm_resource --locate --resource {{ item['key'] }}-monitor --quiet"
   register: resource_location
   changed_when: false
+  delegate_to: "{{ cluster_automation_node }}"
   become: true
 
 - name: "Move {{ item['key'] }}-monitor resource back to {{ item['value'] }}."
@@ -30,9 +32,10 @@
       ansible.builtin.command: "crm_resource --wait"
       changed_when: false
       ignore_errors: true
-      timeout: 30
+      timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
 
     - name : "Clear resource move constraints."
       ansible.builtin.command: "crm_resource --resource {{ item['key'] }}-monitor --clear"
   when: resource_location['stdout'] != item['value']
+  delegate_to: "{{ cluster_automation_node }}"
   become: true

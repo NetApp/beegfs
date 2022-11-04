@@ -1,0 +1,13 @@
+- name: "Stop cluster on {{ cluster_node }}."
+  block:
+    - name: "Stop pacemaker on {{ cluster_node }}."
+      ansible.builtin.systemd:
+        state: stopped
+        name: pacemaker
+
+    - name: "Stop corosync on {{ cluster_node }}."
+      ansible.builtin.systemd:
+        state: stopped
+        name: corosync
+  delegate_to: "{{ cluster_node }}"
+  become: true

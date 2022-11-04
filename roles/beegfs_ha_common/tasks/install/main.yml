@@ -55,7 +55,7 @@
 - name: Ensure BeeGFS HA cluster nodes are in maintenance mode if cluster is available.
   block:
     - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
-      ansible.builtin.include_tasks: ../common/maintenance/set.yml
+      ansible.builtin.include_tasks: common/maintenance/set.yml
   when: inventory_hostname == cluster_automation_node
   tags:
     - beegfs_ha_configure_resource
@@ -126,6 +126,29 @@
   tags:
     - beegfs_ha_configure_resource
     - beegfs_ha_configure
+    - beegfs_ha
+
+- name: Force expected BeeGFS and HA packages to be installed
+  block:
+    - name: Attempt to return services to their preferred BeeGFS HA cluster nodes
+      ansible.builtin.include_tasks: services/restore_services.yml
+
+    - name: Verify all services are running on their preferred node
+      ansible.builtin.include_tasks: validate_resources.yml
+
+    # Execute all included tasks one cluster node at a time serially
+    - name: Force BeeGFS packages upgrade
+      ansible.builtin.include_tasks: packages_force.yml
+      loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+      loop_control:
+        loop_var: force_upgrade_cluster_node
+      when: inventory_hostname == force_upgrade_cluster_node
+
+    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+      ansible.builtin.include_tasks: common/maintenance/set.yml
+  when: beegfs_ha_force_upgrade
+  tags:
+    - beegfs_ha_package
     - beegfs_ha
 
 - name: Ensure expected BeeGFS and HA packages are installed
@@ -226,74 +249,8 @@
 
 - name: Attempt to return cluster to an optimal state.
   block:
-    - name: Determine whether fencing is enabled.
-      ansible.builtin.command: crm_attribute --name stonith-enabled --quiet
-      register: stonith_enabled
-      changed_when: false
-
-    - name: Disable fencing until cluster is fully started.
-      ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update False
-      when: stonith_enabled["stdout"] | bool
-
-    - name: Wait for cluster to stabilize.
-      ansible.builtin.command: crm_resource --wait
-      changed_when: false
-      ignore_errors: true
-      timeout: 30
-
-    - name: Cleanup cluster resource failures.
-      ansible.builtin.command: crm_resource --cleanup
-      changed_when: false
-
-    - name: Wait for cluster to stabilize.
-      ansible.builtin.command: crm_resource --wait
-      changed_when: false
-      ignore_errors: true
-      timeout: 30
-
-    - name: Ensure BeeGFS HA cluster nodes are out of standby mode.
-      ansible.builtin.include_tasks: ../common/standby/clear.yml
-
-    - name: Ensure BeeGFS HA cluster nodes are out of maintenance mode.
-      ansible.builtin.include_tasks: ../common/maintenance/clear.yml
-
-    - name: "Wait for cluster nodes to come online"
-      ansible.builtin.command: "crm_mon -1"
-      changed_when: false
-      loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
-      register: cluster_node_status
-      delay: 1
-      retries: 30
-      until: 'cluster_node_status["stdout"] | regex_search(".*Online: \[.*" ~ item ~ ".*\]", ignorecase=True)'
-      become: true
-
-    - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
-      block:
-        - name: Determine current location of all cluster resources.
-          ansible.builtin.command: crm_mon -r1
-          register: resource_locations
-          changed_when: false
-
-        - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
-          ansible.builtin.include_tasks: move.yml
-          loop: "{{ lookup('ansible.builtin.dict', move_resources, wantlist=true) }}"
-          vars:
-            move_resources: |-
-              {%- set resources = {} -%}
-              {%- for host in groups[beegfs_ha_ansible_cluster_group] if "node_info" in (hostvars[host].keys() | list) -%}
-                {%- set node_info = hostvars[host]["node_info"] -%}
-                {%- for service in node_info["services"] -%}
-                  {%- for resource_group_info in node_info[service] if host == resource_group_info["preferred_node_order"][0] and (resource_group_info["resource_group"] not in resources.keys() | list) -%}
-                    {%- for line in resource_locations["stdout_lines"] if line | regex_search(resource_group_info["resource_group"] ~ "-service.*" ~ host) -%}
-                      {#- DO NOTHING -#}
-                    {%- else -%}
-                      {%- if resources.update({resource_group_info["resource_group"]: resource_group_info["preferred_node_order"][0]}) -%}{%- endif -%}
-                    {%- endfor -%}
-                  {%- endfor -%}
-                {%- endfor -%}
-              {%- endfor -%}
-              {{- resources -}}
-      when: beegfs_ha_force_resource_move
+    - name: Attempt to return services to their preferred BeeGFS HA cluster nodes
+      ansible.builtin.include_tasks: services/restore_services.yml
 
     - name: Enable fencing since cluster is fully started.
       ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update True
@@ -310,15 +267,8 @@
   block:
     - name: Retry until resources are all started
       ansible.builtin.include_tasks: validate_resources.yml
-
-    - name: Warn when resources are not all started.
-      ansible.builtin.fail:
-        msg: "Warning! The following cluster resources are not running: {{ resources_not_started }}"
-      when: resources_not_started | length > 0
-      ignore_errors: true
-      run_once: true
-  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and ("management" in node_info["services"] or
-                                                                            "metadata" in node_info["services"] or "storage" in node_info["services"])'
+  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] 
+    and ("management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"])'
   tags:
     - beegfs_ha_validation
     - beegfs_ha_configure_resource
