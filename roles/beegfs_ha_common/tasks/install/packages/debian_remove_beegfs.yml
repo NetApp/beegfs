@@ -23,5 +23,6 @@
   ansible.builtin.apt:
     state: absent
     name: libbeegfs-ib
-  when: '("metadata" in node_info["services"] or "storage" in node_info["services"]) and node_info["service_configuration_options"]["connUseRDMA"] | default(true)'
+  when: '("metadata" in node_info["services"] or "storage" in node_info["services"])
+         and node_info["service_configuration_options"]["connUseRDMA"] | default(true)'
   become: true

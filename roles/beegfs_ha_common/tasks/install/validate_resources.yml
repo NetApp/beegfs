@@ -33,12 +33,11 @@
       delegate_to: "{{ cluster_automation_node }}"
       become: true
 
-    - name: Retry until resources are all started
+    - name: Validate resources are all started.
       ansible.builtin.include_tasks: install/validate_resources.yml
       vars:
         cluster_restart_complete: true
   when: resources_not_started | length > 0 and not cluster_restart_complete | default(false)
-
 
 - name: Fail when resources are not running.
   ansible.builtin.fail:

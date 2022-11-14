@@ -1,8 +1,9 @@
-# Steps to foricibly upgrade force_upgrade_cluster_node node
+# Steps to forcibly upgrade force_upgrade_cluster_node node
 # 1) Place node into standby.
 # 2) Uninstall BeeGFS packages.
 # 3) Install BeeGFS packages.
-# 4) 
+# 4) Place node out of standby and move services back.
+# 5) Verify cluster resources are on their preferred node.
 - name: "Move {{ force_upgrade_cluster_node }} into standby."
   ansible.builtin.include_tasks: common/standby/set_node.yml
   vars:
@@ -10,7 +11,7 @@
 
 - name: "Reinstall BeeGFS packages on {{ force_upgrade_cluster_node }}."
   block:
-    - name: Uninstall BeeGFS packages on {{ force_upgrade_cluster_node }}."
+    - name: "Uninstall BeeGFS packages on {{ force_upgrade_cluster_node }}."
       ansible.builtin.include_tasks: "packages/{{ hostvars[force_upgrade_cluster_node]['ansible_os_family'] | lower }}_remove_beegfs.yml"
 
     - name: Install BeeGFS packages on {{ force_upgrade_cluster_node }}."

@@ -128,7 +128,7 @@
     - beegfs_ha_configure
     - beegfs_ha
 
-- name: Force expected BeeGFS and HA packages to be installed
+- name: Force expected BeeGFS and HA packages to be installed.
   block:
     - name: Attempt to return services to their preferred BeeGFS HA cluster nodes
       ansible.builtin.include_tasks: services/restore_services.yml
@@ -267,7 +267,7 @@
   block:
     - name: Retry until resources are all started
       ansible.builtin.include_tasks: validate_resources.yml
-  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group] 
+  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
     and ("management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"])'
   tags:
     - beegfs_ha_validation

@@ -19,8 +19,9 @@ Note that this role has been deprecated and will be removed in a future release.
 9. [Override Default Templates](../beegfs_ha_common/docs/override_default_templates.md)
 10. [NTP](../beegfs_ha_common/docs/ntp.md)
 11. [Performance Tuning](../beegfs_ha_common/docs/performance_tuning.md)
-12. [Uninstall](../beegfs_ha_common/docs/uninstall.md)
-13. [Maintenance](../beegfs_ha_common/docs/maintenance.md)
+12. [Upgrade](../beegfs_ha_common/docs/upgrade.md)
+13. [Uninstall](../beegfs_ha_common/docs/uninstall.md)
+14. [Maintenance](../beegfs_ha_common/docs/maintenance.md)
 
 ### Dependencies
 ------------

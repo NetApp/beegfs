@@ -41,7 +41,7 @@
     - name: Ensure BeeGFS HA cluster nodes are out of maintenance mode.
       ansible.builtin.include_tasks: common/maintenance/clear.yml
 
-    - name: "Wait for cluster nodes to come online"
+    - name: Wait for cluster nodes to come online.
       ansible.builtin.command: "crm_mon -1"
       changed_when: false
       loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
@@ -68,11 +68,16 @@
               {%- for host in groups[beegfs_ha_ansible_cluster_group] if "node_info" in (hostvars[host].keys() | list) -%}
                 {%- set node_info = hostvars[host]["node_info"] -%}
                 {%- for service in node_info["services"] -%}
-                  {%- for resource_group_info in node_info[service] if host == resource_group_info["preferred_node_order"][0] and (resource_group_info["resource_group"] not in resources.keys() | list) -%}
-                    {%- for line in resource_locations["stdout_lines"] if line | regex_search(resource_group_info["resource_group"] ~ "-service.*" ~ host) -%}
+                  {%- for resource_group_info in node_info[service]
+                        if host == resource_group_info["preferred_node_order"][0] and
+                          (resource_group_info["resource_group"] not in resources.keys() | list) -%}
+                    {%- for line in resource_locations["stdout_lines"]
+                          if line | regex_search(resource_group_info["resource_group"] ~ "-service.*" ~ host) -%}
                       {#- DO NOTHING -#}
                     {%- else -%}
-                      {%- if resources.update({resource_group_info["resource_group"]: resource_group_info["preferred_node_order"][0]}) -%}{%- endif -%}
+                      {%- if resources.update({
+                            resource_group_info["resource_group"]: resource_group_info["preferred_node_order"][0] }) -%}
+                      {%- endif -%}
                     {%- endfor -%}
                   {%- endfor -%}
                 {%- endfor -%}

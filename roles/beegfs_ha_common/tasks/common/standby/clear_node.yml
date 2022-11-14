@@ -6,7 +6,7 @@
   delegate_to: "{{ cluster_automation_node }}"
   become: true
 
-- name: Move {{ cluster_node }} out of standby.
+- name: "Move {{ cluster_node }} out of standby."
   block:
     - name: "Clear standby for {{ cluster_node }}."
       ansible.builtin.command: "crm_standby --node {{ cluster_node }} --delete"
