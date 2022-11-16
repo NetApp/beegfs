@@ -1,0 +1,13 @@
+- name: "Start cluster on {{ cluster_node }}."
+  block:
+    - name: "Start corosync on {{ cluster_node }}."
+      ansible.builtin.systemd:
+        state: started
+        name: corosync
+
+    - name: "Start pacemaker on {{ cluster_node }}."
+      ansible.builtin.systemd:
+        state: started
+        name: pacemaker
+  become: true
+  delegate_to: "{{ cluster_node }}"

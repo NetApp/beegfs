@@ -6,17 +6,17 @@
   delegate_to: "{{ cluster_automation_node }}"
   become: true
 
-- name: "Move {{ cluster_node }} out of standby."
+- name: "Move {{ cluster_node }} into standby."
   block:
-    - name: "Clear standby for {{ cluster_node }}."
-      ansible.builtin.command: "crm_standby --node {{ cluster_node }} --delete"
+    - name: "Set standby for {{ cluster_node }}."
+      ansible.builtin.command: "crm_standby --node {{ cluster_node }} --update true"
       changed_when: true
 
     - name: "Wait for {{ cluster_node }} changes to stabilize."
       ansible.builtin.command: "crm_resource --wait"
       changed_when: false
-      ignore_errors: true
+      ignore_errors: true  # ignore error is intentional to indicate when timeout occurred
       timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
-  when: standby_query["stdout"] | regex_search(beegfs_ha_common_pacemaker_true_regex, ignorecase=true)
+  when: standby_query["stdout"] | regex_search(beegfs_ha_common_pacemaker_false_regex, ignorecase=true)
   delegate_to: "{{ cluster_automation_node }}"
   become: true

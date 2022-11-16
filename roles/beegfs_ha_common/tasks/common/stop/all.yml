@@ -1,0 +1,6 @@
+- name: Stop all cluster nodes.
+  ansible.builtin.include_tasks: node.yml
+  loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+  loop_control:
+    loop_var: cluster_node
+  run_once: true

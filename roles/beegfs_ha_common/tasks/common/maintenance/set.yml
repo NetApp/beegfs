@@ -3,6 +3,7 @@
   register: crm_mon_status
   failed_when: false
   changed_when: false
+  delegate_to: "{{ cluster_automation_node }}"
   become: true
 
 - name: Ensure cluster nodes are in maintenance mode.
@@ -36,6 +37,7 @@
           register: maintenance_mode_query
           failed_when: false
           changed_when: false
+          delegate_to: "{{ cluster_automation_node }}"
 
         - name: Move cluster nodes into maintenance mode.
           block:
@@ -49,8 +51,9 @@
               ansible.builtin.command: "crm_resource --wait"
               changed_when: false
               ignore_errors: true
-              timeout: 30
-          when: maintenance_mode_query["stdout"] | regex_search(".*value=(?!true|on|y|1)", ignorecase=true)
+              timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
+              delegate_to: "{{ cluster_automation_node }}"
+          when: maintenance_mode_query["stdout"] | regex_search(beegfs_ha_common_pacemaker_false_regex, ignorecase=true)
       when: crm_mon_status["rc"] == 0
       run_once: true
 
@@ -59,6 +62,7 @@
         - name: Move cluster into maintenance mode.
           ansible.builtin.command: "crm_attribute --name maintenance-mode --update true"
           register: global_maintenance_mode
+          delegate_to: "{{ cluster_automation_node }}"
 
         - name: Check whether cluster was placed in maintenance mode.
           ansible.builtin.pause:
@@ -69,7 +73,8 @@
           ansible.builtin.command: "crm_resource --wait"
           changed_when: false
           ignore_errors: true
-          timeout: 30
+          timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
+          delegate_to: "{{ cluster_automation_node }}"
       when: crm_mon_status["rc"] != 0
       run_once: true
   when: 'crm_mon_status["rc"] != 2 or crm_mon_status["stderr"] | regex_search("crm_mon.*", ignorecase=true)'

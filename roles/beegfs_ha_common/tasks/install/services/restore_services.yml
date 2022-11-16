@@ -1,0 +1,88 @@
+# Order of tasks
+# 1) Ensure fencing is disabled
+#     Disabled fencing will persist until the end of the automation in case the config is not in a good state.
+# 2) Clear standby
+# 3) Clear maintenance
+# 4) Wait until all cluster nodes are online
+# 5) Move resources back to preferred node one at a time.
+- name: Ensure all resources are running on their preferred node with fencing disabled.
+  block:
+    - name: Ensure cluster fencing is disabled.
+      block:
+        - name: Determine whether fencing is enabled.
+          ansible.builtin.command: crm_attribute --name stonith-enabled --quiet
+          register: stonith_enabled
+          changed_when: false
+
+        - name: Disable fencing until cluster is fully started.
+          ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update False
+          when: stonith_enabled["stdout"] | bool
+
+        - name: Wait for cluster to stabilize.
+          ansible.builtin.command: crm_resource --wait
+          changed_when: false
+          ignore_errors: true
+          timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
+
+        - name: Cleanup cluster resource failures.
+          ansible.builtin.command: crm_resource --cleanup
+          changed_when: false
+
+        - name: Wait for cluster to stabilize.
+          ansible.builtin.command: crm_resource --wait
+          changed_when: false
+          ignore_errors: true
+          timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
+      delegate_to: "{{ cluster_automation_node }}"
+
+    - name: Ensure BeeGFS HA cluster nodes are out of standby mode.
+      ansible.builtin.include_tasks: common/standby/clear.yml
+
+    - name: Ensure BeeGFS HA cluster nodes are out of maintenance mode.
+      ansible.builtin.include_tasks: common/maintenance/clear.yml
+
+    - name: Wait for cluster nodes to come online.
+      ansible.builtin.command: "crm_mon -1"
+      changed_when: false
+      loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+      register: cluster_node_status
+      delay: 1
+      retries: 30
+      until: 'cluster_node_status["stdout"] | regex_search(".*Online: \[.*" ~ item ~ ".*\]", ignorecase=True)'
+      delegate_to: "{{ cluster_automation_node }}"
+
+    - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
+      block:
+        - name: Determine current location of all cluster resources.
+          ansible.builtin.command: crm_mon -r1
+          register: resource_locations
+          changed_when: false
+          delegate_to: "{{ cluster_automation_node }}"
+
+        - name: Attempt to return services to their preferred BeeGFS HA cluster nodes one at a time.
+          ansible.builtin.include_tasks: install/services/move_service.yml
+          loop: "{{ lookup('ansible.builtin.dict', move_resources, wantlist=true) }}"
+          vars:
+            move_resources: |-
+              {%- set resources = {} -%}
+              {%- for host in groups[beegfs_ha_ansible_cluster_group] if "node_info" in (hostvars[host].keys() | list) -%}
+                {%- set node_info = hostvars[host]["node_info"] -%}
+                {%- for service in node_info["services"] -%}
+                  {%- for resource_group_info in node_info[service]
+                        if host == resource_group_info["preferred_node_order"][0] and
+                          (resource_group_info["resource_group"] not in resources.keys() | list) -%}
+                    {%- for line in resource_locations["stdout_lines"]
+                          if line | regex_search(resource_group_info["resource_group"] ~ "-service.*" ~ host) -%}
+                      {#- DO NOTHING -#}
+                    {%- else -%}
+                      {%- if resources.update({
+                            resource_group_info["resource_group"]: resource_group_info["preferred_node_order"][0] }) -%}
+                      {%- endif -%}
+                    {%- endfor -%}
+                  {%- endfor -%}
+                {%- endfor -%}
+              {%- endfor -%}
+              {{- resources -}}
+      when: beegfs_ha_force_resource_move
+  become: true
+  run_once: true
