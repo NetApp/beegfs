@@ -1,4 +1,1 @@
-# Prefix all variables with 'default_'. The variable without the 'default_' prefix will be set when it is not defined.
-default_beegfs_ha_management_tool: pcs
-default_beegfs_ha_ntp_enabled: false
-default_beegfs_ha_chrony_enabled: true
+redhat_8.yml
