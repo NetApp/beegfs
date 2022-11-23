@@ -1,0 +1,14 @@
+[Unit]
+Description=BeeGFS Helperd
+Documentation=http://www.beegfs.com/content/documentation/
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/etc/beegfs/beegfs-helperd.sh start
+ExecStop=/etc/beegfs/beegfs-helperd.sh stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

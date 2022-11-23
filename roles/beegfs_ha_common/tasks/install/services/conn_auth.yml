@@ -1,0 +1,58 @@
+# This file configures BeeGFS connection authentication
+
+- name: Ensure BeeGFS connection authentication file exists.
+  become: true
+  vars:
+    conn_auth_src: |-
+      {%- if beegfs_ha_conn_auth_src == beegfs_ha_conn_auth_src | realpath -%}
+        {{- playbook_dir + '/' + beegfs_ha_conn_auth_src }}
+      {%- else -%}
+        {{- beegfs_ha_conn_auth_src }}
+      {%- endif -%}
+  block:
+
+    - name: Check for BeeGFS connection authentication file on Ansible control node.
+      delegate_to: localhost
+      run_once: true
+      no_log: true
+      block:
+        - name: Ensure the directory exists for BeeGFS connection authentication file on Ansible control node.
+          ansible.builtin.file:
+            state: directory
+            path: "{{ conn_auth_src | dirname }}"
+
+        - name: Get stats for BeeGFS connection authentication file on Ansible control node.
+          ansible.builtin.stat:
+            path: "{{ conn_auth_src }}"
+          register: conn_auth_src_stat
+
+        - name: Determine the BeeGFS connection authentication secret on the Ansible control node.
+          ansible.builtin.command: "cat {{ conn_auth_src }}"
+          register: conn_auth_secret
+          changed_when: false
+          when: conn_auth_src_stat["stat"]["exists"]
+
+        - name: Generate secret for BeeGFS connection authentication file.
+          ansible.builtin.command: "dd if=/dev/random bs=128 count=1"
+          register: random_conn_auth_secret
+          changed_when: false
+
+        - name: Generate BeeGFS connection authentication file on Ansible control node.
+          ansible.builtin.copy:
+            content: "{{ secret }}"
+            dest: "{{ conn_auth_src }}"
+            mode: "0400"
+          vars:
+            secret: |-
+              {%- if beegfs_ha_conn_auth_secret -%}
+                {{- beegfs_ha_conn_auth_secret -}}
+              {%- elif conn_auth_secret["stdout"] | default("") != "" -%}
+                {{- conn_auth_secret["stdout"] -}}
+              {%- else -%}
+                {{- random_conn_auth_secret["stdout"] -}}
+              {%- endif -%}
+
+    - name: Copy connection authentication file to nodes.
+      ansible.builtin.copy:
+        src: "{{ conn_auth_src }}"
+        dest: "{{ beegfs_ha_conn_auth_dest }}"

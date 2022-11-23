@@ -1,7 +1,7 @@
 - name: Execute all tasks to install the BeeGFS client and mount BeeGFS.
   block:  # Wrapping all tasks in a block so we can set become: yes once.
   - name: When install the DKMS client update /etc/beegfs/beegfs-client-build.mk to add support for third party OFED drivers.
-    template:
+    ansible.builtin.template:
       src: beegfs-client-build.mk.j2
       dest: "/etc/beegfs/beegfs-client-build.mk"
       mode: 0644
@@ -18,13 +18,26 @@
       - ansible.builtin.include_tasks: packages/debian_packages.yml
         when: ansible_facts['os_family'] | lower == 'debian'
 
+      - name: Ensure beegfs-helperd service's daemon exists.
+        ansible.builtin.copy:
+          src: files/beegfs-helperd.sh
+          dest: /etc/beegfs/
+          mode: "0651"
+
+      - name: Ensure beegfs-helperd service is configured
+        ansible.builtin.copy:
+          src: files/beegfs-helperd.service
+          dest: /etc/systemd/system/
+
+      # Don't start beegfs-helperd until the client has been configured since the beegfs-helperd service script requires
+      #   the client config info.
       - name: Ensure beegfs-helperd is started/enabled.
-        systemd:
+        ansible.builtin.systemd:
           name: beegfs-helperd
-          state: started
           enabled: true
-  
-      - name: Install BeeGFS Client udev rule. 
+          daemon_reload: true
+
+      - name: Install BeeGFS Client udev rule.
         ansible.builtin.template:
           src: beegfs-client-udev.rules.j2
           dest: "/etc/udev/rules.d/{{ beegfs_client_udev_rule_name }}"
@@ -38,25 +51,25 @@
         ansible.builtin.command: udevadm control --reload
         when: install_beegfs_client_udev['changed'] == True
         notify: Restart BeeGFS Client
-    tags: beegfs_client_install          
+    tags: beegfs_client_install
 
   - name: Complete non-DKMS BeeGFS Client Tasks
     block:
       - name: Remove the default beegfs-mount.conf entry
-        lineinfile:
+        ansible.builtin.lineinfile:
           path: /etc/beegfs/beegfs-mounts.conf
           line: "/mnt/beegfs /etc/beegfs/beegfs-client.conf"
           state: absent
 
       - name: Update /etc/beegfs/beegfs-client-autobuild.conf to include support for the Mellanox OFED drivers if requested.
-        template:
+        ansible.builtin.template:
           src: beegfs-client-autobuild.j2
           dest: "/etc/beegfs/beegfs-client-autobuild.conf"
           mode: 0644
         register: beegfs_client_autobuild
 
       - name: Force a rebuild of the client kernel module if requested or the source/configuration changed.
-        command: "/etc/init.d/beegfs-client rebuild"
+        ansible.builtin.command: "/etc/init.d/beegfs-client rebuild"
         when: beegfs_client_autobuild.changed or beegfs_client_force_rebuild == True or package_mgr_result.changed == True
         notify: Restart BeeGFS Client
     when: not beegfs_client_dkms_install
@@ -65,12 +78,12 @@
   - name: Complete DKMS Client Tasks
     block:
       - name: Load the BeeGFS kernel module.
-        modprobe:
+        ansible.builtin.modprobe:
           name: beegfs
           state: present
 
       - name: Set the BeeGFS kernel module to load at boot by creating /etc/modules-load.d/beegfs-client-dkms.client.
-        blockinfile:
+        ansible.builtin.blockinfile:
           path: /etc/modules-load.d/beegfs-client-dkms.conf
           create: true
           block: |
@@ -80,29 +93,29 @@
     tags: beegfs_client_install
 
   - name: Include tasks to mount BeeGFS if requested.
-    include_tasks: mount_beegfs.yml
+    ansible.builtin.include_tasks: mount_beegfs.yml
     loop: "{{ beegfs_client_mounts }}"
     when: beegfs_client_mounts is defined
     tags: beegfs_client_mount
 
   - name: Flush handlers to restart the non-DKMS BeeGFS client on configuration changes.
-    meta: flush_handlers
-    tags: 
+    ansible.builtin.meta: flush_handlers
+    tags:
       - beegfs_client_mount
       - beegfs_client_install
 
   - name: Verify all expected BeeGFS mounts are present/unmounted when using the non-DKMS client.
-    include_tasks: mount_check.yml
+    ansible.builtin.include_tasks: mount_check.yml
     loop: "{{ beegfs_client_mounts }}"
     when: beegfs_client_mounts is defined and not beegfs_client_dkms_install
     tags: beegfs_client_mount
 
   - name: Flush handlers to restart the non-DKMS BeeGFS client if any BeeGFS mounts are missing.
-    meta: flush_handlers
+    ansible.builtin.meta: flush_handlers
     tags: beegfs_client_mount
 
   - name: When using the non-DKMS BeeGFS client ensure it is started/enabled so mounts persist across reboots.
-    systemd:
+    ansible.builtin.systemd:
       name: beegfs-client
       state: started
       enabled: true

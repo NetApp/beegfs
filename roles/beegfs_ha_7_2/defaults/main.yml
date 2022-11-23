@@ -18,6 +18,12 @@ beegfs_ha_cluster_node_ips: []                            # Defines an ordered l
                                                           #   there are no IPs listed then the node names will be used.
                                                           #   Node names are defined in /etc/hosts.
 
+beegfs_ha_conn_auth_enabled: true                   # Whether to enable BeeGFS connection authentication
+beegfs_ha_conn_auth_src: files/beegfs/connAuthFile  # Source for the connAuthFile. When path is relative,
+                                                    #   it will be prepended with that playbook's directory
+beegfs_ha_conn_auth_dest: /etc/beegfs/connAuthFile  # Destination for beegfs_common_conn_auth_src.
+beegfs_ha_conn_auth_secret:                         # Secret to template in connAuthFile. If used, consider
+                                                    #   using ansible-vault.
 
 ## Firewall Configuration Defaults
 beegfs_ha_firewall_configure: true          # True to configure the firewall when either firewalld or

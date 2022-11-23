@@ -19,6 +19,8 @@
 - name: Determine the required options for the beegfs-mgmt.conf file.
   ansible.builtin.set_fact:
     beegfs_ha_beegfs_mgmtd_conf_required_options:
+      connDisableAuthentication: "{{ beegfs_ha_conn_auth_enabled | default(omit) }}"
+      connAuthFile: "{{ beegfs_ha_conn_auth_dest | default(omit) }}"
       storeMgmtdDirectory: "{{ mgmt_data_path }}"
       connInterfacesFile: "{{ mgmt_config_path }}connInterfacesFile.conf"
       connNetFilterFile: "{% if (filter_ip_ranges | default(beegfs_ha_filter_ip_ranges)) | length > 0 %}{{ mgmt_config_path }}connNetFilterFile.conf{% endif %}"
@@ -31,17 +33,17 @@
   become: true
 
 # This would catch if for some reason we remove earlier logic that prevents running this block against
-# a node that doesn't contain any "node_info['management']" instances which would return a confusing error. 
-# It also helps us avoid trying to configure multiple management services on the same node, which is not 
+# a node that doesn't contain any "node_info['management']" instances which would return a confusing error.
+# It also helps us avoid trying to configure multiple management services on the same node, which is not
 # supported in current versions of BeeGFS.
 
 - name: Warn if there isn't exactly one management service configured for this node.
   pause:
     prompt:
-      WARNING! There is more than one BeeGFS management service in the inventory for this node OR we should 
-      have skipped trying to configure the management service on this node, but earlier logic was removed that 
-      would prevent this from happening. In either case it is recommended you terminate the deployment and 
-      verify your inventory is correct. If your inventory is correct and you are still seeing this message, 
+      WARNING! There is more than one BeeGFS management service in the inventory for this node OR we should
+      have skipped trying to configure the management service on this node, but earlier logic was removed that
+      would prevent this from happening. In either case it is recommended you terminate the deployment and
+      verify your inventory is correct. If your inventory is correct and you are still seeing this message,
       please open a case with NetApp support before bypassing this warning and continuing the deployment.
   when: node_info['management'] | length != 1
 
@@ -120,7 +122,7 @@
     - name: Unmount management volume.
       ansible.builtin.command: "umount {{ mgmt_volume_mount }}"
       when: management_volume_mount['changed']
-  # This works because there should only ever be one BeeGFS management service running per cluster. 
+  # This works because there should only ever be one BeeGFS management service running per cluster.
   when: inventory_hostname == node_info['management'][0]['preferred_node_order'][0]
   become: true
 
