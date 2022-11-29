@@ -29,18 +29,35 @@
   when: beegfs_ha_firewall_allow_required_ports
 
 # Include all distribution-version variables that are prefixed with default_
+#   This will not fail when the particular distribution version file does not exist.
 - name: Include all distribution-version variables that are prefixed with default_
   block:
     - name: Include distribution-version specific variables (Always).
-      include_vars:
+      ansible.builtin.include_vars:
         name: unmerged_distribution_inventory
+        file: "{{ ansible_distribution | lower }}_{{ ansible_distribution_version }}.yml"
+      failed_when: false
+
+    - name: Set distribution-version specific variables at the top lay if they are not defined
+      ansible.builtin.set_fact:
+        "{{ item[8:] }}": "{{ unmerged_distribution_inventory[item] }}"
+      when: item is match("^default_") and hostvars[inventory_hostname][item[8:]] is not defined
+      loop: "{{ unmerged_distribution_inventory.keys() | default([]) | list }}"
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+
+# Include all distribution major version variables that are prefixed with default_
+- name: Include all distribution-version variables that are prefixed with default_
+  block:
+    - name: Include distribution-version specific variables (Always).
+      ansible.builtin.include_vars:
+        name: unmerged_distribution_major_inventory
         file: "{{ ansible_distribution | lower }}_{{ ansible_distribution_major_version }}.yml"
 
     - name: Set distribution-version specific variables at the top lay if they are not defined
-      set_fact:
-        "{{ item[8:] }}": "{{ unmerged_distribution_inventory[item] }}"
+      ansible.builtin.set_fact:
+        "{{ item[8:] }}": "{{ unmerged_distribution_major_inventory[item] }}"
       when: item is match("^default_") and hostvars[inventory_hostname][item[8:]] is not defined
-      loop: "{{ unmerged_distribution_inventory.keys() | list }}"
+      loop: "{{ unmerged_distribution_major_inventory.keys() | list }}"
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
 # The following section builds up inventory for each resource group and appends it to each host's inventory inside a variable with the resource's name.
