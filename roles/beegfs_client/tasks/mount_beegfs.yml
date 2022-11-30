@@ -27,14 +27,13 @@
       {%- elif item['connAuthFile_src'] is not defined -%}
         {{- beegfs_client_connAuthFile_secret -}}
       {%- endif -%}
-    connAuthFile_path: |-
-      {%- if connAuthFile_src or connAuthFile_secret -%}
-        {%- if item['beegfs_client_config']['connAuthFile'] is defined -%}
-          {{- item['beegfs_client_config']['connAuthFile'] -}}
-        {%- else -%}
-          /etc/beegfs/{{ generated_conf_prefix }}_connAuthFile
-        {%- endif -%}
+    connAuthFile_dest: |-
+      {%- if item['beegfs_client_config']['connAuthFile'] is defined -%}
+        {{- item['beegfs_client_config']['connAuthFile'] -}}
+      {%- else -%}
+        /etc/beegfs/{{ item['sysMgmtdHost'] }}_connAuthFile
       {%- endif -%}
+    connAuthFile_enabled: "{{ item['connAuthFile_enabled'] | default(beegfs_client_connAuthFile_enabled) }}"
 
   block:
     - name: Verify only one connection authentication method is chosen.
@@ -44,19 +43,34 @@
           following options: connAuthFile_src or connAuthFile_secret
       when: connAuthFile_src and connAuthFile_secret
 
-    - name: Ensure BeeGFS connection authentication file exists.
+    - name: Ensure BeeGFS connection authentication file exists copied from source file.
       ansible.builtin.copy:
-        src: "{{ connAuthFile_src }}"
-        dest: "{{ connAuthFile_path }}"
+        src: "{{ connAuthFile_path }}"
+        dest: "{{ connAuthFile_dest }}"
         mode: "0400"
-      when: connAuthFile_src != ''
+      when: connAuthFile_enabled and connAuthFile_path
+      notify:
+        - Restart BeeGFS Helper
+        - Restart BeeGFS Client
+      vars:
+        connAuthFile_path: |-
+          {%- if not connAuthFile_secret -%}
+            {%- if connAuthFile_src -%}
+              {{- connAuthFile_src -}}
+            {%- else -%}
+              {{- playbook_dir }}/files/beegfs/{{ item['sysMgmtdHost'] }}_connAuthFile
+            {%- endif -%}
+          {%- endif -%}
 
-    - name: Ensure BeeGFS connection authentication file exists.
+    - name: Ensure BeeGFS connection authentication file exists with provided secret.
       ansible.builtin.copy:
         content: "{{ connAuthFile_secret }}"
-        dest: "{{ connAuthFile_path }}"
+        dest: "{{ connAuthFile_dest }}"
         mode: "0400"
-      when: connAuthFile_secret != ''
+      when: connAuthFile_enabled and connAuthFile_secret
+      notify:
+        - Restart BeeGFS Helper
+        - Restart BeeGFS Client
 
     - name: Generate the BeeGFS client configuration file for this mount point.
       netapp_eseries.host.update_conf:
@@ -67,8 +81,8 @@
           {%- if connInterfaces_path != '' -%}
             {%- if required_options.update({'connInterfacesFile': connInterfaces_path}) -%}{%- endif -%}
           {%- endif -%}
-          {%- if connAuthFile_path != '' -%}
-            {%- if required_options.update({'connAuthFile': connAuthFile_path}) -%}{%- endif -%}
+          {%- if connAuthFile_enabled -%}
+            {%- if required_options.update({'connAuthFile': connAuthFile_dest}) -%}{%- endif -%}
           {%- endif -%}
           {{- beegfs_client_config_default_options | combine(item['beegfs_client_config']) | combine(required_options) -}}
         mode: "0644"

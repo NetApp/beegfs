@@ -114,11 +114,43 @@ If you are using the BeeGFS client role to mount a BeeGFS filesystem backed by N
 ```
 beegfs_client_mounts:
   - sysMgmtdHost: mgmt
-    mount_point: /mnt/beegfs   
+    mount_point: /mnt/beegfs
     beegfs_client_config:
-      sysSessionChecksEnabled: false 
+      sysSessionChecksEnabled: false
 ```
 IMPORTANT: To prevent silent data corruption `sysSessionChecksEnabled: false` must only be set when the underlying ext4/xfs filesystems used for the BeeGFS management, metadata and storage targets are mounted using the "sync" option. Mounting the targets in "sync" mode is the default configuration provided by the beegfs_ha* roles provided in this collection, but could be overridden.
+
+Configuring BeeGFS connection authentication
+--------------------------------------------
+
+If your BeeGFS filesystem requires connection authentication then the shared secret must be provided to all the clients.
+BeeGFS versions released after 7.3.1 will require this by default.
+
+Notes:
+ * The beegfs_ha roles from collection 1.2 or later will have connection authentication enabled by default and will
+generate <playbook_dir>/files/beegfs/<mgmt_ip>_connAuthFile to be shared with its clients. This file will be used when
+`beegfs_client_connAuthFile_enabled: true` which is its default.
+
+Providing a source file for a mount's connection authentication:
+```
+beegfs_client_mounts:
+  - sysMgmtdHost: mgmt
+    connAuthFile_src: files/beegfs/connAuthFile  # Relative path will start in the playbook's directory.
+```
+
+Providing a secret for a mount's connection authentication:
+```
+beegfs_client_mounts:
+  - sysMgmtdHost: mgmt
+    connAuthFile_secret: <SECRET>
+```
+
+Skipping a mount's connection authentication:
+```
+beegfs_client_mounts:
+  - sysMgmtdHost: mgmt
+    connAuthFile_enabled: false
+```
 
 Tuning recommendations when mounting BeeGFS
 -------------------------------------------

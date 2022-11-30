@@ -18,12 +18,27 @@ beegfs_ha_cluster_node_ips: []                            # Defines an ordered l
                                                           #   there are no IPs listed then the node names will be used.
                                                           #   Node names are defined in /etc/hosts.
 
-beegfs_ha_conn_auth_enabled: true                   # Whether to enable BeeGFS connection authentication
-beegfs_ha_conn_auth_src: files/beegfs/connAuthFile  # Source for the connAuthFile. When path is relative,
-                                                    #   it will be prepended with that playbook's directory
-beegfs_ha_conn_auth_dest: /etc/beegfs/connAuthFile  # Destination for beegfs_common_conn_auth_src.
-beegfs_ha_conn_auth_secret:                         # Secret to template in connAuthFile. If used, consider
-                                                    #   using ansible-vault.
+## Connection Authentication Defaults
+beegfs_ha_conn_auth_enabled: true             # Whether to enable BeeGFS connection authentication. By default, a random
+                                              #   shared secret is created. Add `-e "beegfs_ha_conn_auth_force_new=True`
+                                              #   to the playbook's execution command to generate new random secret. The
+                                              #   beegfs_ha_conn_auth_force_new flag will be ignored when
+                                              #   conn_auth_secret is defined.
+beegfs_ha_conn_auth_src_path: files/beegfs/   # Source for connAuthFile. When path is relative, it will be prepended
+                                              #   with that playbook's directory. If the path provided exists and is a
+                                              #   file then it will be treated as the desired connAuthFile; otherwise,
+                                              #   it will be treated as a directory. When the path is determined to be a
+                                              #   directory then the connAuthFile name will be
+                                              #   <beegfs_ha_mgmtd_floating_ip>_connAuthFile. If the directory does not
+                                              #   exist then it will be created.
+
+beegfs_ha_conn_auth_dest_path: /etc/beegfs/   # Destination directory for beegfs_ha_conn_auth_src_path's connection
+                                              #   authentication file. The file's name will be same as
+                                              #   beegfs_ha_conn_auth_src_path when a file is specified or
+                                              #   <beegfs_ha_mgmtd_floating_ip>_connAuthFile.
+beegfs_ha_conn_auth_secret:                   # This is the secret used in the connAuthFile. If used, consider using
+                                              #   ansible-vault. When not specified and beegfs_ha_conn_auth_src_path
+                                              #   file does not exist then a random secret will be generated.
 
 ## Firewall Configuration Defaults
 beegfs_ha_firewall_configure: true          # True to configure the firewall when either firewalld or
