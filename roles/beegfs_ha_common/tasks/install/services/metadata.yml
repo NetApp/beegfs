@@ -91,7 +91,11 @@
       {%- set required_options = {"sysMgmtdHost": management_info["resource_group"],
                                   "storeMetaDirectory": metadata_directory,
                                   "connInterfacesFile": item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/metadata_config/connInterfacesFile.conf",
+                                  "connDisableAuthentication": not beegfs_ha_conn_auth_enabled,
                                   "logStdFile": "/var/log/beegfs-meta-" ~ item["volumes"][0]["name"] ~ ".log"} -%}
+      {%- if beegfs_ha_conn_auth_dest is defined -%}
+        {%- if required_options.update({"connAuthFile": beegfs_ha_conn_auth_dest}) -%}{%- endif -%}
+      {%- endif -%}
       {%- if (item["filter_ip_ranges"] | default(beegfs_ha_filter_ip_ranges)) | length > 0 -%}
         {%- if required_options.update({"connNetFilterFile": item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/metadata_config/connNetFilterFile.conf"}) -%}{%- endif -%}
       {%- endif -%}

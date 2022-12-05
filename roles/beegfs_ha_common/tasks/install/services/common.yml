@@ -8,6 +8,10 @@
   loop: "{{ lookup('dict', beegfs_ha_required_sysctl_entries) }}"
   become: true
 
+- name: Ensure connAuthFile is installed.
+  ansible.builtin.include_tasks: conn_auth.yml
+  when: beegfs_ha_conn_auth_enabled
+
 - name: Determine all BeeGFS HA services.
   ansible.builtin.service_facts:
   changed_when: false

@@ -1,5 +1,12 @@
+- name: Restart BeeGFS Helper
+  ansible.builtin.systemd:
+    name: beegfs-helperd
+    state: restarted
+  when: not beegfs_client_dkms_install
+  become: true
+
 - name: Restart BeeGFS Client
-  systemd:
+  ansible.builtin.systemd:
     name: beegfs-client
     state: restarted
   when: not beegfs_client_dkms_install

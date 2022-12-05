@@ -8,7 +8,9 @@
       changed_when: >
         (item['mounted'] is not defined and beegfs_client_mount_check.rc == 1) or
         ((item['mounted'] is defined and item['mounted']) and beegfs_client_mount_check.rc == 1)
-      notify: Restart BeeGFS Client
+      notify:
+        - Restart BeeGFS Helper
+        - Restart BeeGFS Client
 
     - name: Unmount BeeGFS if requested.
       command: "umount {{ item['mount_point'] }}"

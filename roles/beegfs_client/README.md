@@ -75,7 +75,7 @@ Mounting the same BeeGFS file system multiple times is possible by providing dif
 
 ```
 beegfs_client_mounts:
-  - sysMgmtdHost: mgmt
+  - sysMgmtdHost: <BeeGFS Management Server IP or Hostname>
     mount_point: /mnt/beegfs
     connInterfaces:
       - ibs4f1
@@ -83,7 +83,7 @@ beegfs_client_mounts:
     beegfs_client_config:
       connClientPortUDP: 8004
 
-  - sysMgmtdHost: mgmt
+  - sysMgmtdHost: <BeeGFS Management Server IP or Hostname>
     mount_point: /mnt/beegfs_2
     connInterfaces:
       - ibs1f1
@@ -95,7 +95,7 @@ beegfs_client_mounts:
 Unmounting BeeGFS is possible by setting `mounted: False` on individual entries: 
 ```
 beegfs_client_mounts:
-  - sysMgmtdHost: mgmt
+  - sysMgmtdHost: <BeeGFS Management Server IP or Hostname>
     mount_point: /mnt/beegfs
     mounted: False
 ```    
@@ -113,22 +113,54 @@ Requirements when mounting BeeGFS with HA enabled
 If you are using the BeeGFS client role to mount a BeeGFS filesystem backed by NetApp's shared-disk high availability solution, to prevent clients reporting "remote I/O" errors when a storage service crashes and is restarted on another node, [`sysSessionChecksEnabled`](https://git.beegfs.com/pub/v7/-/blob/master/client_module/build/dist/etc/beegfs-client.conf#L312) must be set to false in the `beegfs_client_config` for each mount point:
 ```
 beegfs_client_mounts:
-  - sysMgmtdHost: mgmt
-    mount_point: /mnt/beegfs   
+  - sysMgmtdHost: <BeeGFS Management Server IP or Hostname>
+    mount_point: /mnt/beegfs
     beegfs_client_config:
-      sysSessionChecksEnabled: false 
+      sysSessionChecksEnabled: false
 ```
 IMPORTANT: To prevent silent data corruption `sysSessionChecksEnabled: false` must only be set when the underlying ext4/xfs filesystems used for the BeeGFS management, metadata and storage targets are mounted using the "sync" option. Mounting the targets in "sync" mode is the default configuration provided by the beegfs_ha* roles provided in this collection, but could be overridden.
+
+Configuring BeeGFS connection authentication
+--------------------------------------------
+
+If your BeeGFS filesystem requires connection authentication then the shared secret must be provided to all the clients.
+BeeGFS versions released after 7.3.1 will require this by default.
+
+Notes:
+ * The beegfs_ha roles from BeeGFS Collection 3.1.0 or newer will have connection authentication enabled by default and
+will generate <playbook_dir>/files/beegfs/<mgmt_ip>_connAuthFile to be shared with its clients. This file will be used
+when `beegfs_client_connAuthFile_enabled: true` which is its default.
+
+Providing a source file for a mount's connection authentication:
+```
+beegfs_client_mounts:
+  - sysMgmtdHost: <BeeGFS Management Server IP or Hostname>
+    connAuthFile_src: files/beegfs/connAuthFile  # Relative path will start in the playbook's directory.
+```
+
+Providing a secret for a mount's connection authentication:
+```
+beegfs_client_mounts:
+  - sysMgmtdHost: <BeeGFS Management Server IP or Hostname>
+    connAuthFile_secret: <Shared BeeGFS Secret>
+```
+
+Skipping a mount's connection authentication:
+```
+beegfs_client_mounts:
+  - sysMgmtdHost: <BeeGFS Management Server IP or Hostname>
+    connAuthFile_enabled: false
+```
 
 Tuning recommendations when mounting BeeGFS
 -------------------------------------------
 
-While the default parameters provided in beegfs-client.conf provide reasonable performance, adjusting the following `beegfs_client_config` parameters has been seen to improve performance with many workloads: 
+While the default parameters provided in beegfs-client.conf provide reasonable performance, adjusting the following `beegfs_client_config` parameters has been seen to improve performance with many workloads:
 
 ```
 beegfs_client_mounts:
-  - sysMgmtdHost: mgmt
-    mount_point: /mnt/beegfs   
+  - sysMgmtdHost: <BeeGFS Management Server IP or Hostname>
+    mount_point: /mnt/beegfs
     beegfs_client_config:
       connMaxInternodeNum: 128 # Maximum number of simultaneous connections to the same node (BeeGFS Client Default: 12).
       connRDMABufNum: 36 # Allocates the number of buffers for transferring IO (BeeGFS Client Default: 70).
