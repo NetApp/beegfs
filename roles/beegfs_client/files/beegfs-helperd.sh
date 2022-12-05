@@ -1,4 +1,11 @@
 #!/bin/bash
+# This script provides BeeGFS client support by facilitating multiple beegfs-helperd instances based on the BeeGFS
+# client configuration files specified in the beegfs-mount.conf file's mounts. The service_cmd variable provides the
+# base command for each beegfs-helperd instances. Command arguments relevant to beegfs-helperd are appended to the
+# service_cmd variable. All executed commands will be unique.
+#
+# License: BSD-3-Clause
+# Author: Nathan Swartz
 
 mounts=/etc/beegfs/beegfs-mounts.conf
 service_cmd="/opt/beegfs/sbin/beegfs-helperd cfgFile=/etc/beegfs/beegfs-helperd.conf runDaemonized=true"

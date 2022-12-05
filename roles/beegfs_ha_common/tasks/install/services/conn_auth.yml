@@ -39,11 +39,11 @@
         - name: Determine the BeeGFS connection authentication file's destination.
           ansible.builtin.set_fact:
             beegfs_ha_conn_auth_dest: |-
-              {%- set src = beegfs_ha_conn_auth_src | ansible.builtin.basename -%}
+              {%- set src_filename = beegfs_ha_conn_auth_src | ansible.builtin.basename -%}
               {%- if beegfs_ha_conn_auth_dest_path.endswith("/") -%}
-                {{- beegfs_ha_conn_auth_dest_path }}{{ src -}}
+                {{- beegfs_ha_conn_auth_dest_path }}{{ src_filename -}}
               {%- else -%}
-                {{- beegfs_ha_conn_auth_dest_path }}/{{ src -}}
+                {{- beegfs_ha_conn_auth_dest_path }}/{{ src_filename -}}
               {%- endif -%}
 
         - name: Ensure the directory exists for BeeGFS connection authentication file on Ansible control node.

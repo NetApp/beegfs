@@ -39,12 +39,9 @@ Ensure the following conditions are met:
     - netaddr
 - Passwordless SSH is setup from the Ansible control node to all BeeGFS HA nodes.
 - BeeGFS HA nodes have the following configured:
-  - HA repositories containing the necessary packages (pacemaker, corosync, fence-agents-all, resource-agents, pcs) are enabled via 
+  - HA repositories containing the necessary packages (pacemaker, corosync, fence-agents-all, resource-agents, pcs) are enabled via
   package manager
     - Enable command example: `subscription-manager repo-override repo=rhel-8-for-x86_64-highavailability-rpms --add=enabled:1`
-  - Ensure files with a shared secret are in place for connection based authentication (for more details and options to configure
-    see [Importance of Connection Authentication](override_beegfs_configuration_defaults.md#importance-of-conn-auth)).
-      - Note: This is optional but **strongly** recommended.
 
 <a name="tested-ansible-versions"></a>
 ## Tested Ansible Versions
@@ -229,40 +226,34 @@ This file would be created as `group_vars/ha_cluster.yml`:
     beegfs_ha_enable_performance_tuning: True
 
     ### Ensure Consistent Logical IB Port Numbering
-    # Name of the udev rule to create (do not modify): 
+    # Name of the udev rule to create (do not modify):
     eseries_ib_base_udev_name: 99-beegfs-ib.rules
 
-    # Lenovo SR665 PCIe address-to-logical IB port mapping:  
+    # Lenovo SR665 PCIe address-to-logical IB port mapping:
     eseries_ib_base_udev_rules:
       "0000:41:00.0": i1a
       "0000:41:00.1": i1b
       "0000:01:00.0": i2a
-      "0000:01:00.1": i2b  
+      "0000:01:00.1": i2b
       "0000:a1:00.0": i3a
       "0000:a1:00.1": i3b
       "0000:81:00.0": i4a
       "0000:81:00.1": i4b
-        
+
     ### BeeGFS service configuration:
     # Configuration that should apply to all BeeGFS services can be specified as follows:
 
     beegfs_ha_beegfs_mgmtd_conf_ha_group_options:
-      connAuthFile: /etc/beegfs/connAuthFile
+      logLevel: 2
 
     beegfs_ha_beegfs_meta_conf_ha_group_options:
-      connAuthFile: /etc/beegfs/connAuthFile
+      logLevel: 3
 
     beegfs_ha_beegfs_storage_conf_ha_group_options:
-      connAuthFile: /etc/beegfs/connAuthFile
-
-IMPORTANT: In later versions of BeeGFS a connAuthFile is required by default, or it must be explicitly disabled. 
-For security and to simplify upgrading to future BeeGFS versions, configuring a connAuthFile when initially deploying 
-the cluster is recommended. At this time a connAuthFile only readable by the root user must be manually distributed 
-to all BeeGFS servers and clients before running the BeeGFS HA role with the above configuration.
-For more information see [Importance of Connection Authentication](override_beegfs_configuration_defaults.md#importance-of-conn-auth)
+      logLevel: 3
 
 See [Override BeeGFS Configuration Defaults](docs/override_beegfs_configuration_defaults.md) for more
-details on how to override BeeGFS configuration on a global or per service basis. 
+details on how to override BeeGFS configuration on a global or per service basis.
 
 <a name="example-management-group"></a>
 #### Example Management Group

@@ -1,3 +1,3 @@
-{% for item in item['connInterfaces'] | default([]) %}
-{{ item }}
+{% for iface in item['connInterfaces'] | default([]) %}
+{{   iface }}
 {% endfor %}

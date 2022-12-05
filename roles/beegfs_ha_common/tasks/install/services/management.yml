@@ -19,7 +19,7 @@
 - name: Determine the required options for the beegfs-mgmt.conf file.
   ansible.builtin.set_fact:
     beegfs_ha_beegfs_mgmtd_conf_required_options:
-      connDisableAuthentication: "{{ beegfs_ha_conn_auth_enabled | default(omit) }}"
+      connDisableAuthentication: "{{ not beegfs_ha_conn_auth_enabled }}"
       connAuthFile: "{{ beegfs_ha_conn_auth_dest | default(omit) }}"
       storeMgmtdDirectory: "{{ mgmt_data_path }}"
       connInterfacesFile: "{{ mgmt_config_path }}connInterfacesFile.conf"
