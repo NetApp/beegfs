@@ -1,6 +1,8 @@
 # This file configures BeeGFS connection authentication
-- name: Ensure all BeeGFS cluster nodes have the expected connection authentication file.
-  become: true
+- name: Ensure expected BeeGFS connection authentication file exists on Ansible control node.
+  delegate_to: localhost
+  run_once: true
+  no_log: true
   vars:
     conn_auth_path: |-
       {#- Check whether beegfs_ha_conn_auth_src_path is a relative path. Prepend playbook_dir if it is. -#}
@@ -17,74 +19,70 @@
       delegate_to: localhost
       run_once: true
 
-    - name: Ensure BeeGFS connection authentication file exists on all BeeGFS cluster nodes.
-      delegate_to: localhost
-      run_once: true
-      no_log: true
-      block:
-        - name: Determine the BeeGFS connection authentication file's source.
-          ansible.builtin.set_fact:
-            beegfs_ha_conn_auth_src: |-
-              {%- set src_exists = conn_auth_path_stats["stat"]["exists"] -%}
-              {%- if src_exists and conn_auth_path_stats["stat"]["isreg"] -%}
-                {{-  conn_auth_path -}}
-              {%- elif not src_exists or conn_auth_path_stats["stat"]["isdir"] -%}
-                {%- if conn_auth_path.endswith("/") %}
-                  {{- conn_auth_path }}{{ beegfs_ha_mgmtd_floating_ip }}_connAuthFile
-                {%- else -%}
-                  {{- conn_auth_path }}/{{ beegfs_ha_mgmtd_floating_ip }}_connAuthFile
-                {%- endif -%}
-              {%- endif -%}
+    - name: Determine the BeeGFS connection authentication file's source.
+      ansible.builtin.set_fact:
+        beegfs_ha_conn_auth_src: |-
+          {%- set src_exists = conn_auth_path_stats["stat"]["exists"] -%}
+          {%- if src_exists and conn_auth_path_stats["stat"]["isreg"] -%}
+            {{-  conn_auth_path -}}
+          {%- elif not src_exists or conn_auth_path_stats["stat"]["isdir"] -%}
+            {%- if conn_auth_path.endswith("/") %}
+              {{- conn_auth_path }}{{ beegfs_ha_mgmtd_floating_ip }}_connAuthFile
+            {%- else -%}
+              {{- conn_auth_path }}/{{ beegfs_ha_mgmtd_floating_ip }}_connAuthFile
+            {%- endif -%}
+          {%- endif -%}
 
-        - name: Determine the BeeGFS connection authentication file's destination.
-          ansible.builtin.set_fact:
-            beegfs_ha_conn_auth_dest: |-
-              {%- set src_filename = beegfs_ha_conn_auth_src | ansible.builtin.basename -%}
-              {%- if beegfs_ha_conn_auth_dest_path.endswith("/") -%}
-                {{- beegfs_ha_conn_auth_dest_path }}{{ src_filename -}}
-              {%- else -%}
-                {{- beegfs_ha_conn_auth_dest_path }}/{{ src_filename -}}
-              {%- endif -%}
+    - name: Determine the BeeGFS connection authentication file's destination.
+      ansible.builtin.set_fact:
+        beegfs_ha_conn_auth_dest: |-
+          {%- set src_filename = beegfs_ha_conn_auth_src | ansible.builtin.basename -%}
+          {%- if beegfs_ha_conn_auth_dest_path.endswith("/") -%}
+            {{- beegfs_ha_conn_auth_dest_path }}{{ src_filename -}}
+          {%- else -%}
+            {{- beegfs_ha_conn_auth_dest_path }}/{{ src_filename -}}
+          {%- endif -%}
 
-        - name: Ensure the directory exists for BeeGFS connection authentication file on Ansible control node.
-          ansible.builtin.file:
-            state: directory
-            path: "{{ beegfs_ha_conn_auth_src | ansible.builtin.dirname }}"
+    - name: Ensure the directory exists for BeeGFS connection authentication file on Ansible control node.
+      ansible.builtin.file:
+        state: directory
+        path: "{{ beegfs_ha_conn_auth_src | ansible.builtin.dirname }}"
 
-        - name: Get stats for BeeGFS connection authentication file on Ansible control node.
-          ansible.builtin.stat:
-            path: "{{ beegfs_ha_conn_auth_src }}"
-          register: conn_auth_src_stat
+    - name: Get stats for BeeGFS connection authentication file on Ansible control node.
+      ansible.builtin.stat:
+        path: "{{ beegfs_ha_conn_auth_src }}"
+      register: conn_auth_src_stat
 
-        - name: Determine the BeeGFS connection authentication secret on the Ansible control node.
-          ansible.builtin.command: "cat {{ beegfs_ha_conn_auth_src }}"
-          register: conn_auth_secret
-          changed_when: false
-          when: conn_auth_src_stat["stat"]["exists"]
+    - name: Determine the BeeGFS connection authentication secret on the Ansible control node.
+      ansible.builtin.command: "cat {{ beegfs_ha_conn_auth_src }}"
+      register: conn_auth_secret
+      changed_when: false
+      when: conn_auth_src_stat["stat"]["exists"]
 
-        - name: Generate secret for BeeGFS connection authentication file.
-          ansible.builtin.command: "dd if=/dev/random bs=128 count=1"
-          register: conn_auth_random_secret
-          changed_when: false
+    - name: Generate secret for BeeGFS connection authentication file.
+      ansible.builtin.command: "dd if=/dev/random bs=128 count=1"
+      register: conn_auth_random_secret
+      changed_when: false
 
-        - name: Generate BeeGFS connection authentication file on Ansible control node.
-          ansible.builtin.copy:
-            content: "{{ secret }}"
-            dest: "{{ beegfs_ha_conn_auth_src }}"
-            mode: "0400"
-          vars:
-            secret: |-
-              {%- if beegfs_ha_conn_auth_secret -%}
-                {{- beegfs_ha_conn_auth_secret -}}
-              {%- elif beegfs_ha_conn_auth_force_new is defined and beegfs_ha_conn_auth_force_new -%}
-                {{- conn_auth_random_secret["stdout"] -}}
-              {%- elif conn_auth_secret["stdout"] | default("") != "" -%}
-                {{- conn_auth_secret["stdout"] -}}
-              {%- else -%}
-                {{- conn_auth_random_secret["stdout"] -}}
-              {%- endif -%}
-
-    - name: Copy connection authentication file to nodes.
+    - name: Generate BeeGFS connection authentication file on Ansible control node.
       ansible.builtin.copy:
-        src: "{{ beegfs_ha_conn_auth_src }}"
-        dest: "{{ beegfs_ha_conn_auth_dest }}"
+        content: "{{ secret }}"
+        dest: "{{ beegfs_ha_conn_auth_src }}"
+        mode: "0400"
+      vars:
+        secret: |-
+          {%- if beegfs_ha_conn_auth_secret -%}
+            {{- beegfs_ha_conn_auth_secret -}}
+          {%- elif beegfs_ha_conn_auth_force_new is defined and beegfs_ha_conn_auth_force_new -%}
+            {{- conn_auth_random_secret["stdout"] -}}
+          {%- elif conn_auth_secret["stdout"] | default("") != "" -%}
+            {{- conn_auth_secret["stdout"] -}}
+          {%- else -%}
+            {{- conn_auth_random_secret["stdout"] -}}
+          {%- endif -%}
+
+- name: Ensure all BeeGFS cluster nodes have the expected connection authentication file.
+  ansible.builtin.copy:
+    src: "{{ beegfs_ha_conn_auth_src }}"
+    dest: "{{ beegfs_ha_conn_auth_dest }}"
+  become: true
