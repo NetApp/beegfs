@@ -85,4 +85,9 @@
   ansible.builtin.copy:
     src: "{{ beegfs_ha_conn_auth_src }}"
     dest: "{{ beegfs_ha_conn_auth_dest }}"
+  register: conn_auth
   become: true
+
+- name: Determine whether cluster will needed to be restarted due to connection authentication changes.
+  ansible.builtin.set_fact:
+    beegfs_ha_force_restart_services: "{{ beegfs_ha_force_restart_services or conn_auth['changed'] }}"

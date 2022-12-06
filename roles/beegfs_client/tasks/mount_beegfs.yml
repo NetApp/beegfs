@@ -50,7 +50,6 @@
         mode: "0400"
       when: connAuthFile_enabled and connAuthFile_path
       notify:
-        - Restart BeeGFS Helper
         - Restart BeeGFS Client
       vars:
         connAuthFile_path: |-
@@ -69,7 +68,6 @@
         mode: "0400"
       when: connAuthFile_enabled and connAuthFile_secret
       notify:
-        - Restart BeeGFS Helper
         - Restart BeeGFS Client
 
     - name: Generate the BeeGFS client configuration file for this mount point.
@@ -87,7 +85,6 @@
           {{- beegfs_client_config_default_options | combine(item['beegfs_client_config']) | combine(required_options) -}}
         mode: "0644"
       notify:
-        - Restart BeeGFS Helper
         - Restart BeeGFS Client
 
     - name: Create/populate the connInterfaces file at {{ connInterfaces_path }}.
@@ -108,7 +105,6 @@
             line: "{{ item['mount_point'] }} {{ client_conf_path }}"
             state: "{%- if item['mounted'] is defined and item['mounted'] == False  %}absent{%- else %}present{%- endif %}"
           notify:
-            - Restart BeeGFS Helper
             - Restart BeeGFS Client
       when: not beegfs_client_dkms_install
 

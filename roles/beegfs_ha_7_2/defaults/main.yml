@@ -134,8 +134,9 @@ beegfs_ha_fencing_agents: {}
 beegfs_ha_backup: true
 beegfs_ha_backup_path: /tmp/
 beegfs_ha_storage_system_hostgroup_prefix: beegfs
-beegfs_ha_force_resource_move: true   # Forces node and resource changes to migrate services to preferred nodes.
-
+beegfs_ha_force_resource_move: true     # Forces node and resource changes to migrate services to preferred nodes.
+beegfs_ha_force_restart_services: false # Forces all BeeGFS services to restart. Only add to command line arguments
+                                        #   when needed since this will always restart the services regardless of changes.
 
 ## BeeGFS pacemaker Resource Configuration Defaults
 beegfs_ha_resource_agent_path: /usr/lib/ocf/resource.d/
