@@ -168,12 +168,18 @@
   register: beegfs_meta_service_override
   become: true
 
-- name: Reload systemctl daemons.
+- name: Ensure BeeGFS metadata systemd services are up to date.
   ansible.builtin.systemd:
     name: "beegfs-meta@{{ item['volumes'][0]['name'] }}"
-    #state: stopped
     enabled: false
     daemon_reload: "{% if beegfs_meta_service_override['changed'] %}true{% else %}false{% endif %}"
-  register: beegfs_meta_service
   loop: "{{ node_info['metadata'] }}"
+  become: true
+
+- name: Restart all BeeGFS metadata services.
+  ansible.builtin.systemd:
+    name: "beegfs-meta@{{ item['volumes'][0]['name'] }}"
+    state: restarted
+  loop: "{{ node_info['metadata'] }}"
+  when: beegfs_ha_force_restart_services
   become: true

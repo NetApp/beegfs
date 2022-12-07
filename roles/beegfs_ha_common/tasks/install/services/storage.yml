@@ -209,12 +209,18 @@
   register: beegfs_storage_service_override
   become: true
 
-- name: Reload systemctl daemons.
+- name: Ensure BeeGFS storage systemd services are up to date.
   ansible.builtin.systemd:
     name: "beegfs-storage@{{ item['volumes'][0]['name'] }}"
-    #state: stopped
     enabled: false
     daemon_reload: "{% if beegfs_storage_service_override['changed'] %}true{% else %}false{% endif %}"
-  register: beegfs_storage_service
   loop: "{{ node_info['storage'] }}"
+  become: true
+
+- name: Restart all BeeGFS storage services.
+  ansible.builtin.systemd:
+    name: "beegfs-storage@{{ item['volumes'][0]['name'] }}"
+    state: restarted
+  loop: "{{ node_info['storage'] }}"
+  when: beegfs_ha_force_restart_services
   become: true

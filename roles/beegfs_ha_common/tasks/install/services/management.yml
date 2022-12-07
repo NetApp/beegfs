@@ -135,10 +135,18 @@
   register: beegfs_mgmtd_service_override
   become: true
 
-- name: Reload systemctl daemons.
+- name: Ensure BeeGFS management systemd service is up to date.
   ansible.builtin.systemd:
     name: beegfs-mgmtd.service
     enabled: false
     daemon_reload: "{% if beegfs_mgmtd_service_override['changed'] %}true{% else %}false{% endif %}"
   register: beegfs_mgmtd_service
+  become: true
+
+- name: Restart BeeGFS management service.
+  ansible.builtin.systemd:
+    name: beegfs-mgmtd.service
+    state: restarted
+  register: beegfs_mgmtd_service
+  when: beegfs_ha_force_restart_services
   become: true

@@ -18,24 +18,20 @@
       - ansible.builtin.include_tasks: packages/debian_packages.yml
         when: ansible_facts['os_family'] | lower == 'debian'
 
-      - name: Ensure beegfs-helperd service's daemon exists.
-        ansible.builtin.copy:
-          src: files/beegfs-helperd.sh
-          dest: /etc/beegfs/
-          mode: "0651"
+      - name: Disable beegfs-helperd connection authentication.
+        ansible.builtin.lineinfile:
+          create: true
+          path: /etc/beegfs/beegfs-helperd.conf
+          line: "connDisableAuthentication = true"
+          regexp: "^connDisableAuthentication.*=.*"
+          state: present
+        register: beegfs_helperd_conn_auth
 
-      - name: Ensure beegfs-helperd service is configured
-        ansible.builtin.copy:
-          src: files/beegfs-helperd.service
-          dest: /etc/systemd/system/
-
-      # Don't start beegfs-helperd until the client has been configured since the beegfs-helperd service script requires
-      #   the client config info.
       - name: Ensure beegfs-helperd is started/enabled.
         ansible.builtin.systemd:
           name: beegfs-helperd
           enabled: true
-          daemon_reload: true
+          state: "{{ 'restarted' if beegfs_helperd_conn_auth['changed'] else 'started' }}"
 
       - name: Install BeeGFS Client udev rule.
         ansible.builtin.template:
