@@ -1,5 +1,6 @@
 - name: Execute all tasks to install the BeeGFS client and mount BeeGFS.
-  block:  # Wrapping all tasks in a block so we can set become: yes once.
+  become: true
+  block:
   - name: When install the DKMS client update /etc/beegfs/beegfs-client-build.mk to add support for third party OFED drivers.
     ansible.builtin.template:
       src: beegfs-client-build.mk.j2
@@ -11,13 +12,34 @@
 
   - name: Install and configure BeeGFS Client packages (All).
     block:
-      - ansible.builtin.include_tasks: packages/redhat_packages.yml
-        when: ansible_facts['os_family'] | lower == 'redhat'
-      - ansible.builtin.include_tasks: packages/suse_packages.yml
-        when: ansible_facts['os_family'] | lower == 'suse'
-      - ansible.builtin.include_tasks: packages/debian_packages.yml
-        when: ansible_facts['os_family'] | lower == 'debian'
+      - ansible.builtin.include_tasks: packages/{{ ansible_facts['os_family'] | lower }}_packages.yml
 
+      - name: Validate the BeeGFS client supports NVidia GPUDirect Storage (GDS).
+        block:
+          - name: Determine the BeeGFS client supports GDS.
+            ansible.builtin.command: "{{ beegfs_client_gds_gdscheck_path }} -p"
+            register: gds_check
+
+          # It is possible for previously installed client versions to be installed that do not support GDS.
+          - name: Check whether BeeGFS client supports GDS.
+            ansible.builtin.fail:
+              msg: |
+                The installed BeeGFS client package does not support NVidia GPUDirect Storage (GDS)! Please update
+                BeeGFS client version or set beegfs_client_gds_support=False.
+            when: not beegfs_supported
+            vars:
+              beegfs_supported: |-
+                {%- set scratch = {"found": False} -%}
+                {%- for line in gds_check['stdout_lines'] -%}
+                  {%- if line | regex_search("BeeGFS\s*: Supported", ignorecase=True) -%}
+                    {%- if scratch.update({"found": True}) -%}{%- endif -%}
+                  {%- endif -%}
+                {%- endfor -%}
+                {{- scratch["found"] -}}
+        when: beegfs_client_gds_support
+
+      # BeeGFS connection authentication is not required for beegfs-helperd since it is only used locally for the
+      #   beegfs-client services.
       - name: Disable beegfs-helperd connection authentication.
         ansible.builtin.lineinfile:
           create: true
@@ -51,11 +73,33 @@
 
   - name: Complete non-DKMS BeeGFS Client Tasks
     block:
-      - name: Remove the default beegfs-mount.conf entry
-        ansible.builtin.lineinfile:
-          path: /etc/beegfs/beegfs-mounts.conf
-          line: "/mnt/beegfs /etc/beegfs/beegfs-client.conf"
-          state: absent
+      - name: Ensure expected BeeGFS file system mounts exist in beegfs-mounts.conf.
+        ansible.builtin.template:
+          src: beegfs-mounts-conf.j2
+          dest: /etc/beegfs/beegfs-mounts.conf
+        notify:
+          - Restart BeeGFS Client
+
+      - name: Determine the nvfs.h path required for GDS.
+        block:
+          - name: Search for the GDS support library.
+            ansible.builtin.command: "ls -1 {{ beegfs_client_gds_nvfs_h_path }}nvfs.h"
+            register: gds_nvfs_h_paths
+
+          - name: Check whether GDS support library exists.
+            ansible.builtin.fail:
+              msg: GDS support library could not be found! Update beegfs_client_gds_nvfs_h_path with the correct path.
+            when: gds_nvfs_h_paths["stdout_lines"] | length == 0
+
+          - name: Check for multiple version of the GDS support library.
+            ansible.builtin.fail:
+              msg: Multiple GDS support libraries were found! Update beegfs_client_gds_nvfs_h_path with the correct path.
+            when: gds_nvfs_h_paths["stdout_lines"] | length > 1
+
+          - name: Set the path for GDS support library.
+            ansible.builtin.set_fact:
+              beegfs_client_gds_nvfs_h_dir: gds_nvfs_h_paths["stdout"] | ansible.builtin.dirname
+        when: beegfs_client_gds_support
 
       - name: Update /etc/beegfs/beegfs-client-autobuild.conf to include support for the Mellanox OFED drivers if requested.
         ansible.builtin.template:
@@ -117,5 +161,3 @@
       enabled: true
     when: beegfs_client_mounts is defined and not beegfs_client_dkms_install
     tags: beegfs_client_mount
-
-  become: true

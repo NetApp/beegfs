@@ -1,0 +1,13 @@
+# Maintained by E-Series Ansible BeeGFS colection
+
+{% for mount in beegfs_client_mounts %}
+{%   if mount["mounted"] | default(true) %}
+{%     set mgmt_ip = mount["sysMgmtdHost"] %}
+{%     set client_port = mount["beegfs_client_config"]["connClientPortUDP"] | default("") %}
+{%     if client_port %}
+{{       mount["mount_point"] }} /etc/beegfs/{{ mgmt_ip }}_{{ client_port }}_beegfs-client.conf
+{%     else %}
+{{       mount["mount_point"] }} /etc/beegfs/{{ mgmt_ip }}_beegfs-client.conf
+{%     endif %}
+{%   endif %}
+{% endfor %}

@@ -9,12 +9,21 @@
         {{- mgmt_ip -}}
       {%- endif -%}
     client_conf_path: "/etc/beegfs/{{ generated_conf_prefix }}_beegfs-client.conf"
-    connInterfaces_path: |-
+
+    connRDMAInterfacesFile_path: |-
       {%- if item['beegfs_client_config']['connInterfacesFile'] is defined -%}
         {{- item['beegfs_client_config']['connInterfacesFile'] -}}
       {%- elif item['connInterfaces'] is defined -%}
+        /etc/beegfs/{{ generated_conf_prefix }}_client-rdma.conf
+      {%- endif -%}
+
+    connInterfaces_path: |-
+      {%- if item['beegfs_client_config']['connRDMAInterfacesFile'] is defined -%}
+        {{- item['beegfs_client_config']['connRDMAInterfacesFile'] -}}
+      {%- elif item['connInterfaces'] is defined -%}
         /etc/beegfs/{{ generated_conf_prefix }}_connInterfaces.conf
       {%- endif -%}
+
     connAuthFile_src: |-
       {%- if item['connAuthFile_src'] is defined -%}
         {{- item['connAuthFile_src'] -}}
@@ -70,14 +79,33 @@
       notify:
         - Restart BeeGFS Client
 
+    - name: Create/populate the connInterfaces file at {{ connInterfaces_path }}.
+      ansible.builtin.template:
+        src: beegfs_connection_interfaces.j2
+        dest: "{{ connInterfaces_path }}"
+        mode: 0644
+      notify:
+        - Restart BeeGFS Client
+
+    - name: Create/populate the connRDMAInterfaces file at {{ connRDMAInterfacesFile_path }}.
+      ansible.builtin.template:
+        src: beegfs_connection_interfaces.j2
+        dest: "{{ connRDMAInterfacesFile_path }}"
+        mode: 0644
+      notify:
+        - Restart BeeGFS Client
+
     - name: Generate the BeeGFS client configuration file for this mount point.
       netapp_eseries.host.update_conf:
         src: /etc/beegfs/beegfs-client.conf
         dest: "{{ client_conf_path }}"
         options: |-
           {%- set required_options = {'sysMgmtdHost': item['sysMgmtdHost']} -%}
-          {%- if connInterfaces_path != '' -%}
+          {%- if connInterfaces_path -%}
             {%- if required_options.update({'connInterfacesFile': connInterfaces_path}) -%}{%- endif -%}
+          {%- endif -%}
+          {%- if beegfs_client_multirail_support -%}
+            {%- if required_options.update({'connRDMAInterfacesFile': connRDMAInterfacesFile_path}) -%}{%- endif -%}
           {%- endif -%}
           {%- if connAuthFile_enabled -%}
             {%- if required_options.update({'connAuthFile': connAuthFile_dest}) -%}{%- endif -%}
@@ -86,27 +114,6 @@
         mode: "0644"
       notify:
         - Restart BeeGFS Client
-
-    - name: Create/populate the connInterfaces file at {{ connInterfaces_path }}.
-      ansible.builtin.template:
-        src: beegfs_connection_interfaces.j2
-        dest: "{{ connInterfaces_path }}"
-        mode: 0644
-      when: item['connInterfaces'] is defined
-      notify:
-        - Restart BeeGFS Client
-
-    - name: Mount BeeGFS (non-DKMS client).
-      block:
-        - name: Update /etc/beegfs/beegfs-mounts.conf to include requested BeeGFS file system.
-          ansible.builtin.lineinfile:
-            create: true
-            path: /etc/beegfs/beegfs-mounts.conf
-            line: "{{ item['mount_point'] }} {{ client_conf_path }}"
-            state: "{%- if item['mounted'] is defined and item['mounted'] == False  %}absent{%- else %}present{%- endif %}"
-          notify:
-            - Restart BeeGFS Client
-      when: not beegfs_client_dkms_install
 
     - name: Mount BeeGFS (DKMS client).
       block:
