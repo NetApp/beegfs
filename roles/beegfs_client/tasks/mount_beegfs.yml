@@ -9,21 +9,18 @@
         {{- mgmt_ip -}}
       {%- endif -%}
     client_conf_path: "/etc/beegfs/{{ generated_conf_prefix }}_beegfs-client.conf"
-
-    connRDMAInterfacesFile_path: |-
+    connInterfaces_path: |-
       {%- if item['beegfs_client_config']['connInterfacesFile'] is defined -%}
         {{- item['beegfs_client_config']['connInterfacesFile'] -}}
       {%- elif item['connInterfaces'] is defined -%}
         /etc/beegfs/{{ generated_conf_prefix }}_client-rdma.conf
       {%- endif -%}
-
-    connInterfaces_path: |-
+    connRDMAInterfacesFile_path: |-
       {%- if item['beegfs_client_config']['connRDMAInterfacesFile'] is defined -%}
         {{- item['beegfs_client_config']['connRDMAInterfacesFile'] -}}
       {%- elif item['connInterfaces'] is defined -%}
         /etc/beegfs/{{ generated_conf_prefix }}_connInterfaces.conf
       {%- endif -%}
-
     connAuthFile_src: |-
       {%- if item['connAuthFile_src'] is defined -%}
         {{- item['connAuthFile_src'] -}}
