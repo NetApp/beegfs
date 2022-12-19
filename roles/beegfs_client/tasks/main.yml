@@ -82,8 +82,9 @@
 
       - name: Determine the nvfs.h path required for GDS.
         block:
+          # Shell is required in order to expand the path. Do not use command.
           - name: Search for the GDS support library.
-            ansible.builtin.command: "ls -1 {{ beegfs_client_gds_nvfs_h_path }}nvfs.h"
+            ansible.builtin.shell: "ls -1 {{ beegfs_client_gds_nvfs_h_path }}nvfs.h"
             register: gds_nvfs_h_paths
 
           - name: Check whether GDS support library exists.
@@ -98,7 +99,7 @@
 
           - name: Set the path for GDS support library.
             ansible.builtin.set_fact:
-              beegfs_client_gds_nvfs_h_dir: gds_nvfs_h_paths["stdout"] | ansible.builtin.dirname
+              beegfs_client_gds_nvfs_h_dir: "{{ gds_nvfs_h_paths['stdout'] | ansible.builtin.dirname }}"
         when: beegfs_client_gds_support
 
       - name: Update /etc/beegfs/beegfs-client-autobuild.conf to include support for the Mellanox OFED drivers if requested.
