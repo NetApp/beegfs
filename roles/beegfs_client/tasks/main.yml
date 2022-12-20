@@ -19,6 +19,7 @@
           - name: Determine the BeeGFS client supports GDS.
             ansible.builtin.command: "{{ beegfs_client_gds_gdscheck_path }} -p"
             register: gds_check
+            changed_when: false
 
           # It is possible for previously installed client versions to be installed that do not support GDS.
           - name: Check whether BeeGFS client supports GDS.
@@ -86,6 +87,7 @@
           - name: Search for the GDS support library.
             ansible.builtin.shell: "ls -1 {{ beegfs_client_gds_nvfs_h_path }}nvfs.h"
             register: gds_nvfs_h_paths
+            changed_when: false
 
           - name: Check whether GDS support library exists.
             ansible.builtin.fail:
