@@ -40,20 +40,6 @@ The following variables control how the BeeGFS client is installed and kernel mo
   * `beegfs_client_ofed_enable: False`
 * To use the InfiniBand kernel modules from the OpenFabrics OFED, you must specify the header include path:
   * `beegfs_client_ofed_include_path: "/usr/src/ofa_kernel/default/include"`
-* To add multi-rail support, set `beegfs_client_multirail_support=true` and each RDMA interface must be multi-homed in
-the same network.
-  * Multi-rail support provides clients the capability to utilize multiple RDMA interfaces. When multi-rail support is
-  enabled it's important for the RDMA interfaces to be contained within the same subnet; this requires the RDMA
-  interfaces to be multi-homed. When configuring IP interfaces using one of the netapp_eseries.host roles simply add
-  '99-multihoming.j2' to the list of hook_templates for the interface. Otherwise, see the beegfs guide for configuring
-  client multi-rail support, https://doc.beegfs.io/latest/advanced_topics/rdma_support.html#client-multi-rail-support.
-* To add Nvidia GPUDirect support, set `beegfs_client_gds_support=true` and the following prerequisite must be satisfied:
-  * CUDA >=11.5.1
-  * Mellanox OFED 5.4
-  * nvidia-gds >=11.5.1
-  * nvidia-fs >=2.9.5-1
-  * NVIDIA datacenter class GPU, Tesla or newer architecture
-  * Mellanox ConnectX-5 or newer RDMA NIC
 * Create a BeeGFS client udev rule to override attributes in `/sys/class/bdi/beegfs-*` when BeeGFS is mounted (default: True):
   * `beegfs_client_udev_rule_install: True`
 * Adjust attributes in `/sys/class/bdi/beegfs-*` tuned by the BeeGFS client udev rule:
@@ -114,6 +100,42 @@ beegfs_client_mounts:
     mount_point: /mnt/beegfs
     mounted: False
 ```
+
+Add Multirail support:
+  * All BeeGFS services are required to be accessible from the same network.
+  * BeeGFS client interfaces must be multi-homed.
+
+        When multi-rail support is enabled it's important for the RDMA interfaces to be contained within the same
+        subnet; this requires the RDMA interfaces to be multi-homed. When configuring IP interfaces using one of the
+        netapp_eseries.host roles simply add '99-multihoming.j2' to the list of hook_templates for the interfaces.
+        Otherwise, see the [beegfs guide for configuring client multi-rail support](https://doc.beegfs.io/latest/advanced_topics/rdma_support.html#client-multi-rail-support).
+
+  * Update the mounts defined in beegfs_client_mounts list in the client's inventory.
+
+        connRDMAInterfaces:
+          - <Interface 1>
+          - <Interface N>
+
+Add NVIDIA GPUDirect storage support:
+  * Install nvidia.nvidia_driver role
+
+        ansible-galaxy install nvidia.nvidia_driver
+
+  * Add nvidia.nvidia_driver role to the client playbook.
+
+        - name: Install and configure BeeGFS clients.
+          hosts: beegfs_clients
+          roles:
+            - nvidia.nvidia_driver
+
+  * Update the client's inventory variables.
+
+        beegfs_client_gds_support: true
+        nvidia_driver_ubuntu_install_from_cuda_repo: true
+        nvidia_driver_branch: "<NVIDIA_GPU_DRIVER_BRANCH>"
+
+  * For more information visit, https://doc.beegfs.io/7.3.2/advanced_topics/gds_support.html.
+
 
 Notes:
 * Specifying `sysMgmtdHost` in `beegfs_client_config` is not supported since it is has to be configured elsewhere.

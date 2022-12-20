@@ -13,13 +13,14 @@
       {%- if item['beegfs_client_config']['connInterfacesFile'] is defined -%}
         {{- item['beegfs_client_config']['connInterfacesFile'] -}}
       {%- elif item['connInterfaces'] is defined -%}
-        /etc/beegfs/{{ generated_conf_prefix }}_client-rdma.conf
+        /etc/beegfs/{{ generated_conf_prefix }}_connInterfaces.conf
       {%- endif -%}
+    multirail_enabled: "{{ (item['connRDMAInterfacesFile'] | default([])) | length > 0 }}"
     connRDMAInterfacesFile_path: |-
       {%- if item['beegfs_client_config']['connRDMAInterfacesFile'] is defined -%}
         {{- item['beegfs_client_config']['connRDMAInterfacesFile'] -}}
-      {%- elif item['connInterfaces'] is defined -%}
-        /etc/beegfs/{{ generated_conf_prefix }}_connInterfaces.conf
+      {%- elif item['connRDMAInterfacesFile'] is defined -%}
+        /etc/beegfs/{{ generated_conf_prefix }}_client-rdma.conf
       {%- endif -%}
     connAuthFile_src: |-
       {%- if item['connAuthFile_src'] is defined -%}
@@ -86,9 +87,10 @@
 
     - name: Create/populate the connRDMAInterfaces file at {{ connRDMAInterfacesFile_path }}.
       ansible.builtin.template:
-        src: beegfs_connection_interfaces.j2
+        src: beegfs_rdma_connection_interfaces.j2
         dest: "{{ connRDMAInterfacesFile_path }}"
         mode: 0644
+      when: multirail_enabled
       notify:
         - Restart BeeGFS Client
 
@@ -101,7 +103,7 @@
           {%- if connInterfaces_path -%}
             {%- if required_options.update({'connInterfacesFile': connInterfaces_path}) -%}{%- endif -%}
           {%- endif -%}
-          {%- if beegfs_client_multirail_support -%}
+          {%- if multirail_enabled -%}
             {%- if required_options.update({'connRDMAInterfacesFile': connRDMAInterfacesFile_path}) -%}{%- endif -%}
           {%- endif -%}
           {%- if connAuthFile_enabled -%}

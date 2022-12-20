@@ -1,4 +1,4 @@
-{% set interfaces = item['connRDMAInterfaces'] | default(item['connInterfaces'] | deafult([])) %}
+{% set interfaces = item['connRDMAInterfaces'] %}
 {% for iface in interfaces %}
 {{   iface }}
 {% endfor %}

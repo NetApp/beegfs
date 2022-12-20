@@ -14,47 +14,32 @@
     block:
       - ansible.builtin.include_tasks: packages/{{ ansible_facts['os_family'] | lower }}_packages.yml
 
-      - name: Validate the BeeGFS client supports NVidia GPUDirect Storage (GDS).
-        block:
-          - name: Determine the BeeGFS client supports GDS.
-            ansible.builtin.command: "{{ beegfs_client_gds_gdscheck_path }} -p"
-            register: gds_check
-            changed_when: false
-
-          # It is possible for previously installed client versions to be installed that do not support GDS.
-          - name: Check whether BeeGFS client supports GDS.
-            ansible.builtin.fail:
-              msg: |
-                The installed BeeGFS client package does not support NVidia GPUDirect Storage (GDS)! Please update
-                BeeGFS client version or set beegfs_client_gds_support=False.
-            when: not beegfs_supported
-            vars:
-              beegfs_supported: |-
-                {%- set scratch = {"found": False} -%}
-                {%- for line in gds_check['stdout_lines'] -%}
-                  {%- if line | regex_search("BeeGFS\s*: Supported", ignorecase=True) -%}
-                    {%- if scratch.update({"found": True}) -%}{%- endif -%}
-                  {%- endif -%}
-                {%- endfor -%}
-                {{- scratch["found"] -}}
-        when: beegfs_client_gds_support
-
       # BeeGFS connection authentication is not required for beegfs-helperd since it is only used locally for the
       #   beegfs-client services.
-      - name: Disable beegfs-helperd connection authentication.
-        ansible.builtin.lineinfile:
-          create: true
-          path: /etc/beegfs/beegfs-helperd.conf
-          line: "connDisableAuthentication = true"
-          regexp: "^connDisableAuthentication.*=.*"
-          state: present
-        register: beegfs_helperd_conn_auth
+      - name: Ensure BeeGFS Helperd connection authentication is disabled.
+        block:
+          - name: Ensure connDisableAuthentication is true in the beegfs-helperd.conf file.
+            ansible.builtin.lineinfile:
+              create: true
+              path: /etc/beegfs/beegfs-helperd.conf
+              line: "connDisableAuthentication = true"
+              regexp: "^connDisableAuthentication.*=.*"
+              state: present
+            register: beegfs_helperd_conn_auth
+          - name: Ensure there is no connAuthFile specified in the beegfs-helperd.conf file.
+            ansible.builtin.lineinfile:
+              create: true
+              path: /etc/beegfs/beegfs-helperd.conf
+              line: "connAuthFile ="
+              regexp: "^connAuthFile.*=.*"
+              state: present
+            register: beegfs_helperd_conn_auth_file
 
       - name: Ensure beegfs-helperd is started/enabled.
         ansible.builtin.systemd:
           name: beegfs-helperd
           enabled: true
-          state: "{{ 'restarted' if beegfs_helperd_conn_auth['changed'] else 'started' }}"
+          state: "{{ 'restarted' if beegfs_helperd_conn_auth['changed'] or beegfs_helperd_conn_auth_file['changed'] else 'started' }}"
 
       - name: Install BeeGFS Client udev rule.
         ansible.builtin.template:
@@ -164,3 +149,28 @@
       enabled: true
     when: beegfs_client_mounts is defined and not beegfs_client_dkms_install
     tags: beegfs_client_mount
+
+  - name: Validate the BeeGFS client supports NVidia GPUDirect Storage (GDS).
+    block:
+      - name: Determine the BeeGFS client supports GDS.
+        ansible.builtin.command: "{{ beegfs_client_gds_gdscheck_path }} -p"
+        register: gds_check
+        changed_when: false
+
+      # It is possible for previously installed client versions to be installed that do not support GDS.
+      - name: Check whether BeeGFS client supports GDS.
+        ansible.builtin.fail:
+          msg: |
+            The installed BeeGFS client package does not support NVidia GPUDirect Storage (GDS)! Please update
+            BeeGFS client version or set beegfs_client_gds_support=False.
+        when: not beegfs_supported
+        vars:
+          beegfs_supported: |-
+            {%- set scratch = {"found": False} -%}
+            {%- for line in gds_check['stdout_lines'] -%}
+              {%- if line | regex_search("BeeGFS\s*: Supported", ignorecase=True) -%}
+                {%- if scratch.update({"found": True}) -%}{%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{- scratch["found"] -}}
+    when: beegfs_client_gds_support
