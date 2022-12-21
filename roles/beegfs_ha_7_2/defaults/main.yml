@@ -345,15 +345,6 @@ beegfs_ha_pcsd_path: /var/lib/pcsd/
 
 ## HA Package Version Defaults
 beegfs_ha_force_upgrade: false
-# beegfs_ha_beegfs_version:     # By default the BeeGFS version will be selected based
-                                #   on the repository url below (beegfs_ha_X_repository_base_url).
-beegfs_ha_corosync_version: 3.1.0
-beegfs_ha_pacemaker_version: 2.0.5
-beegfs_ha_pacemaker_remote_version: 2.0.5
-beegfs_ha_pcs_version: 0.10.8
-beegfs_ha_resource_agent_version: 4.1.1
-beegfs_ha_fence_agents_all_version: 4.2.1
-
 
 ## Uninstall Defaults
 beegfs_ha_uninstall: false                  # Determines whether to uninstall the entire BeeGFS HA solution
