@@ -20,7 +20,7 @@
 - name: Retrieve currently mounted volumes on the preferred host.
   ansible.builtin.command:
     cmd: mount
-    warn: false
+    warn: "{{ omit if ansible_version.major >= 2 and ansible_version.minor >= 14 else false }}"
   changed_when: false
   register: mount_info
   become: true
@@ -29,7 +29,7 @@
   ansible.builtin.command:
     cmd: "mount -t {{ item['volumes'][0]['metadata']['format_type'] }} -o {{ item['volumes'][0]['metadata']['mount_options'] }}
                    {{ item['volumes'][0]['path'] }} {{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}"
-    warn: false
+    warn: "{{ omit if ansible_version.major >= 2 and ansible_version.minor >= 14 else false }}"
   loop: "{{ node_info['metadata'] }}"
   register: metadata_volume_mount
   when: inventory_hostname == item['preferred_node_order'][0] and item['volumes'][0]['name'] not in mounted_metadata_volumes

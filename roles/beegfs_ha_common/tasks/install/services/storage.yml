@@ -18,7 +18,7 @@
 - name: Retrieve currently mounted volumes on the preferred host.
   ansible.builtin.command:
     cmd: mount
-    warn: false
+    warn: "{{ omit if ansible_version.major >= 2 and ansible_version.minor >= 14 else false }}"
   changed_when: false
   register: mount_info
   become: true
@@ -27,7 +27,7 @@
   ansible.builtin.command:
     cmd: "mount -t {{ item['metadata']['format_type'] }} -o {{ item['metadata']['mount_options'] }}
                 {{ item['path'] }} {{ item['metadata']['mount_dir'] }}{{ item['name'] }}"
-    warn: false
+    warn: "{{ omit if ansible_version.major >= 2 and ansible_version.minor >= 14 else false }}"
   loop: "{{ preferred_volumes }}"
   register: storage_volume_mount
   changed_when: "storage_volume_mount['rc'] == 0"
