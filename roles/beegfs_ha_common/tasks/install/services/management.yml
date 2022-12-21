@@ -55,14 +55,14 @@
     - name: Retrieve currently mounted volumes.
       ansible.builtin.command:
         cmd: mount
-        warn: false
+        warn: "{{ omit if ansible_version.major >= 2 and ansible_version.minor >= 14 else false }}"
       changed_when: false
       register: current_mounted_volumes
 
     - name: Mount management volume.
       ansible.builtin.command:
         cmd: "mount -t {{ mgmt_volume_format_type }} -o {{ mgmt_volume_mount_options }} {{ mgmt_volume_mount_device }} {{ mgmt_volume_mount }}"
-        warn: false
+        warn: "{{ omit if ansible_version.major >= 2 and ansible_version.minor >= 14 else false }}"
       register: management_volume_mount
       when: volume_mounted == False
       vars:
