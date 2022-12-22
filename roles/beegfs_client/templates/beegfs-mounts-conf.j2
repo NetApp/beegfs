@@ -1,5 +1,3 @@
-# Maintained by E-Series Ansible BeeGFS colection
-
 {% for mount in beegfs_client_mounts %}
 {%   if mount["mounted"] | default(true) %}
 {%     set mgmt_ip = mount["sysMgmtdHost"] %}
