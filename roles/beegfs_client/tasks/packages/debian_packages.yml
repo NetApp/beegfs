@@ -38,7 +38,7 @@
       - libelf-dev
   register: package_mgr_result
 
-- name: Ensure packages required for NVidia GPUDirect Storage is installed (Debian/Ubuntu).
+- name: Ensure packages required for NVIDIA GPUDirect Storage is installed (Debian/Ubuntu).
   ansible.builtin.apt:
     state: present
     name: "{{ beegfs_client_gds_packages }}"

@@ -14,18 +14,18 @@
   when: not beegfs_client_dkms_install
   become: true
 
-- name: Ensure the beegfs module is removed.
-  ansible.builtin.modprobe:
-    state: absent
-    name: beegfs
-  listen: "Restart BeeGFS Client"
-  become: true
-
 - name: Ensure all mounts are removed
   ansible.builtin.mount:
     state: unmounted
     path: item['mount_point']
   loop: "{{ beegfs_client_mounts }}"
+  listen: "Restart BeeGFS Client"
+  become: true
+
+- name: Ensure the beegfs module is removed.
+  ansible.builtin.modprobe:
+    state: absent
+    name: beegfs
   listen: "Restart BeeGFS Client"
   become: true
 

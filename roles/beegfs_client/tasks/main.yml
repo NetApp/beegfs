@@ -150,7 +150,7 @@
     when: beegfs_client_mounts is defined and not beegfs_client_dkms_install
     tags: beegfs_client_mount
 
-  - name: Validate the BeeGFS client supports NVidia GPUDirect Storage (GDS).
+  - name: Validate the BeeGFS client supports NVIDIA GPUDirect Storage (GDS).
     block:
       - name: Determine the BeeGFS client supports GDS.
         ansible.builtin.command: "{{ beegfs_client_gds_gdscheck_path }} -p"
@@ -161,7 +161,7 @@
       - name: Check whether BeeGFS client supports GDS.
         ansible.builtin.fail:
           msg: |
-            The installed BeeGFS client package does not support NVidia GPUDirect Storage (GDS)! Please update
+            The installed BeeGFS client package does not support NVIDIA GPUDirect Storage (GDS)! Please update
             BeeGFS client version or set beegfs_client_gds_support=False.
         when: not beegfs_supported
         vars:

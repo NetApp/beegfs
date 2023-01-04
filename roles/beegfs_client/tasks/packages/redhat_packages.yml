@@ -39,7 +39,7 @@
       - beegfs-client-devel
   register: package_mgr_result
 
-- name: Ensure packages required for NVidia GPUDirect Storage is installed (RedHat/CentOS).
+- name: Ensure packages required for NVIDIA GPUDirect Storage is installed (RedHat/CentOS).
   ansible.builtin.yum:
     state: present
     name: "{{ beegfs_client_gds_packages }}"

@@ -135,6 +135,9 @@ Add NVIDIA GPUDirect storage support:
         nvidia_driver_branch: "<NVIDIA_GPU_DRIVER_BRANCH>"
 
   * For more information visit, https://doc.beegfs.io/7.3.2/advanced_topics/gds_support.html.
+  * For more information regarding which NVIDIA GPU driver branch to use visit,
+    https://www.nvidia.com/download/index.aspx?lang=en-us. Note that the driver branch dictates which version of CUDA
+    that can be used.
 
 
 Notes:
