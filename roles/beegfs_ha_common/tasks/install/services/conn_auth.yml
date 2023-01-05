@@ -81,7 +81,13 @@
             {{- conn_auth_random_secret["stdout"] -}}
           {%- endif -%}
 
-- name: Ensure all BeeGFS cluster nodes have the expected connection authentication file.
+- name: Ensure the directory exists for BeeGFS connection authentication file on the the BeeGFS cluster nodes.
+  ansible.builtin.file:
+    state: directory
+    path: "{{ beegfs_ha_conn_auth_dest | ansible.builtin.dirname }}"
+  become: true
+
+- name: Ensure BeeGFS cluster nodes have the expected connection authentication file.
   ansible.builtin.copy:
     src: "{{ beegfs_ha_conn_auth_src }}"
     dest: "{{ beegfs_ha_conn_auth_dest }}"

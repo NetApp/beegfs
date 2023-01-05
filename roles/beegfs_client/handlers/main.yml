@@ -1,6 +1,46 @@
-- name: Restart BeeGFS Client
+- name: Stop BeeGFS Helper
+  ansible.builtin.systemd:
+    name: beegfs-helperd
+    state: stopped
+  listen: "Restart BeeGFS Client"
+  when: not beegfs_client_dkms_install
+  become: true
+
+- name: Stop BeeGFS Client
   ansible.builtin.systemd:
     name: beegfs-client
-    state: restarted
+    state: stopped
+  listen: "Restart BeeGFS Client"
+  when: not beegfs_client_dkms_install
+  become: true
+
+- name: Ensure all mounts are removed
+  ansible.builtin.mount:
+    state: unmounted
+    path: item['mount_point']
+  loop: "{{ beegfs_client_mounts }}"
+  listen: "Restart BeeGFS Client"
+  become: true
+
+- name: Ensure the beegfs module is removed.
+  ansible.builtin.modprobe:
+    state: absent
+    name: beegfs
+  listen: "Restart BeeGFS Client"
+  become: true
+
+- name: Start BeeGFS Helper
+  ansible.builtin.systemd:
+    name: beegfs-helperd
+    state: started
+  listen: "Restart BeeGFS Client"
+  when: not beegfs_client_dkms_install
+  become: true
+
+- name: Start BeeGFS Client
+  ansible.builtin.systemd:
+    name: beegfs-client
+    state: started
+  listen: "Restart BeeGFS Client"
   when: not beegfs_client_dkms_install
   become: true
