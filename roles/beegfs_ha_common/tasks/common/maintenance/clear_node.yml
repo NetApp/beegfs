@@ -6,6 +6,12 @@
   delegate_to: "{{ cluster_automation_node }}"
   become: true
 
+- name: Restart pacemaker on {{ cluster_node }}
+  ansible.builtin.command: systemctl restart pacemaker
+  become: true
+  delegate_to: "{{ cluster_node }}"
+  when: maintenance_query["stdout"] | regex_search(beegfs_ha_common_pacemaker_true_regex, ignorecase=true)
+
 - name: Move {{ cluster_node }} out of maintenance mode.
   block:
     - name: "Clear maintenance attributes for {{ cluster_node }}."
