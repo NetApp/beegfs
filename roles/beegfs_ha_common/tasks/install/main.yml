@@ -58,6 +58,7 @@
       ansible.builtin.include_tasks: common/maintenance/set.yml
   when: inventory_hostname == cluster_automation_node
   tags:
+    - beegfs_ha_move_all_to_preferred
     - beegfs_ha_configure_resource
     - beegfs_ha_configure
     - beegfs_ha
