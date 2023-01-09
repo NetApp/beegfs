@@ -9,6 +9,7 @@ The BeeGFS HA role allows for upgrades between major and minor versions of BeeGF
 - [Upgrade](#upgrade)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
+  - [Tested Upgrade Paths](#tested-upgrade-paths)
   - [BeeGFS Patch Version Upgrade Steps](#beegfs-patch-version-upgrade-steps)
     - [Upgrade BeeGFS Collection](#upgrade-beegfs-collection)
     - [Update Ansible Inventory](#update-ansible-inventory)
@@ -21,7 +22,7 @@ The BeeGFS HA role allows for upgrades between major and minor versions of BeeGF
     - [Upgrading from BeeGFS version 7.2.6 or 7.3.0](#upgrading-from-beegfs-version-7.2.6-or-7.3.0)
   - [BeeGFS Release Notes](#beegfs-release-notes)
 
-<a name="Overview"></a>
+<a name="overview"></a>
 ## Overview
 
 The strategy used to upgrade the BeeGFS version is to first ensure the cluster is in an optimal state with each BeeGFS
@@ -31,6 +32,16 @@ services.
 
 For more information, see [BeeGFS Upgrade](https://doc.beegfs.io/latest/advanced_topics/upgrade.html) documentation.
 
+
+<a name="tested-upgrade-paths"></a>
+## Tested Upgrade Paths
+
+| Original Version | Upgrade Version | Multirail | Details                                                            |
+|------------------|-----------------|-----------|--------------------------------------------------------------------|
+| 7.2.6            | 7.3.2           | Yes       | Upgrading beegfs collection from v3.0.1 to v3.1.0, multirail added |
+| 7.2.6            | 7.2.8           | No        | Upgrading beegfs collection from v3.0.1 to v3.1.0                  |
+| 7.2.8            | 7.3.1           | Yes       | Upgrade using beegfs collection v3.1.0, multirail added            |
+| 7.3.1            | 7.3.2           | Yes       | Upgrade using beegfs collection v3.1.0                             |
 
 <a name="beegfs-patch-version-upgrade-steps"></a>
 ## BeeGFS Patch Version Upgrade Steps
@@ -116,24 +127,14 @@ This section provides notable information for upgrades.
 ### Upgrading from BeeGFS version 7.2.6 or 7.3.0
 
 BeeGFS versions released after 7.3.1 will no longer allow services to start without either specifying a connAuthFile or
-setting connDisableAuthentication=true in the service's configuration file. It is highly recommended to enable
+setting connDisableAuthentication=true in the service's configuration file. By default the beegfs_ha* roles will
+generate the file and added it to the Ansible control node at
+<playbook_directory>/files/beegfs/<beegfs_mgmt_ip_address>_connAuthFile. Also, the beegfs_client role will check for the
+presence of this file and supply it to the clients. However, if the beegfs_client role is not used to configure the
+clients then this file will need to be shared with them before they can have access. It is highly recommended to enable
 connection based authentication security. See
 [BeeGFS Connection Based Authentication](https://doc.beegfs.io/7.3.2/advanced_topics/authentication.html#connectionbasedauth)
 for more information.
-
-TODO: This release should add connAuthFile support (ESOLA-420)
-
-    beegfs_ha_beegfs_mgmtd_conf_ha_group_options:
-        connAuthFile: /etc/beegfs/connAuthFile
-        # connDisableAuthentication=false  # Disables connection based authentication
-
-    beegfs_ha_beegfs_meta_conf_ha_group_options:
-        connAuthFile: /etc/beegfs/connAuthFile
-        # connDisableAuthentication=false  # Disables connection based authentication
-
-    beegfs_ha_beegfs_storage_conf_ha_group_options:
-        connAuthFile: /etc/beegfs/connAuthFile
-        # connDisableAuthentication=false  # Disables connection based authentication
 
 
 <a name="beegfs-release-notes"></a>
