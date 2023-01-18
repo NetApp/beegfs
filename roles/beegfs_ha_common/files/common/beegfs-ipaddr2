@@ -714,6 +714,42 @@ delete_interface () {
 }
 
 #
+# Find all conflicting ip addresses and labels and remove them
+#
+remove_conflicts() {
+    local ipaddr netmask label addr_match label_match
+    ipaddr="$1"
+    netmask="$2"
+    label="$3"
+
+    $IP2UTIL --oneline --family $FAMILY addr | while read -r line; do
+        addr_match=0
+        if echo "$line" | grep -q "$ipaddr/$netmask"; then
+            addr_match=1
+        fi
+
+        label_match=0
+        if echo "$line" | grep "\\ $label\\\\"; then
+            label_match=1
+        fi
+
+        if [ $addr_match == 1 ] && [ $label_match == 1 ]; then
+            continue
+        elif [ $addr_match == 1 ] || [ $label_match == 1 ]; then
+            conflict_args=$(echo $line | tr -s ' ' | awk '{split($4, ip, "/"); print ip[1] " " $2 " " ip[2]}')
+            conflict_ipaddr=conflict_args | awk '{print $1 "/" $3}'
+            conflict_iface=conflict_args | awk '{print $2}'
+            ocf_log info "Deleting conflicting IP address ($conflict_ipaddr $conflict_iface)"
+            if ! delete_interface $conflict_args; then
+                return $OCF_ERR_GENERIC
+            fi
+        fi
+    done
+
+    return $OCF_SUCCESS
+}
+
+#
 #        Add an interface
 #
 add_interface () {
@@ -1094,6 +1130,11 @@ ip_start() {
         #       Do we already service this IP address on $NIC?
         #
         local ip_status=`ip_served`
+
+        #
+        #       Remove any conflicting IP addresses or labels
+        #
+        remove_conflicts "$OCF_RESKEY_ip" "$NETMASK" "$IFLABEL"
 
         if [ "$ip_status" = "ok" ]; then
                 exit $OCF_SUCCESS
