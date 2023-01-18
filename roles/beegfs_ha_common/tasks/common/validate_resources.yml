@@ -1,0 +1,20 @@
+- name: Check each pacemaker resource status.
+  ansible.builtin.shell: "for x in $(crm_resource --list-raw); do crm_resource --resource=$x --why; done"
+  register: pacemaker_resources_status
+  changed_when: false
+  failed_when: false
+  delegate_to: "{{ cluster_automation_node }}"
+  run_once: true
+  become: true
+
+- name: Fail when resources are not running.
+  ansible.builtin.fail:
+    msg: "Not all BeeGFS HA resources are running. {{ resources_not_started }}"
+  when: resources_not_started | length > 0
+  vars:
+    resources_not_started: |-
+      {%- set resources = [] -%}
+      {%- for line in pacemaker_resources_status["stdout_lines"] if line and line | regex_search("is not running", ignorecase=True) -%}
+        {%- if resources.append(line.split(" ")[1]) -%}{%- endif -%}
+      {%- endfor -%}
+      {{- resources -}}

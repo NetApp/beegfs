@@ -30,53 +30,41 @@
       delegate_to: "{{ item }}"
       loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
 
-    - name: Ensure cluster nodes are in maintenance mode.
+    # Setting the cluster into maintenance-mode rather than each individual cluster nodes prevents a number of issues
+    #   from occurring.
+    #   1) Pacemaker knows what nodes are available and can make the resource location graph once rather than each
+    #      time a cluster node is brought out of maintenance.
+    #   2) Resources can sometimes be placed on a non-primary node when the primary is still in maintenance; while the
+    #      automation will handle this case, it is preferable to avoid it all together.
+    #  This approach also speeds up the automation tasks for setting and bring the cluster out of maintenance-mode.
+    - name: Ensure cluster nodes is in maintenance-mode.
       block:
         - name: Check whether node is in maintenance-mode or the cluster is stopped on the node.
           ansible.builtin.command: "crm_attribute --name maintenance-mode --query"
           register: maintenance_mode_query
           failed_when: false
           changed_when: false
-          delegate_to: "{{ cluster_automation_node }}"
 
-        - name: Move cluster nodes into maintenance mode.
+        - name: Move cluster into maintenance-mode.
           block:
-            - name: Move cluster nodes into maintenance mode.
-              ansible.builtin.include_tasks: set_node.yml
-              loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
-              loop_control:
-                loop_var: cluster_node
+            - name: Move cluster into maintenance mode.
+              ansible.builtin.command: "crm_attribute --name maintenance-mode --update true"
+              register: global_maintenance_mode
+
+            - name: Check whether cluster was placed in maintenance mode.
+              ansible.builtin.pause:
+                prompt: "WARNING! Identified the cluster is at least partially deployed, but was unable to put the cluster into maintenance mode. If you are still in the process of deploying the cluster this can be safely ignored. If you are attempting to make changes to an existing cluster, continuing may temporarily disrupt filesystem operations, but will likely correct any outstanding issues with the cluster. Press enter to continue, Ctrl+C to interrupt"
+              when: global_maintenance_mode["rc"] != 0
 
             - name: Wait for cluster changes to stabilize if the cluster is started.
               ansible.builtin.command: "crm_resource --wait"
               changed_when: false
               ignore_errors: true
               timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
-              delegate_to: "{{ cluster_automation_node }}"
           when: maintenance_mode_query["stdout"] | regex_search(beegfs_ha_common_pacemaker_false_regex, ignorecase=true)
-      when: crm_mon_status["rc"] == 0
+      delegate_to: "{{ cluster_automation_node }}"
       run_once: true
 
-    - name: If cluster has started then move cluster nodes into maintenance mode.
-      block:
-        - name: Move cluster into maintenance mode.
-          ansible.builtin.command: "crm_attribute --name maintenance-mode --update true"
-          register: global_maintenance_mode
-          delegate_to: "{{ cluster_automation_node }}"
-
-        - name: Check whether cluster was placed in maintenance mode.
-          ansible.builtin.pause:
-            prompt: "WARNING! Identified the cluster is at least partially deployed, but was unable to put the cluster into maintenance mode. If you are still in the process of deploying the cluster this can be safely ignored. If you are attempting to make changes to an existing cluster, continuing may temporarily disrupt filesystem operations, but will likely correct any outstanding issues with the cluster. Press enter to continue, Ctrl+C to interrupt"
-          when: global_maintenance_mode["rc"] != 0
-
-        - name: Wait for cluster changes to stabilize if the cluster is started.
-          ansible.builtin.command: "crm_resource --wait"
-          changed_when: false
-          ignore_errors: true
-          timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
-          delegate_to: "{{ cluster_automation_node }}"
-      when: crm_mon_status["rc"] != 0
-      run_once: true
   when: 'crm_mon_status["rc"] != 2 or crm_mon_status["stderr"] | regex_search("crm_mon.*", ignorecase=true)'
   become: true
   ignore_errors: true
