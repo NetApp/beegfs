@@ -1,11 +1,3 @@
-- name: Stop BeeGFS Helper
-  ansible.builtin.systemd:
-    name: beegfs-helperd
-    state: stopped
-  listen: "Restart BeeGFS Client"
-  when: not beegfs_client_dkms_install
-  become: true
-
 - name: Stop BeeGFS Client
   ansible.builtin.systemd:
     name: beegfs-client
@@ -14,19 +6,48 @@
   when: not beegfs_client_dkms_install
   become: true
 
+# This task will capture all BeeGFS mounts whereas if beegfs_client_mounts variable is relied on, it is possible for
+#   other BeeGFS mounts to remain (i.e. removed from inventory, manually configured, etc). This is problematic since any
+#   BeeGFS mount will prevent the beegfs module from being unloaded.
+- name: Retrieve all BeeGFS mounts.
+  ansible.builtin.command: egrep "^beegfs_nodev" /proc/mounts
+  failed_when: false
+  changed_when: false
+  register: beegfs_proc_mounts
+  listen: "Restart BeeGFS Client"
+  become: true
+
 - name: Ensure all mounts are removed
   ansible.builtin.mount:
     state: unmounted
-    path: item['mount_point']
-  loop: "{{ beegfs_client_mounts }}"
+    path: "{{ item }}"
+  loop: "{{ mounts }}"
   listen: "Restart BeeGFS Client"
   become: true
+  vars:
+    mounts: |-
+      {%- set mounts = [] -%}
+      {%- for line in beegfs_proc_mounts["stdout_lines"] -%}
+        {%- set parts = line | ansible.builtin.split(" ") -%}
+        {%- if parts | length > 2 -%}
+          {%- if mounts.append(parts[1]) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- mounts -}}
 
 - name: Ensure the beegfs module is removed.
   ansible.builtin.modprobe:
     state: absent
     name: beegfs
   listen: "Restart BeeGFS Client"
+  become: true
+
+- name: Stop BeeGFS Helper
+  ansible.builtin.systemd:
+    name: beegfs-helperd
+    state: stopped
+  listen: "Restart BeeGFS Client"
+  when: not beegfs_client_dkms_install
   become: true
 
 - name: Start BeeGFS Helper
