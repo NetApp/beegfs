@@ -52,9 +52,9 @@
       tags: always
   tags: always
 
-- name: Ensure BeeGFS HA cluster nodes are in maintenance mode if cluster is available.
+- name: Ensure BeeGFS HA cluster is in maintenance mode if cluster is available.
   block:
-    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+    - name: Ensure BeeGFS HA cluster is in maintenance mode.
       ansible.builtin.include_tasks: common/maintenance/set.yml
   when: inventory_hostname == cluster_automation_node
   tags:
