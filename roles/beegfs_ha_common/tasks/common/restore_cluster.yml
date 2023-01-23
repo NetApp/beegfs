@@ -1,0 +1,37 @@
+# Order of tasks
+# 1) Ensure fencing is disabled (Disabled fencing will persist until the end of the automation)
+# 2) Clear standby
+# 3) Clear maintenance (Clears maintenance-mode cluster attribute and re-evaluates resource states)
+# 4) Wait until all cluster nodes are online
+# 5) Move resources back to preferred node
+# 6) Verify all services are running on their preferred node
+- name: Ensure cluster fencing is disabled.
+  block:
+    - name: Determine whether fencing is enabled.
+      ansible.builtin.command: crm_attribute --name stonith-enabled --quiet
+      register: stonith_enabled
+      changed_when: false
+
+    - name: Disable fencing until cluster is fully started.
+      ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update False
+      when: stonith_enabled["stdout"] | bool
+
+    - name: Wait for cluster changes to complete.
+      ansible.builtin.command: crm_resource --wait
+      changed_when: false
+      ignore_errors: true
+      timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
+  delegate_to: "{{ cluster_automation_node }}"
+
+- name: Ensure BeeGFS HA cluster nodes are out of standby mode.
+  ansible.builtin.include_tasks: common/standby/clear.yml
+
+# Clearing the cluster maintenance-mode will clear past failures and refresh the cluster node resources.
+- name: Ensure BeeGFS HA cluster is out of maintenance mode.
+  ansible.builtin.include_tasks: common/maintenance/clear.yml
+
+- name: Verify all services are running on their preferred node
+  ansible.builtin.include_tasks: common/move_resources_to_preferred.yml
+
+- name: Verify all services are running on their preferred node
+  ansible.builtin.include_tasks: common/validate_resources.yml

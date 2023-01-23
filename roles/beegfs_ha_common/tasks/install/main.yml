@@ -52,9 +52,9 @@
       tags: always
   tags: always
 
-- name: Ensure BeeGFS HA cluster nodes are in maintenance mode if cluster is available.
+- name: Ensure BeeGFS HA cluster is in maintenance mode if cluster is available.
   block:
-    - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
+    - name: Ensure BeeGFS HA cluster is in maintenance mode.
       ansible.builtin.include_tasks: common/maintenance/set.yml
   when: inventory_hostname == cluster_automation_node
   tags:
@@ -132,10 +132,7 @@
 - name: Force expected BeeGFS and HA packages to be installed.
   block:
     - name: Attempt to return services to their preferred BeeGFS HA cluster nodes
-      ansible.builtin.include_tasks: services/restore_services.yml
-
-    - name: Verify all services are running on their preferred node
-      ansible.builtin.include_tasks: validate_resources.yml
+      ansible.builtin.include_tasks: common/restore_cluster.yml
 
     # Execute all included tasks one cluster node at a time serially
     - name: Force BeeGFS packages upgrade
@@ -251,11 +248,7 @@
 - name: Attempt to return cluster to an optimal state.
   block:
     - name: Attempt to return services to their preferred BeeGFS HA cluster nodes
-      ansible.builtin.include_tasks: services/restore_services.yml
-
-    - name: Enable fencing since cluster is fully started.
-      ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update True
-      when: stonith_enabled["stdout"] | bool
+      ansible.builtin.include_tasks: common/restore_cluster.yml
   when: inventory_hostname == cluster_automation_node
   become: true
   tags:
@@ -264,14 +257,14 @@
     - beegfs_ha_configure
     - beegfs_ha
 
-- name: Verify all Pacemaker resources are started.
+- name: Restore temporary cluster attributes.
   block:
-    - name: Retry until resources are all started
-      ansible.builtin.include_tasks: validate_resources.yml
-  when: 'inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-    and ("management" in node_info["services"] or "metadata" in node_info["services"] or "storage" in node_info["services"])'
+    - name: Enable fencing since cluster is fully started.
+      ansible.builtin.command: crm_attribute --type crm_config --name stonith-enabled --update True
+  when: inventory_hostname == cluster_automation_node
+  become: true
   tags:
-    - beegfs_ha_validation
+    - beegfs_ha_move_all_to_preferred
     - beegfs_ha_configure_resource
     - beegfs_ha_configure
     - beegfs_ha

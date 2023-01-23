@@ -24,7 +24,4 @@
     cluster_node: "{{ force_upgrade_cluster_node }}"
 
 - name: Return services to their preferred BeeGFS HA cluster nodes
-  ansible.builtin.include_tasks: services/restore_services.yml
-
-- name: Verify all services are running on their preferred node
-  ansible.builtin.include_tasks: validate_resources.yml
+  ansible.builtin.include_tasks: common/restore_cluster.yml
