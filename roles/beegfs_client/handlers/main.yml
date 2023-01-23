@@ -11,9 +11,9 @@
 #   BeeGFS mount will prevent the beegfs module from being unloaded.
 - name: Retrieve all BeeGFS mounts.
   ansible.builtin.command: egrep "^beegfs_nodev" /proc/mounts
-  failed_when: false
-  changed_when: false
   register: beegfs_proc_mounts
+  failed_when: beegfs_proc_mounts["rc"] not in [0, 1]
+  changed_when: false
   listen: "Restart BeeGFS Client"
   become: true
 
