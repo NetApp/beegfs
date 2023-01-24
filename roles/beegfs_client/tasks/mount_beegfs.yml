@@ -107,7 +107,9 @@
             {%- if required_options.update({'connRDMAInterfacesFile': connRDMAInterfacesFile_path}) -%}{%- endif -%}
           {%- endif -%}
           {%- if connAuthFile_enabled -%}
-            {%- if required_options.update({'connAuthFile': connAuthFile_dest}) -%}{%- endif -%}
+            {%- if required_options.update({'connDisableAuthentication': 'false', 'connAuthFile': connAuthFile_dest}) -%}{%- endif -%}
+          {%- else -%}
+            {%- if required_options.update({'connDisableAuthentication': 'true'}) -%}{%- endif -%}
           {%- endif -%}
           {{- beegfs_client_config_default_options | combine(item['beegfs_client_config']) | combine(required_options) -}}
         mode: "0644"
