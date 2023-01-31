@@ -1,0 +1,48 @@
+# Overview of tasks
+# * Determine whether cluster is in maintenance mode.
+# * If cluster is in maintenance-mode then
+# * * Clear pacemaker history and state information to force a re-evaluation of the cluster resources.
+# * * Wait for re-evaluation to complete.
+# * * Delete the cluster maintenance-mode attribute.
+# * * Wait for cluster to come out of maintenance mode.
+# * Move any cluster nodes that are individually in maintenance.
+
+- name: Check whether cluster is in maintenance-mode or the cluster is stopped
+  ansible.builtin.command: "crm_attribute --name maintenance-mode --query"
+  register: maintenance_query
+  failed_when: false
+  changed_when: false
+  delegate_to: "{{ cluster_automation_node }}"
+  become: true
+
+- name: Clear cluster maintenance-mode.
+  block:
+    # This task will clear the failure count and force a re-evaluation of all the resources. The re-evaluation will
+    #   force pacemaker to restart any resources that are in an unexpected state whether previously failed or not. An
+    #   example for when this is needed is after the automation modifies an interface and the floating IP addresses are
+    #   consequently deleted, the state probes will alert the cluster to the missing addresses and start them.
+    - name: Refresh the state of each cluster node.
+      ansible.builtin.command: crm_resource --refresh
+
+    # This task will wait until the cluster resources have been re-evaluated and should not be stopped.
+    - name: Wait for cluster resource refresh to complete.
+      ansible.builtin.command: "crm_resource --wait"
+      changed_when: false
+
+    - name: Ensure BeeGFS HA cluster is not in maintenance mode.
+      ansible.builtin.command: "crm_attribute --name maintenance-mode --delete"
+
+    - name: Wait for cluster changes to complete.
+      ansible.builtin.command: "crm_resource --wait"
+      changed_when: false
+  when: "maintenance_query['rc'] in [0, 105] and maintenance_query['stdout']
+         | regex_search(beegfs_ha_common_pacemaker_true_regex, ignorecase=true)"
+  delegate_to: "{{ cluster_automation_node }}"
+  become: true
+
+- name: Move cluster nodes out of maintenance mode.
+  ansible.builtin.include_tasks: clear_node.yml
+  loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+  loop_control:
+    loop_var: cluster_node
+  run_once: true

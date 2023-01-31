@@ -1,0 +1,6 @@
+default_beegfs_ha_corosync_version: 3.1.5
+default_beegfs_ha_pacemaker_version: 2.1.2
+default_beegfs_ha_pacemaker_remote_version: 2.1.2
+default_beegfs_ha_pcs_version: 0.10.12
+default_beegfs_ha_resource_agent_version: 4.9.0
+default_beegfs_ha_fence_agents_all_version: 4.2.1

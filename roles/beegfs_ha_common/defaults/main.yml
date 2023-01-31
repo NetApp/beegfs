@@ -1,0 +1,4 @@
+#  Be sure to add ignorecase=true to the regex_search
+beegfs_ha_common_pacemaker_true_regex: ".*value=(1|y|yes|on|true)"
+beegfs_ha_common_pacemaker_false_regex: ".*value=(?!1|y|yes|on|true)" # Anything not true
+beegfs_ha_common_pacemaker_wait_timeout: 300

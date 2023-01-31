@@ -1,0 +1,13 @@
+- name: Start all cluster nodes.
+  ansible.builtin.include_tasks: node.yml
+  loop: "{{ groups[beegfs_ha_ansible_cluster_group] }}"
+  loop_control:
+    loop_var: cluster_node
+  run_once: true
+
+- name: Wait for cluster to finish starting.
+  ansible.builtin.command: "crm_resource --wait"
+  changed_when: false
+  ignore_errors: true
+  timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
+  delegate_to: "{{ cluster_automation_node }}"

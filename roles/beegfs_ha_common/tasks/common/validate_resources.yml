@@ -1,0 +1,27 @@
+# Validate_resources.yml is called once at the end of common/restore_cluster.yml which is call from two locations,
+#   1) When forcing a BeeGFS version upgrade. The version upgrade path requires the cluster to be in an optimal state
+#       since nodes are placed in standby and resources must migrate to a non-preferred node.
+#   2) At the end of the automation just prior to enabling fencing and creating a backup of the cluster.
+#
+#   In both instances, it is preferable to fail, alerting the user rather than to continue. The upgrade path requires
+#     the automation to stop and failing in the second instance prevents cluster nodes from being fenced.
+- name: Check each pacemaker resource status.
+  ansible.builtin.shell: "for x in $(crm_resource --list-raw); do crm_resource --resource=$x --why; done"
+  register: pacemaker_resources_status
+  changed_when: false
+  failed_when: false
+  delegate_to: "{{ cluster_automation_node }}"
+  run_once: true
+  become: true
+
+- name: Fail when resources are not running.
+  ansible.builtin.fail:
+    msg: "Not all BeeGFS HA resources are running. {{ resources_not_started }}"
+  when: resources_not_started | length > 0
+  vars:
+    resources_not_started: |-
+      {%- set resources = [] -%}
+      {%- for line in pacemaker_resources_status["stdout_lines"] if line and line | regex_search("is not running", ignorecase=True) -%}
+        {%- if resources.append(line.split(" ")[1]) -%}{%- endif -%}
+      {%- endfor -%}
+      {{- resources -}}

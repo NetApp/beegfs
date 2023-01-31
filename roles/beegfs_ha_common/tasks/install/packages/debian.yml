@@ -1,0 +1,94 @@
+- name: Ensure software properties common package is installed (Debian/Ubuntu).
+  ansible.builtin.apt:
+    state: latest
+    name: software-properties-common
+  become: true
+
+- name: Add BeeGFS apt respository key (Debian/Ubuntu).
+  apt_key:
+    url: "{{ beegfs_ha_debian_repository_gpgkey }}"
+    state: present
+  become: true
+
+- name: Add BeeGFS apt respository (Debian/Ubuntu).
+  apt_repository:
+    state: present
+    repo: "deb [arch=amd64] {{ beegfs_ha_debian_repository_base_url }} stretch non-free"
+    update_cache: true
+  become: true
+
+- name: Ensure the BeeGFS management package is installed (Debian/Ubuntu - Management).
+  ansible.builtin.apt:
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+    name: "beegfs-mgmtd{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}={{ beegfs_ha_beegfs_version }}{% endif %}"
+  register: beegfs_mgmtd_package
+  when: '"management" in node_info["services"]'
+  become: true
+
+- name: Stop beegfs-mgmtd service.
+  ansible.builtin.systemd:
+    name: beegfs-mgmtd.service
+    state: stopped
+    enabled: false
+  when: beegfs_mgmtd_package['changed'] == True
+  become: true
+
+- name: Ensure the BeeGFS metadata package is installed (Debian/Ubuntu - Metadata).
+  ansible.builtin.apt:
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+    name: "beegfs-meta{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}={{ beegfs_ha_beegfs_version }}{% endif %}"
+  register: beegfs_meta_package
+  when: '"metadata" in node_info["services"]'
+  become: true
+
+- name: Stop beegfs-metadata service.
+  ansible.builtin.systemd:
+    name: beegfs-meta.service
+    state: stopped
+    enabled: false
+  when: beegfs_meta_package['changed'] == True
+  become: true
+
+- name: Ensure the BeeGFS storage package is installed (Debian/Ubuntu - Storage).
+  ansible.builtin.apt:
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+    name: "beegfs-storage{% if beegfs_ha_beegfs_version is defined and beegfs_ha_beegfs_version %}={{ beegfs_ha_beegfs_version }}{% endif %}"
+  register: beegfs_storage_package
+  when: '"storage" in node_info["services"]'
+  become: true
+
+- name: Stop beegfs-storage service.
+  ansible.builtin.systemd:
+    name: beegfs-storage.service
+    state: stopped
+    enabled: false
+  when: beegfs_storage_package['changed'] == True
+  become: true
+
+- name: Ensure the BeeGFS infiniband package is installed (Debian/Ubuntu - Metadata/Storage).
+  block:
+    - name: Remove BeeGFS infiniband package to avoid potential conflicts (Debian/Ubuntu - Metadata/Storage).
+      ansible.builtin.apt:
+        state: absent
+        name: libbeegfs-ib
+      when: beegfs_meta_package['changed'] or beegfs_storage_package['changed']
+    - name: Ensure the BeeGFS infiniband package is installed (Debian/Ubuntu - Metadata/Storage).
+      ansible.builtin.apt:
+        state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+        name: libbeegfs-ib
+  when: '("metadata" in node_info["services"] or "storage" in node_info["services"])
+    and node_info["service_configuration_options"]["connUseRDMA"] | default(true)'
+  become: true
+
+- name: Ensure the numactl package is installed (Debian/Ubuntu - Metadata/Storage).
+  ansible.builtin.apt:
+    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+    name: numactl
+  when: '"metadata" in node_info["services"] or "storage" in node_info["services"]'
+  become: true
+
+- name: Ensure bc is installed (Debian/Ubuntu).
+  ansible.builtin.apt:
+    state: present
+    name: bc
+  become: true

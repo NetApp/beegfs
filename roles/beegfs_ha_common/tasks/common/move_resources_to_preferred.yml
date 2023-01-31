@@ -1,0 +1,56 @@
+- name: Clear past history and then restart any resource monitor that is found on a non-preferred node.
+  block:
+    - name: Clear all past failures, clear history, and fail count.
+      ansible.builtin.command: "crm_resource --cleanup"
+
+    - name: Wait for cluster to stabilize.
+      ansible.builtin.command: "crm_resource --wait"
+      changed_when: false
+
+    - name: Determine current location of all cluster resources.
+      ansible.builtin.command: crm_mon -r1
+      register: resource_locations
+      changed_when: false
+
+    - name: Move resources back to their preferred cluster nodes.
+      ansible.builtin.command: "crm_resource --resource {{ item }} --restart"
+      loop: "{{ non_preferred_resources }}"
+      when: beegfs_ha_force_resource_move and non_preferred_resources | length > 0
+      vars:
+        non_preferred_resources: |-
+          {#- Create a dictionary of the preferred cluster node for each resource monitor -#}
+          {%- set preferred_nodes = {} -%}
+          {%- for host in groups[beegfs_ha_ansible_cluster_group] if "node_info" in (hostvars[host].keys() | list) -%}
+            {%- set node_info = hostvars[host]["node_info"] -%}
+
+            {%- for service in node_info["services"] -%}
+              {%- for info in node_info[service] -%}
+                {%- set monitor_resource = info["resource_group"] ~ "-monitor" -%}
+                {%- set preferred_node = info["preferred_node_order"][0] -%}
+
+                {%- if host == preferred_node and (monitor_resource not in preferred_nodes.keys() | list) -%}
+                  {%- if preferred_nodes.update({monitor_resource: preferred_node}) -%}{%- endif -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endfor -%}
+          {%- endfor -%}
+
+          {#- Find any monitor resources that are not on their preferred cluster nodes. -#}
+          {%- set non_preferred_resources = [] -%}
+          {%- for line in resource_locations["stdout_lines"] if line and line | regex_search("monitor") -%}
+            {%- set parts = line | regex_replace("^[\s*]+([A-Za-z0-9_]+-monitor)\s.*\s(\S+)$", "\\1 \\2") | split(" ") -%}
+            {%- set monitor = parts[0] -%}
+            {%- set current_node = parts[1] -%}
+
+            {%- if current_node != preferred_nodes[monitor] -%}
+              {%- if non_preferred_resources.append(monitor) -%}{%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{- non_preferred_resources -}}
+
+    - name: Wait for cluster changes to complete.
+      ansible.builtin.command: "crm_resource --wait"
+      changed_when: false
+  delegate_to: "{{ cluster_automation_node }}"
+  run_once: true
+  become: true
