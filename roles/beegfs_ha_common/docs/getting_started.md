@@ -30,10 +30,10 @@
 Ensure the following conditions are met:
 - Ansible control node has the following installed:
   - Python 3.6 or later
-    - The Ansible version above may have a minimum required Python version 
+    - The Ansible version above may have a minimum required Python version
   - NetApp E-Series Ansible Collections:
-    - netapp_eseries.santricity 1.3.1 or later.
-    - netapp_eseries.host 1.2 or later.
+    - netapp_eseries.santricity 1.4.0 or later.
+    - netapp_eseries.host 1.3 or later.
   - Python (pip) packages installed:
     - ipaddr
     - netaddr
@@ -55,10 +55,10 @@ Build the inventory and playbook files for on your BeeGFS cluster requirements. 
 For security reasons these passwords should not be stored in plain text and, instead, should use [Ansible Vault](https://docs.ansible.com/ansible/latest/user_guide/vault.html).
 
 There are two ways to build the necessary files:
-1. Define the inventory and run the `create_inventory_structure.yml` playbook from the `getting_started/beegfs_ha_latest` folder. This is the recommended 
+1. Define the inventory and run the `create_inventory_structure.yml` playbook from the `getting_started/beegfs_ha_latest` folder. This is the recommended
 way to get started with the BeeGFS HA role.
-   * Refer to the readme from [beegfs_ha_latest getting_started project](../../../getting_started/beegfs_ha_latest/README.md) 
-     for details. 
+   * Refer to the readme from [beegfs_ha_latest getting_started project](../../../getting_started/beegfs_ha_latest/README.md)
+     for details.
 2. Create the inventory and playbook using the examples and variables found in the below sections.
 
 Once all the files are created, then run the playbook.
@@ -68,8 +68,8 @@ Once all the files are created, then run the playbook.
 <a name="example-playbook-inventory-grouphost-variables"></a>
 ## Example Playbook, Inventory, Group/Host Variables
 
-This section contains an example of how to layout the playbook and inventory files. The variables used in the inventory 
-files are not exhaustive, see additional variables from under [Role Variables](role_variables.md) or other NetApp 
+This section contains an example of how to layout the playbook and inventory files. The variables used in the inventory
+files are not exhaustive, see additional variables from under [Role Variables](role_variables.md) or other NetApp
 E-Series Ansible Collections ([santricity](https://galaxy.ansible.com/netapp_eseries/santricity), [host](https://galaxy.ansible.com/netapp_eseries/host)).
 
 <a name="example-beegfs-ha-playbook-file"></a>
@@ -101,12 +101,12 @@ This file would typically be created as `inventory.yml`:
     all:
       vars:
         ansible_python_interpreter: /usr/bin/python3
-      
+
       children:
         eseries_storage_systems:  # BeeGFS HA E-Series storage group
           hosts:
             eseries_storage_system_c1:
-            eseries_storage_system_c2:  
+            eseries_storage_system_c2:
             eseries_storage_system_c3:
 
         ha_cluster:   # BeeGFS HA (Pacemaker) cluster group
@@ -147,8 +147,8 @@ Any variable supported by the netapp_eseries.santricity collection can be set in
 
 This file would be created as `group_vars/eseries_storage_systems.yml`:
 
-    ### eseries_storage_systems Ansible group inventory file. 
-    # Place all default/common variables for NetApp E-Series Storage Systems here: 
+    ### eseries_storage_systems Ansible group inventory file.
+    # Place all default/common variables for NetApp E-Series Storage Systems here:
     ansible_connection: local
     eseries_system_password: <PASSWORD>
     eseries_validate_certs: false
@@ -166,14 +166,14 @@ This file would be created as `group_vars/eseries_storage_systems.yml`:
 
 This file would be created as `group_vars/ha_cluster.yml`:
 
-    ### ha_cluster Ansible group inventory file. 
+    ### ha_cluster Ansible group inventory file.
     # Place all default/common variables for BeeGFS HA cluster resources below.
 
     ### Cluster node defaults
     ansible_ssh_user: root
     ansible_become_password: <PASSWORD>
 
-    # If the following options are specified, then Ansible will automatically reboot nodes when necessary for changes to take effect: 
+    # If the following options are specified, then Ansible will automatically reboot nodes when necessary for changes to take effect:
     eseries_common_allow_host_reboot: true
     eseries_common_reboot_test_command: "! systemctl status eseries_nvme_ib.service || systemctl --state=active,exited | grep eseries_nvme_ib.service"
 
@@ -185,21 +185,21 @@ This file would be created as `group_vars/ha_cluster.yml`:
       resource-stickiness: 15000
       cluster-ipc-limit: 5500
 
-    # The following variables should be adjusted depending on the desired configuration: 
+    # The following variables should be adjusted depending on the desired configuration:
     beegfs_ha_cluster_name: hacluster                  # BeeGFS HA cluster name.
     beegfs_ha_cluster_username: hacluster              # BeeGFS HA cluster username.
     beegfs_ha_cluster_password: hapassword             # BeeGFS HA cluster username's password.
     beegfs_ha_cluster_password_sha512_salt: randomSalt # BeeGFS HA cluster username's password salt.
     beegfs_ha_mgmtd_floating_ip: 100.127.101.0         # BeeGFS management service IP address.
     beegfs_ha_alert_email_list: ["email@example.com"]  # E-mail recipient list for notifications when BeeGFS HA
-                                                       #   resources change or fail. Often a distribution list 
+                                                       #   resources change or fail. Often a distribution list
                                                        #   for the team responsible for managing the cluster.
     beegfs_ha_alert_conf_ha_group_options:
       mydomain: <SEARCH_DOMAIN>  # This parameter specifies the local internet domain name. This is optional when the
                                  #    cluster nodes have fully qualified hostnames (i.e. host.example.com)
 
     ### Fencing configuration:
-    # OPTION 1: To enable fencing using APC Power Distribution Units (PDUs): 
+    # OPTION 1: To enable fencing using APC Power Distribution Units (PDUs):
     beegfs_ha_fencing_agents:
       fence_apc:
         - ipaddr: <PDU_IP_ADDRESS>
@@ -207,11 +207,11 @@ This file would be created as `group_vars/ha_cluster.yml`:
           passwd: <PDU_PASSWORD>
           pcmk_host_map: "<HOSTNAME>:<PDU_PORT>,<PDU_PORT>;<HOSTNAME>:<PDU_PORT>,<PDU_PORT>"
 
-    # OPTION 2: To enable fencing using the Redfish APIs provided by the Lenovo XCC (and other BMCs):  
+    # OPTION 2: To enable fencing using the Redfish APIs provided by the Lenovo XCC (and other BMCs):
     redfish: &redfish
       username: <BMC_USERNAME>
       password: <BMC_PASSWORD>
-      ssl_insecure: 1 # If a valid SSL certificate is not available specify “1”. 
+      ssl_insecure: 1 # If a valid SSL certificate is not available specify “1”.
 
     beegfs_ha_fencing_agents:
       fence_redfish:
@@ -277,7 +277,7 @@ This file would be created as `group_vars/mgmt.yml`:
           - name: <STORAGE POOL>  # Shared storage pools must be defined exactly the same with the exception of volumes each time.
             raid_level: raid1
             criteria_drive_count: 4
-            common_volume_configuration:                
+            common_volume_configuration:
               segment_size_kb: 128
             volumes:
               - size: 1
@@ -340,9 +340,9 @@ A file for each storage resources would be created as `group_vars/stor_<number>.
             volumes:  # See the performance tuning defaults section of [BeeGFS HA Defaults](../defaults/main.yml) for
                       # comprehensive list of options.
               - size: 21.50
-                owning_controller: <OWNING CONTROLLER>         
+                owning_controller: <OWNING CONTROLLER>
               - size: 21.50
-                owning_controller: <OWNING CONTROLLER>         
+                owning_controller: <OWNING CONTROLLER>
 
 <a name="example-host_vars-inventory-files"></a>
 ### Example host_vars Inventory Files
@@ -360,14 +360,14 @@ A file for each storage systems would be created as `host_vars/<hostname>.yml` (
 
     # Define NVMe over InfiniBand ports.
     eseries_controller_nvme_ib_port:
-      controller_a:    
+      controller_a:
           -  # Ordered list of IPv4 addresses for controller A starting with channel 1
       controller_b:
           -  # Ordered list of IPv4 addresses for controller B starting with channel 1
 
     # Define InfiniBand iSER ports
     eseries_controller_ib_iser_port:
-      controller_a:    
+      controller_a:
           -  # Ordered list of IPv4 addresses for controller A starting with channel 1
       controller_b:
           -  # Ordered list of IPv4 addresses for controller B starting with channel 1
@@ -398,7 +398,7 @@ A file for each nodes would be created as `host_vars/<hostname>.yml`  (i.e., hos
 ## General Notes
 
 - All BeeGFS cluster nodes need to be available.
-- Fencing agents should be used to ensure failed nodes are definitely down.  
+- Fencing agents should be used to ensure failed nodes are definitely down.
   - WARNING: If `beegfs_ha_cluster_crm_config_options['stonith-enabled']` is set to false then fencing agent will not be configured!
   - For details on configuring different fencing agents, see [Configuring Fencing in a High Availability Cluster](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_high_availability_clusters/assembly_configuring-fencing-configuring-and-managing-high-availability-clusters).
 - Uninstall functionality will remove required BeeGFS 7.2 packages. This means that there will be no changes made to the kernel development/NTP/chrony packages whether they previously existed or not.

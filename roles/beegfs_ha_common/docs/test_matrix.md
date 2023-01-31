@@ -9,19 +9,21 @@ supporting.
 
 - [Support Matrix](#support-matrix)
   - [Table of Contents](#table-of-contents)
-  - [Supported BeeGFS and Operating System](#supported-beegfs-and-operating-system)
+  - [Tested BeeGFS and Operating System](#tested-beegfs-and-operating-system)
     - [Additional Notes](#additional-notes)
   - [Supported Storage System](#supported-storage-system)
     - [Additional Notes](#additional-notes-1)
   - [Supported Fence Agent](#supported-fence-agent)
     - [Additional Notes](#additional-notes-2)
 
-<a name="supported-beegfs-and-operating-system"></a>
-## Supported BeeGFS and Operating System
+<a name="tested-beegfs-and-operating-system"></a>
+## Tested BeeGFS and Operating System
 
 | BeeGFS Component       | BeeGFS Version | Operating System                                 |
 | ---------------------- |----------------|--------------------------------------------------|
 | BeeGFS Server services | 7.2.6          | RedHat 8.4 (kernel 4.18.0-305.25.1.el8_4.x86_64) |
+| BeeGFS Server services | 7.2.8          | RedHat 8.4 (kernel 4.18.0-305.25.1.el8_4.x86_64) |
+| BeeGFS Server services | 7.3.2          | RedHat 8.4 (kernel 4.18.0-305.25.1.el8_4.x86_64) |
 
 <a name="additional-notes"></a>
 ### Additional Notes
