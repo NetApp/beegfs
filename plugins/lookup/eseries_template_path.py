@@ -1,4 +1,4 @@
-# (c) 2020, NetApp, Inc
+# (c) 2024, NetApp, Inc
 # BSD-3 Clause (see COPYING or https://opensource.org/licenses/BSD-3-Clause)
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
@@ -8,7 +8,8 @@ DOCUMENTATION = """
     author: Nathan Swartz
     short_description: Searches playbook's directory for expected templates file before using the E-Series role's.
     description:
-      - Attempts to find the template source file first in the playbook's directory under templates/<ROLES_NAME>/ otherwise use the role's template file.
+      - Attempts to find the template source file first in the playbook's directory under templates/<ROLES_NAME>/ 
+        otherwise use the role's template file.
       - Provides a mechanism for users to override NetApp E-Series Ansible role's templates.
     options:
       relative_filepath:

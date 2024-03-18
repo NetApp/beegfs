@@ -3,7 +3,7 @@ galaxy_info:
   description: Configures a highly available BeeGFS parallel file system with NetApp E-Series storage systems.
   company: NetApp
   license: BSD-3-Clause
-  min_ansible_version: 2.13
+  min_ansible_version: 2.10
   platforms:
     - name: EL
       versions:

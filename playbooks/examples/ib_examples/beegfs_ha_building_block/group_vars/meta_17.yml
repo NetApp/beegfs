@@ -1,0 +1,23 @@
+# meta_17 - BeeGFS HA Metadata Resource Group
+beegfs_ha_beegfs_meta_conf_resource_group_options:
+  connMetaPortTCP: 8015
+  connMetaPortUDP: 8015
+  tuneBindToNumaZone: 0
+
+floating_ips:
+  - i1b:192.168.9.117/24
+  - i2b:192.168.10.117/24
+
+beegfs_service: metadata
+
+beegfs_targets:
+  eseries_storage_system_05:
+    eseries_storage_pool_configuration:
+      - name: beegfs_m17_m18_m21_m22
+        raid_level: raid1
+        criteria_drive_count: 4
+        common_volume_configuration:
+          segment_size_kb: 128
+        volumes:
+          - size: 21.5
+            owning_controller: A

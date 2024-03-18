@@ -1,0 +1,27 @@
+# meta_07 - BeeGFS HA Metadata Resource Group
+
+# This is a template for BeeGFS HA metadata resource group. Review all comments and update with all expected values.
+# IMPORTANT: All capitalized words in angled brackets must be updated.
+
+beegfs_ha_beegfs_meta_conf_resource_group_options:
+  connMetaPortTCP: 8075
+  connMetaPortUDP: 8075
+  tuneBindToNumaZone: 1
+
+floating_ips:
+  - i3b:100.127.101.7/16
+  - i4b:100.128.102.7/16
+
+beegfs_service: metadata
+
+beegfs_targets:
+  eseries_storage_system_02:
+    eseries_storage_pool_configuration:
+      - name: beegfs_m3_m4_m7_m8
+        raid_level: raid1
+        criteria_drive_count: 4
+        common_volume_configuration:
+          segment_size_kb: 128
+        volumes:
+          - size: 21.25
+            owning_controller: A

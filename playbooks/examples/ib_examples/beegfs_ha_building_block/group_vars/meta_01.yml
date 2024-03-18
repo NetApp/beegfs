@@ -1,0 +1,45 @@
+# meta_01 - BeeGFS HA Metadata Resource Group
+
+# This is a template for BeeGFS HA metadata resource group. Review all comments and update with all expected values.
+# IMPORTANT: All capitalized words in angled brackets must be updated.
+
+beegfs_ha_beegfs_meta_conf_resource_group_options:
+  connMetaPortTCP: 8015               # Metadata service default: 8005
+  connMetaPortUDP: 8015
+  # NUMA node binding for BeeGFS HA service. This NUMA policy will be applied whenever and wherever the BeeGFS service # resides. This can provide significant performance increases by avoiding the cache misses between NUMA nodes.
+  tuneBindToNumaZone: 0
+
+# Node IPs for Pacemaker services.
+floating_ips:
+  - i1b:100.127.101.1/16
+  - i2b:100.128.102.1/16
+
+# Type of BeeGFS service the HA resource group will manage. Choices: management, metadata, storage.
+beegfs_service: metadata
+
+beegfs_targets:
+  eseries_storage_system_01:                # 1st array of building block that defined in inventory
+    eseries_storage_pool_configuration:
+      # The management service does not require much storage. For this reason the storage pool's name is specified here
+      # to provide a common pool of drives to be used between this metadata services and the management service.
+      # If name is changed, differs from the management storage pool's name or removed a common storage pool will not be
+      # created.
+      - name: beegfs_m1_m2_m5_m6
+
+        # Storage pool/volume group RAID type. Choices: raid0, raid1, raid5, raid6, raidDiskPool
+        # RAID 1 mirrors the data between two drives which is the recommended storage type for management and metadata
+        # services. If this storage pool is shared with other services this value must be the same on all definitions.
+        raid_level: raid1                   
+
+        # Total drive count for the storage pool. RAID 1 requires even number of drives. If this storage pool is shared 
+        # with other services this value must be the same on all definitions.
+        criteria_drive_count: 4             
+
+        common_volume_configuration:
+          segment_size_kb: 128
+
+        # BeeGFS metadata service requires only one volume.
+        volumes:
+          # Size of the BeeGFS metadata service volume in percentage of total storage pool capacity.
+          - size: 21.25
+            owning_controller: A

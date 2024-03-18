@@ -1,0 +1,10 @@
+- hosts: all
+  gather_facts: false
+  any_errors_fatal: true  #Fail on any error
+  vars_files: "{{ playbook_dir | dirname }}/passwords.yml"
+  collections:
+    - netapp_eseries.beegfs
+  tasks:
+    - name: Ensure BeeGFS HA cluster is setup.
+      ansible.builtin.import_role:
+        name: beegfs_ha_7_4

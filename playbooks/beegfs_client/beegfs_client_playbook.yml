@@ -1,0 +1,23 @@
+# BeeGFS client playbook. 
+
+- hosts: beegfs_clients
+  collections:
+    - netapp_eseries.host
+    - netapp_eseries.beegfs
+  roles:
+    - geerlingguy.ntp
+  vars_files: "{{ playbook_dir | dirname }}/passwords.yml"
+  become: True          # Set to False if ansible_ssh_pass is used.
+  tasks:
+    # # Uncomment this task to configure IPs on IB ports.
+    # - name: Configure IPs for IB ports
+    #   import_role:
+    #     name: ipoib
+
+    - name: tune_performance
+      import_role:
+        name: tune_performance
+
+    - name: Install BeeGFS client services
+      import_role:
+        name: beegfs_client
