@@ -78,7 +78,7 @@ for more information.
 
 Make any required or desired updates to your cluster's Ansible inventory files. See
 [Version Upgrade Notes](#version-upgrade-notes) for details about your specific upgrade requirements. Also, see
-[Getting Started - Example Inventory File](getting_started.md#example-inventory-file) for more information about
+[Getting Started - Example Inventory File](../../getting_started/beegfs_on_custom_configurations/beegfs_ha_building_block/README.md#update-the-inventory-file) for more information about
 configuring your BeeGFS HA inventory files.
 
 
@@ -102,7 +102,7 @@ upgrade information.
 
 Make any required or desired updates to your cluster's Ansible inventory files. See
 [Version Upgrade Notes](#version-upgrade-notes) for any details about your specific upgrade inventory requirements.
-Also, see [Getting Started - Example Inventory File](getting_started.md#example-inventory-file) for information about
+Also, see [Getting Started - Example Inventory File](../../getting_started/beegfs_on_custom_configurations/beegfs_ha_building_block/README.md) for information about
 configuring your BeeGFS HA inventory files.
 
 
@@ -110,7 +110,7 @@ configuring your BeeGFS HA inventory files.
 ### Update Ansible Playbook
 
 Update the beegfs_ha_<VERSION> role in the import_role task to the desired version. Below is the beegfs_ha_playbook.yml
-file provided in the [Getting Started - Example BeeGFS HA Playbook File](getting_started.md#example-beegfs-ha-playbook-file)
+file provided in the [Getting Started - Example BeeGFS HA Playbook File](../../getting_started/beegfs_on_custom_configurations/beegfs_ha_building_block/README.md)
 
     - hosts: all
       gather_facts: false

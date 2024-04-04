@@ -37,7 +37,7 @@ cluster resource groups and storage targets. Refer to the comments in the `beegf
 modification details.
 
 An example inventory file for a single cluster can be referenced in the
-[examples](/getting_started/beegfs_on_custom_configurations/examples) folder.
+[examples](../examples) folder.
 
 <a name="create-the-inventory-structure"></a>
 ### 3. Create the Inventory Structure
@@ -58,7 +58,7 @@ not be modified.
 Review and update the generated files found in the `group_vars` directory. This directory contains all group-level
 variable files. Carefully read the comments in each file for guidance.
 
-Example group_var files can be found in the [examples](/getting_started/beegfs_on_custom_configurations/examples) folder.
+Example group_var files can be found in the [examples](../examples) folder.
 
 <a name="review-the-host-variable-files"></a>
 ### 5. Review the Host Variable Files
@@ -66,7 +66,7 @@ Example group_var files can be found in the [examples](/getting_started/beegfs_o
 Review and update the generated files found in the `host_vars` directory. This directory contains files for each BeeGFS
 HA node and E-Series storage. Again, carefully read the comments in each file for guidance.
 
-Example host_var files can be found in the [examples](/getting_started/beegfs_on_custom_configurations/examples) folder.
+Example host_var files can be found in the [examples](../examples) folder.
 
 <a name="review-the-password-configuration-file"></a>
 ### 6. Review the Password Configuration File

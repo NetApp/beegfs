@@ -35,7 +35,7 @@ The BeeGFS role provides the following functionality:
 1) Tuning kernel parameters using sysctl.
 2) Tuning parameters on E-Series block devices/paths using udev.
 
-All default tuning parameters are defined at [BeeGFS Tuning](/roles/beegfs_ha_7_4/defaults/main.yml), these may need to
+All default tuning parameters are defined at [BeeGFS Tuning](../../roles/beegfs_ha_7_4/defaults/main.yml), these may need to
 be adjusted to tune based on the environment. As with any Ansible variable, you can override these defaults on a
 host-by-host or group basis to tune each node or sets of nodes differently. See [Role Variables](role_variables.md) to
 see the order of precedence for setting variables.
