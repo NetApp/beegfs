@@ -1,0 +1,25 @@
+# stor_12 - BeeGFS HA Storage Resource Group
+beegfs_ha_beegfs_storage_conf_resource_group_options:
+  connStoragePortTCP: 8043
+  connStoragePortUDP: 8043
+  tuneBindToNumaZone: 1
+
+floating_ips:
+  - i4b:100.128.104.12/16
+  - i3b:100.127.103.12/16
+
+beegfs_service: storage
+
+beegfs_targets:
+  eseries_storage_system_04:
+    eseries_storage_pool_configuration:
+      - name: beegfs_s11_s12
+        raid_level: raid6
+        criteria_drive_count: 10
+        common_volume_configuration:
+          segment_size_kb: 128
+        volumes:
+          - size: 21.5
+            owning_controller: B          
+          - size: 21.5
+            owning_controller: B          

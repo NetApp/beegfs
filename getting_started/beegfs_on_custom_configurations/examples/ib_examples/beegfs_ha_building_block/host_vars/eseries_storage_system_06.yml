@@ -1,0 +1,33 @@
+# eseries_storage_system_02 - BeeGFS HA E-Series storage target resource
+
+# Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+# # Parameter documentation
+# Parameter in santricity roles.
+# https://github.com/netappeseries/santricity/blob/master/roles/nar_santricity_host/README.md
+
+# All parameters that can be configured on E-Series storage systems.
+# https://github.com/netappeseries/santricity/blob/master/README.md 
+
+
+ansible_host: 10.113.13.21                 # one of the management IP of the controllers in the array.
+eseries_system_api_url: "https://{{ ansible_host }}:8443/devmgr/v2/"
+eseries_system_password: "{{ eseries_password }}"
+eseries_validate_certs: false
+
+# Communication's protocol between storage and hosts. Choices: fc, ib_iser, ib_srp, iscsi, nvme_fc, nvme_ib, nvme_roce
+eseries_initiator_protocol: nvme_ib
+
+
+# IPs to communicate with storage array.
+eseries_controller_nvme_ib_port:
+  controller_a:
+    - 192.168.5.101
+    - 192.168.6.101
+    - 192.168.5.100
+    - 192.168.6.100
+  controller_b:
+    - 192.168.7.101
+    - 192.168.8.101
+    - 192.168.7.100
+    - 192.168.8.100

@@ -1,3 +1,0 @@
-- name: Import the beegfs_ha_common role using the defaults for beegfs_ha_7_2.
-  ansible.builtin.import_role:
-    name: netapp_eseries.beegfs.beegfs_ha_common

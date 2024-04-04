@@ -1,0 +1,22 @@
+# BeeGFS Client Server 3
+
+# Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+ansible_host: 10.113.13.15
+ansible_ssh_user: "{{ ssh_client_user }}"
+ansible_become_password: "{{ ssh_client_become_pass }}"
+
+eseries_ipoib_interfaces:
+  - name: ib0
+    address: 100.127.1.3/16
+  - name: ib1
+    address: 100.128.1.3/16
+
+eseries_ipoib_udev_name: 99-beegfs-ipoib.rules
+
+# This information can be polled with "lshw -class network -businfo".
+eseries_ipoib_udev_rules:
+  "0000:27:00.0": i1a
+  "0000:27:00.1": i1b
+
+# Reference https://github.com/netappeseries/host/blob/master/roles/nvme_ib/README.md for other available options.

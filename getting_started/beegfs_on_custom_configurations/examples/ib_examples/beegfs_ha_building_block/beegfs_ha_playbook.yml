@@ -1,0 +1,34 @@
+# # Comment out this play or any tasks in this play if it's not applicable to your environment.
+- hosts: ha_cluster
+  gather_facts: false
+  become: True
+  any_errors_fatal: True
+  tasks:
+    - name: Add custom RHEL 9 repository
+      vars:
+        repo_url: http://netapp.com/rhel/9server-x86_64
+        repo_filename: repomirror.repo
+      shell: yum config-manager --add-repo {{ repo_url }}/{{ repo_filename }}
+      args:
+        creates: /etc/yum.repos.d/{{ repo_filename }}
+
+    - name: Install OpenSM packages from MOFED to enable virtual connection between BeeGFS servers and storage array.
+      vars:
+        repo_url: https://linux.mellanox.com/public/repo/mlnx_ofed/23.10-2.1.3.1/rhel9.3/x86_64
+      ansible.builtin.yum:
+        name: 
+          - "{{ repo_url }}/opensm-5.17.0.1.MLNX20240219.0eca20cc-0.1.2310213.x86_64.rpm"
+          - "{{ repo_url }}/opensm-libs-5.17.0.1.MLNX20240219.0eca20cc-0.1.2310213.x86_64.rpm"
+        state: present
+        disable_gpg_check: True
+
+- hosts: all
+  gather_facts: false
+  become: True
+  any_errors_fatal: true  #Fail on any error
+  collections:
+    - netapp_eseries.beegfs
+  tasks:
+    - name: Ensure BeeGFS HA cluster is setup.
+      ansible.builtin.import_role:
+        name: beegfs_ha_7_4

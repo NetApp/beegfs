@@ -1,6 +1,35 @@
 # Changelog
 Notable changes to the BeeGFS collection will be documented in this file.
 
+[3.2.0] - 2024-03-30
+--------------------
+### Added
+- Add beegfs_ha_7_4 role to support BeeGFS 7.4.3 with RHEL/Rocky 9.
+
+### Deprecated
+- Remove deprecated beegfs_ha_7_2 role.
+
+[3.1.0] - 2023-01-30
+--------------------
+### Added
+- Add beegfs_ha_7_3 and beegfs_ha_common roles. Both beegfs_ha_7_2 and beegfs_ha_7_3 utilize beegfs_ha_common using their own defaults.
+- Update collection to use the latest BeeGFS versions (7.2.8/7.3.2)
+- Add support for online BeeGFS version upgrades
+- Add support for BeeGFS connection authentication
+- Improve the process for restoring the BeeGFS HA resources.
+  - Add probe to ensure resources are started correctly
+  - Simplify the resource relocation process when previously failover.
+  - Improve code supportability and reusability
+- Improve BeeGFS client role
+  - Add template for beegfs-mounts.conf to avoid issues with mounts not defined in the inventory.
+  - Complete the client restart handler process (i.e. stop client, remove mounts, unload beegfs module, stop helperd, start helperd, start client)
+- Add support for multi-rail communications
+- Add support for NVIDIA GPUDirect (GDS)
+- Add support for Rocky Linux
+
+### Deprecated
+- Deprecated the beegfs_ha_7_2 role and will be removed in a future release.
+
 [3.0.1] - 2022-08-15
 --------------------
 ### Added
@@ -44,7 +73,7 @@ Notable changes to the BeeGFS collection will be documented in this file.
     file systems to scale independently of Pacemaker/Corosync limits on the number of resources/nodes in a cluster.
 - A role (beegfs_client) that includes:
   - The ability to install and configure the BeeGFS client kernel module, including building with support for inbox or
-    Mellanox OFED drivers. 
+    Mellanox OFED drivers.
   - Mounting one or more BeeGFS file systems (and/or the same file system multiple times) and specifying custom
     configuration.
   - Automatic tuning of kernel read ahead settings for BeeGFS mounts improving sequential read performance and greatly
@@ -58,13 +87,13 @@ Notable changes to the BeeGFS collection will be documented in this file.
   minutes before resuming. This issue does not occur when BeeGFS nodes are gracefully placed in and out of standby for
   planned maintenance.
   - Impact: Applications will not observe an I/O error, and only applications that implement timeouts around file I/O
-    operations (open, close, read, write, etc.) are expected to see any impact due to this issue. 
+    operations (open, close, read, write, etc.) are expected to see any impact due to this issue.
   - Workaround: Disabling use of RDMA on BeeGFS clients (connUseRDMA=False) and only using TCP will prevent this issue
     from occurring. Note disabling RDMA will likely have a negative impact on performance.
   - Technical Details: This is due to the current connection response timeout in BeeGFS. While currently this timeout is
     not user configurable, work is underway to decrease this timeout in the future.
 
-### Removed 
+### Removed
 - Legacy roles for deploying BeeGFS 7.1. Note BeeGFS can be cleanly upgraded from 7.1 to 7.2.
   - IMPORTANT: Please open a support ticket for assistance migrating 7.1 BeeGFS Ansible inventories to the new 7.2
     format.
@@ -79,13 +108,13 @@ Notable changes to the BeeGFS collection will be documented in this file.
   BeeGFS](https://blog.netapp.com/high-availability-beegfs) to RedHat and CentOS hosts along with supporting
   documentation.
 - An interactive example that expedites getting started with the beegfs_ha_7_1 role by generating a full skeleton
-  inventory through an interactive playbook (see: `examples/beegfs_ha_7_1/README.md`).   
+  inventory through an interactive playbook (see: `examples/beegfs_ha_7_1/README.md`).
 
 ### Changed
 - Building the Docker image now includes the new E-Series Host collection and additional dependencies. Added a
   .dockerignore file to help reduce final image size.
 - Documentation for each role is now being maintained under the respective roles. The README in the base of the project
-  provides links to the documentation for all currently supported roles.   
+  provides links to the documentation for all currently supported roles.
 - Role specific changes: nar_santricity_beegfs_7_1
   - Added a note to the README under Known Issues/Limitations with observed behavior when regularly
     deploying/wiping/redeploying BeeGFS using the yum package manager.
@@ -96,15 +125,15 @@ Notable changes to the BeeGFS collection will be documented in this file.
 ### Fixed
 - Role specific fixes: nar_santricity_beegfs_7_1
   - Added additional rescans required to detect newly mapped E-Series volumes attached through iSCSI/iSER without a
-    reboot.  
+    reboot.
   - Updated the role to work with both new and legacy versions of the SANtricity collection.
-  
+
 [1.1.0] - 2020-04-10
 --------------------
 
 ### Added
 - Support for using E-Series volumes presented over NVMe-oF protocols as BeeGFS storage/metadata targets.
-- Support for defining multiple BeeGFS file systems in the same inventory file. 
+- Support for defining multiple BeeGFS file systems in the same inventory file.
 - Post-deployment check to verify the BeeGFS deployment(s) described in the inventory match the output of
   `beegfs-check-servers`.
 
