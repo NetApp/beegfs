@@ -1,0 +1,72 @@
+# BeeGFS client inventory. 
+
+all:
+  children:
+    # Ansible group representing all BeeGFS clients: 
+    beegfs_clients:
+      hosts:
+        node_cs1:
+        node_cs2:
+        node_cs3:
+        node_cs4:
+      vars:
+        beegfs_client_connAuthFile_enabled: True    # default: True
+        sys_mgmtd_host: 100.127.101.0
+
+        # # OPTION 1: If you’re using the Mellanox OFED drivers and they are already installed.
+        # eseries_ib_skip: True # Skip installing inbox drivers when using the IPoIB role.
+        # beegfs_client_ofed_enable: True       # Default: False
+        # beegfs_client_ofed_include_path: "/usr/src/ofa_kernel/default/include"
+
+        # OPTION 2: Use installed inbox IB/RDMA drivers for IPoIB role.
+        eseries_ib_skip: True     # Set to False to re-install/install inbox IB/RDMA drivers for IPoIB role.
+        
+        beegfs_client_mounts:
+          - sysMgmtdHost: "{{ sys_mgmtd_host }}"
+            mounted: True          
+            mount_point: /mnt/beegfs
+            connAuthFile_src: |-
+              {{ playbook_dir | dirname }}/beegfs_ha_building_block/files/beegfs/{{ sys_mgmtd_host }}_connAuthFile
+            connInterfaces:
+              - ib0
+              - ib1
+            beegfs_client_config:
+              connClientPortUDP: 8004                         # Client service default: 8004
+              # Maximum number of simultaneous connections to the same node.
+              connMaxInternodeNum: 128                        # BeeGFS Client Default: 12
+              # Allocates the number of buffers for transferring IO.
+              connRDMABufNum: 36                              # BeeGFS Client Default: 70
+              # Size of each allocated RDMA buffer 
+              connRDMABufSize: 65536                          # BeeGFS Client Default: 8192
+              tuneFileCacheType: native
+              tuneFileCacheBufSize: "2097152"
+              connFallbackExpirationSecs: 90
+              #connCommRetrySecs: 60
+              sysSessionChecksEnabled: false
+              # connAuthFile: /etc/beegfs/connAuthFile
+              # sysMountSanityCheckMS: 11000
+
+          - sysMgmtdHost: "{{ sys_mgmtd_host }}"
+            mounted: True          
+            mount_point: /mnt/beegfs_buffered
+            connAuthFile_src: |-
+              {{ playbook_dir | dirname }}/beegfs_ha_building_block/files/beegfs/{{ sys_mgmtd_host }}_connAuthFile
+            connInterfaces:
+              - ib1
+              - ib0
+            beegfs_client_config:
+              connClientPortUDP: 8014                           # Client service default: 8004
+              # Maximum number of simultaneous connections to the same node.
+              connMaxInternodeNum: 128                          # BeeGFS Client Default: 12
+              # Allocates the number of buffers for transferring IO.
+              connRDMABufNum: 36                                # BeeGFS Client Default: 70
+              # Size of each allocated RDMA buffer 
+              connRDMABufSize: 65536                            # BeeGFS Client Default: 8192
+              tuneFileCacheType: buffered
+              tuneFileCacheBufSize: "2097152"
+              connFallbackExpirationSecs: 90
+              #connCommRetrySecs: 60
+              sysSessionChecksEnabled: false
+              # connAuthFile: /etc/beegfs/connAuthFile
+              # sysMountSanityCheckMS: 11000
+                                

@@ -1,0 +1,211 @@
+# Example BeeGFS HA (High-Availability) cluster inventory file.
+
+# The basic function for Ansible inventory files are to define host groups. Group variables can be placed in a YAML 
+# file that corresponds to the group's name in the group_vars/ directory. Likewise, host variables can be placed in a 
+# YAML file that has its name in the host_vars/ directory. Note that the names used for Ansible host names do not need 
+# to correspond to the systems actual hostname; these are references only for Ansible automation.
+
+all:
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  children:
+
+    # BeeGFS HA cluster resource Ansible group
+    ha_cluster:
+      children:
+
+        # Define all resource groups here for the BeeGFS cluster. At minimum you must have a management, metadata, and 
+        # storage group. Create a 'hosts' dictionary containing the cluster node names you wish to be included in the 
+        # resource group.
+
+        # NOTES:
+        #   - The resource group's name is used to generate the resource's floating IP labels which can be a maximum of 
+        #     15 characters and are in the form <iface>:<resource_group_name><interface_index> (i.e. i1a:stor_01_1).
+        #   - Step 3 in readme of beegfs_ha role will prompt you to select the BeeGFS service (management, metadata, 
+        #     storage) you'd like the resource group to manage. Note that there can only be one management group.
+        #   - The host names are used for the BeeGFS HA cluster node names (i.e. node_mm1, node_mm2). These names can 
+        #     be changed to whatever you'd like the nodes to be named.
+        #   - The order of the cluster nodes in the hosts dictionary determines the resource's preference for the host, 
+        #     starting with the highest preference.
+        #   - For best performance, number of resource groups should match with number of ports connecting to the 
+        #     storage. For example, if node_mm1 has 4 ports connecting to the storage, then create 4 meta resource 
+        #     groups for the node. This rule applies to stor resource groups also but not mgmt resource group.
+
+
+        # BeeGFS HA Management Resource Group - There can only be one BeeGFS HA management resource group; however, you 
+        # can list as management failover hosts you'd like under hosts.
+        # -----------------------------------
+        # "mgmt" will be used to define Pacemaker resource group.
+        # If everything is running correctly, BeeGFS management service will be running on node_mm1_ss1.
+        # If something happens to node_mm1_ss1, Pacemaker will migrate the BeeGFS management service to node_mm2_ss2.
+        mgmt:  
+          hosts:
+            # node_mm1_ss1, node_mm2_ss2, or node_mmX_ssX can be hostname or hostname alias.
+            node_mm1_ss1:   # Management node name. This is the most preferred BeeGFS management node.
+            node_mm2_ss2:   # Management node name. This is the next preferred node.
+
+
+
+        ##################################
+        #####    Building block 1    #####
+        ##################################
+
+        #
+        # BeeGFS HA Metadata Resource Groups
+        # List all the BeeGFS HA metadata resource groups in this section.
+        # Metadata resource group names must end with an underscore followed by the nodeNumID that is designated for
+        # the service resource.
+        #
+        # NOTE: For optimal performance, each building block should have one service associated to each port connecting 
+        #       to the storage array. 8 services created because 8 ports connected to the storage array.
+        #
+
+        # "meta_01" will be used to define a Pacemaker resource group
+        # If everything is running correctly, BeeGFS metadata service (meta_01) will be running on node_mm1_ss1.
+        # If something happens to node_mm1_ss1, Pacemaker will migrate the meta_01 service to node_mm2_ss2.
+        meta_01:
+          hosts:
+            # node_mm1_ss1, node_mm2_ss2, or node_mmX_ssX can be hostname or hostname alias.
+            node_mm1_ss1:   # node_mm1_ss1 is the most preferred BeeGFS metadata node for meta_01 to meta_04.
+            node_mm2_ss2:   # This is the next preferred node.
+
+        meta_02:
+          hosts:
+            node_mm1_ss1:
+            node_mm2_ss2:
+
+        meta_03:
+          hosts:
+            node_mm1_ss1:
+            node_mm2_ss2:
+
+        meta_04:
+          hosts:
+            node_mm1_ss1:
+            node_mm2_ss2:
+
+        meta_05:
+          hosts:
+            node_mm2_ss2:   # node_mm2_ss2 is the preferred node BeeGFS metadata node for meta_05 to meta_08.
+            node_mm1_ss1:
+
+        meta_06:
+          hosts:
+            node_mm2_ss2:
+            node_mm1_ss1:
+
+        meta_07:
+          hosts:
+            node_mm2_ss2:
+            node_mm1_ss1:
+
+        meta_08:
+          hosts:
+            node_mm2_ss2:
+            node_mm1_ss1:
+
+
+        #
+        # BeeGFS HA Storage Resource Groups
+        # List all the BeeGFS HA storage resource groups in this section.
+        # Storage resource names must end with an underscore followed by the nodeNumID that is designated for the
+        # service resource.
+        #
+        # NOTE: For optimal performance, each building block should have one service associated to each port connecting 
+        #       to the storage array. 8 services created because 8 ports connected to the storage array.
+        #
+
+        # "stor_01" will be used to define a Pacemaker resource group
+        #  If everything is running correctly, BeeGFS storage service (stor_01) will be running on node_mm1_ss1.
+        #  If something happens to node_mm1_ss1, Pacemaker will migrate the stor_01 service to node_mm2_ss2.
+        stor_01:
+          hosts:
+            node_mm1_ss1:   # node_mm1_ss1 is the most preferred BeeGFS storage node for stor_01 to stor_04.
+            node_mm2_ss2:   # This is the next preferred node.
+
+        stor_02:
+          hosts:
+            node_mm1_ss1:
+            node_mm2_ss2:
+
+        stor_03:
+          hosts:
+            node_mm1_ss1:
+            node_mm2_ss2:
+
+        stor_04:
+          hosts:
+            node_mm1_ss1:
+            node_mm2_ss2:
+
+        stor_05:
+          hosts:
+            node_mm2_ss2:   # node_mm2_ss2 is the most preferred BeeGFS storage node for stor_05 to stor_08.
+            node_mm1_ss1:   # This is the next preferred node.
+
+        stor_06:
+          hosts:
+            node_mm2_ss2:
+            node_mm1_ss1:
+
+        stor_07:
+          hosts:
+            node_mm2_ss2:
+            node_mm1_ss1:
+
+        stor_08:
+          hosts:
+            node_mm2_ss2:
+            node_mm1_ss1:
+
+
+        # # Add any additional metadata resource groups here (i.e. meta_09, ..., meta_xx)
+        # # Add any additional storage resource groups here (i.e. stor_09, ..., stor_xx)
+        # # For example, adding another building block:
+
+        # ##################################
+        # #####    Building block 2    #####
+        # ##################################
+
+        # meta_09:
+        #   hosts:
+        #     node_mm3_ss3:   # node_mm3_ss3 is the most preferred BeeGFS metadata node for meta_09 to meta_12.
+        #     node_mm4_ss4:   # This is the next preferred node.
+
+        # meta_XX:
+        #   hosts:
+        #     node_mmX_ssX:
+        #     node_mmX_ssX:
+
+
+        # #
+        # # BeeGFS HA Storage Resource Groups - List all the BeeGFS HA storage resource groups in this section.
+        # # Storage resource names must end with and underscore followed by the nodeNumID that is designated for the
+        # # service resource.
+        # #
+        # stor_09:
+        #   hosts:
+        #     node_mm3_ss3:   # node_mm3_ss3 is the most preferred BeeGFS metadata node for stor_09 to stor_12.
+        #     node_mm4_ss4:   # This is the next preferred node.
+
+        # stor_XX:
+        #   hosts:
+        #     node_mmX_ssX:
+        #     node_mmX_ssX:
+
+
+    # NetApp E-Series storage systems Ansible group
+    eseries_storage_systems:
+      hosts:
+        ##################################
+        #####    Building block 1    #####
+        ##################################
+        eseries_storage_system_01:
+        eseries_storage_system_02:
+
+        # ##################################
+        # #####    Building block 2    #####
+        # ##################################
+        # eseries_storage_system_03:
+        # eseries_storage_system_XX:
+

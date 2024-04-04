@@ -1,10 +1,12 @@
 namespace: "netapp_eseries"
 name: "beegfs"
-version: "3.0.1"
+version: "3.2.0"
 readme: "README.md"
 authors:
+  - "Vu Tran (@VuTran007)"
+  - "Christian Whiteside (@mcwhiteside)"
   - "Joe McCormick (@iamjoemccormick)"
-  - "Nathan Swartz (@ndswartz)"
+  - "Nathan Swartz (@swartzn)"
   - "Tracy Cummins (@tracycummins)"
 description: "The NetApp E-Series BeeGFS collection provides roles to deploy supported versions of BeeGFS on hosts using NetApp E-Series storage."
 license:
@@ -16,8 +18,8 @@ tags:
   - beegfs
   - ha
 dependencies:
-  "netapp_eseries.santricity": '>=1.3.1'
-  "netapp_eseries.host": ">=1.2.0"
+  "netapp_eseries.santricity": '>=1.4.0'
+  "netapp_eseries.host": ">=1.3.2"
 repository: "https://github.com/netappeseries/beegfs/"
 documentation: ""
 homepage: "https://github.com/netappeseries/beegfs/"

@@ -41,6 +41,24 @@
           enabled: true
           state: "{{ 'restarted' if beegfs_helperd_conn_auth['changed'] or beegfs_helperd_conn_auth_file['changed'] else 'started' }}"
 
+      # The following task is required until the beegfs-ctl help is changed since the tool does not allow help to be
+      #   viewed until connection authentication is handled. With the defaults /etc/beegfs/beegfs-client.conf file where
+      #   connDisableAuthentication=false and there is no valid connAuthFile specified, beegfs-ctl --help will result
+      #   in the follow error message.
+      #     Unrecoverable error: No connAuthFile configured. Using BeeGFS without connection authentication is
+      #     considered insecure and is not recommended. If you really want or need to run BeeGFS without connection
+      #     authentication, please set connDisableAuthentication to true.
+      #   If a new user doesn't already know the commands and attempts to learn about it through the help (there is no
+      #   man page) then they will be prevented unless they know to modify the connection authentication settings in
+      #   /etc/beegfs/beegfs-client.conf to which the error message doesn't mention.
+      - name: Ensure connDisableAuthentication is true in the beegfs-client.conf file.
+        ansible.builtin.lineinfile:
+          create: true # This should never happen but if the file does need to be created this will still work.
+          path: /etc/beegfs/beegfs-client.conf
+          line: "connDisableAuthentication = true"
+          regexp: "^connDisableAuthentication.*=.*"
+          state: present
+
       - name: Install BeeGFS Client udev rule.
         ansible.builtin.template:
           src: beegfs-client-udev.rules.j2

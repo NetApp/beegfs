@@ -1,0 +1,23 @@
+# BeeGFS Client Server 1
+
+# Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+ansible_host: 10.113.13.13
+ansible_ssh_user: "{{ ssh_client_user }}"
+ansible_become_password: "{{ ssh_client_become_pass }}"
+
+# In this example, IPoIB protocol is used for client server to communicate with BeeGFS services.
+eseries_ipoib_interfaces:
+  - name: ib0
+    address: 100.127.1.1/16
+  - name: ib1
+    address: 100.128.1.1/16
+
+eseries_ipoib_udev_name: 99-beegfs-ipoib.rules
+
+# This information can be polled with "lshw -class network -businfo".
+eseries_ipoib_udev_rules:
+  "0000:c1:00.0": ib0
+  "0000:c1:00.1": ib1
+
+# Reference https://github.com/netappeseries/host/blob/master/roles/nvme_ib/README.md for other available options.
