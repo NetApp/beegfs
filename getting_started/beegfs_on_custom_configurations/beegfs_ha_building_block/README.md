@@ -37,7 +37,7 @@ cluster resource groups and storage targets. Refer to the comments in the `beegf
 modification details.
 
 An example inventory file for a single cluster can be referenced in the
-[examples](/getting_started/beegfs_on_custom_configurations/examples) folder.
+[examples](../../beegfs_on_custom_configurations/examples) folder.
 
 <a name="create-the-inventory-structure"></a>
 ### 3. Create the Inventory Structure
