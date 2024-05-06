@@ -49,7 +49,7 @@ Additional information about tested configurations can be found in the [test mat
   - Python 3.9 or later
   - Python3 pip
   - NetApp E-Series Ansible Collections:
-    - [netapp_eseries.santricity](https://galaxy.ansible.com/ui/repo/published/netapp_eseries/santricity/) 1.4.1 or
+    - [netapp_eseries.santricity](https://galaxy.ansible.com/ui/repo/published/netapp_eseries/santricity/) 1.4.0 or
     later.
     - [netapp_eseries.host](https://galaxy.ansible.com/ui/repo/published/netapp_eseries/host/) 1.3.2 or later.
   - The following Python packages must be installed via pip:

@@ -1,0 +1,49 @@
+# BeeGFS Client Server 97
+
+# Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+ansible_host: 10.113.13.7
+beegfs_client_server: 97
+ansible_ssh_user: "{{ ssh_client_user }}"
+ansible_become_password: "{{ ssh_client_become_pass }}"
+
+eseries_roce_udev_name: 99-beegfs-inband.rules
+eseries_roce_udev_rules:
+  "0000:61:00.0": eth0
+  "0000:61:00.1": eth1
+
+eseries_roce_interfaces:
+  - name: eth0
+    address: "100.130.100.{{ beegfs_client_server }}/24"
+    zone: beegfs
+    mstconfig:
+      LINK_TYPE_P1: eth
+  - name: eth1
+    address: "100.131.100.{{ beegfs_client_server }}/24"
+    zone: beegfs
+    mstconfig:
+      LINK_TYPE_P2: eth
+
+# # # Configure the following sections depending on the protocol used for BeeGFS services.
+# # # For example: IPoIB protocol is used for the following sections.
+
+# # IPs for BeeGFS server to communicate with BeeGFS services.
+# eseries_ipoib_interfaces:
+#   - name: ib0
+#     address: "100.127.1.{{ beegfs_client_server }}/16"
+#   - name: ib1
+#     address: "100.128.1.{{ beegfs_client_server }}/16"
+
+# # Filename to store udev rules to override default interface names.
+# eseries_ipoib_udev_name: 99-beegfs-ipoib.rules
+
+
+# # NOTE: The interface name here + resource name specified in beegfs_ha_inventory.yml must be less than 15 characters.
+
+# # Maps interface PCI slots to interface names for ensuring persistent interface names.
+# # This information can be polled with "lshw -class network -businfo".
+# eseries_ipoib_udev_rules:         
+#   "0000:c1:00.0": ib0
+#   "0000:c1:00.1": ib1
+
+# Reference https://github.com/netappeseries/host/blob/master/roles/nvme_ib/README.md for other available options.

@@ -1,0 +1,7 @@
+# DO NOT MODIFY - Managed by NetApp BeeGFS
+{% for export_info in beegfs_nfs_server_exports %}
+{{   "{:<20}".format(export_info["path"]) }}{{ " " }}
+{%-  for subnet in export_info["subnet_permissions"] -%}
+{{     subnet -}}({{ export_info["options"] }}){{ " " }}
+{%-  endfor -%}
+{% endfor %}

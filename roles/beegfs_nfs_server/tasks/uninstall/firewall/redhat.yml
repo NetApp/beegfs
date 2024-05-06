@@ -1,0 +1,10 @@
+- name: Remove NFS service from firewall zone "{{ nfs_firewall_rule['zone'] }}"
+  ansible.posix.firewalld:
+    service: "{{ nfs_firewall_rule['service'] }}"
+    state: disabled
+    offline: true
+    permanent: "{{ nfs_firewall_rule['permanent'] }}"
+    zone: "{{ nfs_firewall_rule['zone'] }}"
+  become: true
+  notify:
+    - Restart firewall daemon

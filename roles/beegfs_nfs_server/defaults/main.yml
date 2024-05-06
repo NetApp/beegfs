@@ -1,0 +1,46 @@
+######################
+# Required Variables #
+######################
+
+nfs_firewall_rule:
+  zone: beegfs
+  service: nfs
+  permanent: True
+
+beegfs_nfs_server_exports: []
+# beegfs_nfs_server_exports:    # example
+#   - path: /mnt/beegfs
+#     options: "rw,async,fsid=0,crossmnt,no_subtree_check,no_root_squash"
+#     mode: 2770
+#     owner: root
+#     group: root
+#     subnet_permissions:
+#       - "*"                 # allow any IPs to connect
+#       - 192.168.100.0/24    # allow only IPs in specified subnet to connect
+#       - 192.168.200.0/24
+
+
+
+######################
+# Optional Variables #
+######################
+
+beegfs_nfs_server_kernel_parameters:
+  fs.leases-enable: 0
+
+beegfs_nfs_server_kernel_modules:
+  - name: nfs
+    params:
+
+# Disable pre-NFSv4 services. Services will be masked (symlinked to null device)
+beegfs_nfs_server_disable_services:
+  - rpc-statd.service   # NFSv3 service
+  - rpcbind.service     # NFSv3 service
+  - rpcbind.socket      # NFSv3 service
+
+beegfs_nfs_server_kernel_conf:
+  path: /etc/default/nfs-kernel-server
+  options:
+    NEED_SVCGSSD: "no"
+
+beegfs_nfs_server_uninstall: false

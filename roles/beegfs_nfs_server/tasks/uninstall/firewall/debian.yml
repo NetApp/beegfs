@@ -1,0 +1,7 @@
+- name: Disable firewall rule for NFS ports
+  community.general.ufw:
+    rule: deny
+    port: "{{ nfs_firewall_rule['service'] }}"
+  become: true
+  notify:
+    - Restart firewall daemon
