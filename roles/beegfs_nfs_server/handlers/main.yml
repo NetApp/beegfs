@@ -1,0 +1,15 @@
+---
+- name: Reload NFS server daemon
+  ansible.builtin.systemd:
+    name: beegfs-nfs-server.service
+    state: restarted
+    daemon_reload: true
+  become: true
+  listen: "Reload NFS server daemon"
+
+- name: Restart firewall daemon
+  ansible.builtin.systemd:
+    name: firewalld.service
+    state: restarted
+  become: true
+  listen: "Restart firewall daemon"

@@ -1,0 +1,64 @@
+nfs_firewall_rule:
+  zone: beegfs
+  service: nfs
+  permanent: true
+
+beegfs_nfs_server_exports:
+  - path: /mnt/beegfs
+    options: "rw,async,fsid=0,crossmnt,no_subtree_check,no_root_squash"
+    mode: 2770
+    owner: root
+    group: root
+    subnet_permissions:
+      - 100.130.100.0/24
+      - 100.131.100.0/24
+
+beegfs_client_mounts:
+  - sysMgmtdHost: "{{ sys_mgmtd_host }}"
+    mounted: True          
+    mount_point: /mnt/beegfs              # Can be set to another mount point.
+    connAuthFile_src: |-
+      {{ playbook_dir | dirname }}/beegfs_ha_building_block/files/beegfs/{{ sys_mgmtd_host }}_connAuthFile
+    connInterfaces:
+      - i1b
+      - i2b
+    beegfs_client_config:
+      connClientPortUDP: 8004             # Default: 8004
+      # Maximum number of simultaneous connections to the same node.
+      connMaxInternodeNum: 128            # BeeGFS Client Default: 12
+      # Allocates the number of buffers for transferring IO.
+      connRDMABufNum: 36                  # BeeGFS Client Default: 70
+      # Size of each allocated RDMA buffer 
+      connRDMABufSize: 65536              # BeeGFS Client Default: 8192
+      tuneFileCacheType: native
+      tuneFileCacheBufSize: "2097152"
+      connFallbackExpirationSecs: 90
+      #connCommRetrySecs: 60
+      sysSessionChecksEnabled: false     # Set to 'false' when deploying in shared disk HA environments.
+      # connAuthFile: /etc/beegfs/connAuthFile
+      # sysMountSanityCheckMS: 11000      # BeeGFS Client Default: 11000
+      tuneRefreshOnGetAttr: True         # Set to True if using the NFSv4 service through BeeGFS client. 
+
+  - sysMgmtdHost: "{{ sys_mgmtd_host }}"
+    mounted: True          
+    mount_point: /mnt/beegfs_buffered
+    connAuthFile_src: |-
+      {{ playbook_dir | dirname }}/beegfs_ha_building_block/files/beegfs/{{ sys_mgmtd_host }}_connAuthFile
+    connInterfaces:
+      - i1b
+      - i2b
+    beegfs_client_config:
+      connClientPortUDP: 8014
+      # Maximum number of simultaneous connections to the same node.
+      connMaxInternodeNum: 128            # BeeGFS Client Default: 12
+      # Allocates the number of buffers for transferring IO.
+      connRDMABufNum: 36                  # BeeGFS Client Default: 70
+      # Size of each allocated RDMA buffer 
+      connRDMABufSize: 65536              # BeeGFS Client Default: 8192
+      tuneFileCacheType: buffered
+      tuneFileCacheBufSize: "2097152"
+      connFallbackExpirationSecs: 90
+      #connCommRetrySecs: 60
+      sysSessionChecksEnabled: false      # Set to 'false' when deploying in shared disk HA environments.
+      # connAuthFile: /etc/beegfs/connAuthFile
+      # sysMountSanityCheckMS: 11000      # BeeGFS Client Default: 11000

@@ -1,0 +1,5 @@
+- name: Unconfigure server and kernel
+  ansible.builtin.include_tasks: uninstall/unconfigure.yml
+
+- name: Uninstall required OS packages for NFSv4 server
+  ansible.builtin.include_tasks: uninstall/packages.yml

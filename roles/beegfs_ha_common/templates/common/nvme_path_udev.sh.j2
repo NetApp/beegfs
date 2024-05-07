@@ -1,0 +1,41 @@
+#!/bin/sh
+
+nvme_device="$1"
+
+nsid=$(echo $nvme_device | grep -oE 'n[0-9]+')
+controller_name=$(echo $nvme_device | grep -E 'nvme[0-9]+$')
+
+if [[ $nsid ]]; then
+  nvme_subsystem=$(echo $nvme_device | grep -oE 'nvme[0-9]+')
+  nvme_path_names=$(ls /sys/block | grep -oE ${nvme_subsystem}'c[0-9]+'${nsid}$)
+
+  # Apply settings to NVMe paths
+  for nvme_path_name in $nvme_path_names; do
+    # Ex: nvme_path=/sys/block/nvme2c2n4
+    nvme_path=/sys/block/$nvme_path_name
+
+{% for attribute, value in (beegfs_ha_eseries_nvme_attributes.items() | list) %}
+    echo {{ value }} > $nvme_path/{{ attribute }}; \
+{% endfor %}
+
+  done
+
+elif [[ $controller_name ]]; then
+  # Wait for the device to show in the path.
+  sleep 5;
+
+  # Ex: controller_path=/sys/class/nvme-fabrics/ctl/nvme0
+  controller_path=/sys/class/nvme-fabrics/ctl/$controller_name
+
+  for path in $controller_path/nvme*c*; do
+    nvme_path_name=$(basename $path)
+    device_name=$(echo $nvme_path_name | sed -E 's/c[0-9]+//')
+    device_path=/sys/block/$device_name
+
+    if [ -w $device_path/uevent ]; then
+      # Apply settings to NVMe block devices.
+      echo add > $device_path/uevent;
+    fi
+
+  done
+fi

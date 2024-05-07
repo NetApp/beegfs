@@ -1,0 +1,40 @@
+# BeeGFS Client Server 98
+
+# Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+ansible_host: 10.113.13.8
+beegfs_client_server: 98
+ansible_ssh_user: "{{ ssh_client_user }}"
+ansible_become_password: "{{ ssh_client_become_pass }}"
+
+eseries_roce_udev_name: 99-beegfs-inband.rules
+eseries_roce_udev_rules:
+  "0000:61:00.0": eth0
+  "0000:61:00.1": eth1
+
+eseries_roce_interfaces:
+  - name: eth0
+    address: "100.130.100.{{ beegfs_client_server }}/24"
+    zone: beegfs
+    mstconfig:
+      LINK_TYPE_P1: eth
+  - name: eth1
+    address: "100.131.100.{{ beegfs_client_server }}/24"
+    zone: beegfs
+    mstconfig:
+      LINK_TYPE_P2: eth
+
+# # Use node_cs1.yml for reference
+
+# eseries_ipoib_interfaces:
+#   - name: ib0
+#     address: "100.127.1.{{ beegfs_client_server }}/16"
+#   - name: ib1
+#     address: "100.128.1.{{ beegfs_client_server }}/16"
+
+# eseries_ipoib_udev_name: 99-beegfs-ipoib.rules
+# eseries_ipoib_udev_rules:
+#   "0000:c1:00.0": i1a
+#   "0000:c1:00.1": i1b
+
+# Reference https://github.com/netappeseries/host/blob/master/roles/nvme_ib/README.md for other available options.

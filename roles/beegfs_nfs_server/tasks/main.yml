@@ -1,0 +1,7 @@
+- name: Install BeeGFS NFS Server
+  ansible.builtin.import_tasks: install/main.yml
+  when: not beegfs_nfs_server_uninstall
+
+- name: Uninstall BeeGFS NFS Server
+  ansible.builtin.import_tasks: uninstall/main.yml
+  when: beegfs_nfs_server_uninstall

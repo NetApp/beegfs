@@ -1,0 +1,19 @@
+- name: Define beegfs_nfs_server_vars variable in packages.yml
+  ansible.builtin.include_vars:
+    file: "{{ ansible_facts['os_family'] | lower }}.yml"
+    name: beegfs_nfs_server_vars
+
+- name: Set facts for beegfs_nfs_server_packages variable
+  ansible.builtin.set_fact:
+    beegfs_nfs_server_packages: "{{ beegfs_nfs_server_vars['os_packages'] }}"
+
+- name: Uninstall required packages
+  ansible.builtin.package:
+    # nfs-utils package has these dependency packages: pacemaker, pcs, resource-agents.
+    # The dependency packages are required for HA cluster.
+    # Uninstall nfs-utils would uninstall these dependency packages. Therefore, skip uninstalling nfs-utils package.
+    name: "{{ 'skipping_nfs-utils' if 'nfs-utils' in item else item }}"
+    state: absent
+    autoremove: true
+  become: true
+  loop: "{{ beegfs_nfs_server_packages }}"

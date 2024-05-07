@@ -1,0 +1,76 @@
+- name: Add NFS systemd service
+  ansible.builtin.template:
+    src: beegfs_nfs_server.service.j2
+    dest: /etc/systemd/system/beegfs-nfs-server.service
+    mode: "1644"
+  become: true
+
+- name: Stop and disable NFS server service
+  ansible.builtin.systemd:
+    name: beegfs-nfs-server.service
+    state: stopped
+    enabled: false
+  become: true
+
+- name: Configure NFS server configurations
+  block:
+    - name: Configure nfs-kernel-server file
+      community.general.ini_file:
+        path: /etc/default/nfs-kernel-server
+        section: ""
+        option: "{{ item['key'] }}"
+        value: "{{ item['value'] }}"
+        mode: "1644"
+        backup: true
+      loop: "{{ beegfs_nfs_server_kernel_conf['options'] | dict2items }}"
+      become: true
+
+    - name: Create /etc/nfs.conf.d directory
+      ansible.builtin.file:
+        path: /etc/nfs.conf.d
+        state: directory
+        mode: "2751"
+      become: true
+
+    - name: Configure NFS server
+      ansible.builtin.template:
+        src: nfs_conf.j2
+        dest: /etc/nfs.conf.d/nfs.conf
+        mode: "1644"
+      become: true
+
+    - name: Load kernel modules and make persistent through reboots
+      community.general.modprobe:
+        name: "{{ item['name'] }}"
+        params: "{{ item['params'] }}"
+        state: present
+        persistent: present
+      loop: "{{ beegfs_nfs_server_kernel_modules }}"
+      become: true
+
+    - name: Apply persistent kernel configuration
+      ansible.posix.sysctl:
+        name: "{{ item['key'] }}"
+        value: "{{ item['value'] }}"
+        state: present
+        reload: true
+        sysctl_set: true
+        sysctl_file: "/etc/sysctl.d/99-beegfs-nfs-server.conf"
+      loop: "{{ beegfs_nfs_server_kernel_parameters | dict2items }}"
+      become: true
+
+    - name: Disable systemd services that used by pre-NFSv4 to ensure kernel NFSv4 is used
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+        masked: true
+      loop: "{{ beegfs_nfs_server_disable_services }}"
+      become: true
+
+- name: Start and enable NFS server service
+  ansible.builtin.systemd:
+    name: beegfs-nfs-server.service
+    state: started
+    enabled: true
+  become: true

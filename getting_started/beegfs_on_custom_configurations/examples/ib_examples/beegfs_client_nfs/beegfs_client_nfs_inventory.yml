@@ -1,0 +1,23 @@
+# BeeGFS client inventory. 
+
+all:
+  children:
+    beegfs_clients:
+      hosts:
+        # node_mm3_ss3 to node_mmX_ssX can be hostname or hostname alias.
+        node_mm3_ss3:
+        node_mm4_ss4:
+        node_mmX_ssX:
+      vars:
+        # Set to False if HA building blocks are configured with no connection authentication.
+        beegfs_client_connAuthFile_enabled: True
+
+        sys_mgmtd_host: 100.127.101.0
+
+        # # OPTION 1: If you’re using the Mellanox OFED drivers and they are already installed.
+        # eseries_ib_skip: True # Skip installing inbox drivers when using the IPoIB role.
+        # beegfs_client_ofed_enable: True       # Default: False
+        # beegfs_client_ofed_include_path: "/usr/src/ofa_kernel/default/include"
+
+        # OPTION 2: Use installed inbox IB/RDMA drivers for IPoIB role.
+        eseries_ib_skip: True     # Set to False to re-install/install inbox IB/RDMA drivers for IPoIB role.

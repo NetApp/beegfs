@@ -1,0 +1,14 @@
+- name: Define beegfs_nfs_server_vars variable in packages.yml
+  ansible.builtin.include_vars:
+    file: "{{ ansible_facts['os_family'] | lower }}.yml"
+    name: beegfs_nfs_server_vars
+
+- name: Set facts for beegfs_nfs_server_packages variable
+  ansible.builtin.set_fact:
+    beegfs_nfs_server_packages: "{{ beegfs_nfs_server_vars['os_packages'] }}"
+
+- name: Install required packages
+  ansible.builtin.package:
+    name: "{{ beegfs_nfs_server_packages }}"
+    state: present
+  become: true

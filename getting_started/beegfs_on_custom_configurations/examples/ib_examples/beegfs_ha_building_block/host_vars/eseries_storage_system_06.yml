@@ -22,12 +22,12 @@ eseries_initiator_protocol: nvme_ib
 # IPs to communicate with storage array.
 eseries_controller_nvme_ib_port:
   controller_a:
-    - 192.168.5.101
-    - 192.168.6.101
-    - 192.168.5.100
-    - 192.168.6.100
+    - 192.168.5.101   # Port 2a (virtual)
+    - 192.168.6.101   # Port 2b (virtual)
+    - 192.168.5.100   # Port 2a (physical)
+    - 192.168.6.100   # Port 2b (physical)
   controller_b:
-    - 192.168.7.101
-    - 192.168.8.101
-    - 192.168.7.100
-    - 192.168.8.100
+    - 192.168.7.101   # Port 2a (virtual)
+    - 192.168.8.101   # Port 2b (virtual)
+    - 192.168.7.100   # Port 2a (physical)
+    - 192.168.8.100   # Port 2b (physical)

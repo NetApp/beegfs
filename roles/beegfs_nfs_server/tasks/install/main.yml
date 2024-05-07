@@ -1,0 +1,5 @@
+- name: Install required OS packages for NFSv4 server
+  ansible.builtin.include_tasks: install/packages.yml
+
+- name: Configure server and kernel
+  ansible.builtin.include_tasks: install/configure.yml

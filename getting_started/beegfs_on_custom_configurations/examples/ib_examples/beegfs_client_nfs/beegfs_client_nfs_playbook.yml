@@ -1,0 +1,35 @@
+# BeeGFS client with NFS service playbook. 
+
+- hosts: beegfs_clients
+  # roles:
+  #   - geerlingguy.ntp
+  any_errors_fatal: true  #Fail on any error
+  become: True
+  tasks:
+    - name: Configure BeeGFS client services on HA cluster
+      block:
+        # # Uncomment this task to configure IPs on IB ports.
+        # - name: Configure IPs on IB ports
+        #   import_role:
+        #     name: ipoib
+
+        # # Do not run this task on HA cluster since HA cluster already tuned for performance.
+        # - name: tune_performance
+        #   import_role:
+        #     name: tune_performance
+
+        - name: Install BeeGFS client services on HA cluster
+          import_role:
+            name: netapp_eseries.beegfs.beegfs_client
+      when: not beegfs_nfs_server_uninstall
+
+    - name: Configure BeeGFS NFSv4 service on HA cluster
+      block:
+        - name: Configure IPs on Ethenet ports for in-band network
+          import_role:
+            name: netapp_eseries.host.roce
+          when: not beegfs_nfs_server_uninstall
+
+        - name: Install BeeGFS NFSv4 service on HA cluster
+          import_role:
+            name: netapp_eseries.beegfs.beegfs_nfs_server
