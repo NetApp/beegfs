@@ -1,10 +1,9 @@
-netappeseries.beegfs.client Role
-================================
+# netappeseries.beegfs.client Role
 
 Installs the BeeGFS Client and optionally mounts one or more BeeGFS file systems, or the same BeeGFS file system multiple times. The role can also unmount one or more BeeGFS file systems if requested.
 
-Requirements
-------------
+
+## Requirements
 
 * The BeeGFS client [does not currently support SELinux](https://doc.beegfs.io/latest/trouble_shooting/general.html#access-denied-error-on-the-client-even-with-correct-permissions) so it must be disabled before running the role.
 * The firewall ports used by the BeeGFS client for communication must not be blocked. The default TCP/UDP ports [can be found here](https://doc.beegfs.io/latest/advanced_topics/network_tuning.html#firewalls-network-address-translation-nat), and optionally overridden as part of mounting BeeGFS using this role (see beegfs_client_config below).
@@ -12,25 +11,28 @@ Requirements
 
 IMPORTANT: If you are using this role in conjunction with the BeeGFS high availability solution deployed by the other role(s) in this collection, please see the notes below for additional [requirements when mounting BeeGFS with HA enabled](#requirements-when-mounting-beegfs-with-ha-enabled).
 
-Support Matrix
---------------
+
+## Support Matrix
 
 | Component              | BeeGFS Version | Operating System          | Client Protocols  |
 | ---------------------- |----------------| ------------------------- | ----------------- |
-| BeeGFS Client service  | 7.2.6          | RedHat 8.3, Ubuntu 20.04  | TCP/UDP and RDMA  |
+| BeeGFS Client Services | 7.2.6          | RedHat 8.3, Ubuntu 20.04  | TCP/UDP and RDMA  |
+| BeeGFS Client Services | 7.4.3          | Ubuntu 22.04 LTS          | TCP/UDP and RDMA  |
 
-Supported Tags
---------------
+
+## Supported Tags
 
 * beegfs_client_install
 * beegfs_client_mount
 
-Variables
----------
+
+## Variables
+
 
 ### Required
 
 None.
+
 
 ### Optional
 
@@ -147,8 +149,7 @@ Notes:
 * By default the role will attempt to mount all BeeGFS filesystems listed in `beegfs_client_mounts` every time it runs unless `mounted: False`, in which case it will ensure that file system is unmounted.
 
 <a name="requirements-when-mounting-beegfs-with-ha-enabled"></a>
-Requirements when mounting BeeGFS with HA enabled
--------------------------------------------------
+## Requirements when mounting BeeGFS with HA enabled
 
 If you are using the BeeGFS client role to mount a BeeGFS filesystem backed by NetApp's shared-disk high availability solution, to prevent clients reporting "remote I/O" errors when a storage service crashes and is restarted on another node, [`sysSessionChecksEnabled`](https://git.beegfs.com/pub/v7/-/blob/master/client_module/build/dist/etc/beegfs-client.conf#L312) must be set to false in the `beegfs_client_config` for each mount point:
 ```
@@ -160,8 +161,8 @@ beegfs_client_mounts:
 ```
 IMPORTANT: To prevent silent data corruption `sysSessionChecksEnabled: false` must only be set when the underlying ext4/xfs filesystems used for the BeeGFS management, metadata and storage targets are mounted using the "sync" option. Mounting the targets in "sync" mode is the default configuration provided by the beegfs_ha* roles provided in this collection, but could be overridden.
 
-Configuring BeeGFS connection authentication
---------------------------------------------
+
+## Configuring BeeGFS connection authentication
 
 If your BeeGFS filesystem requires connection authentication then the shared secret must be provided to all the clients.
 BeeGFS versions released after 7.3.1 will require this by default.
@@ -169,7 +170,7 @@ BeeGFS versions released after 7.3.1 will require this by default.
 Notes:
  * The beegfs_ha roles from BeeGFS Collection 3.1.0 or newer will have connection authentication enabled by default and
 will generate <playbook_dir>/files/beegfs/<mgmt_ip>_connAuthFile to be shared with its clients. This file will be used
-when `beegfs_client_connAuthFile_enabled: true` which is its default.
+when `beegfs_client_connAuthFile_enabled: true`, which is its default.
 
 Providing a source file for a mount's connection authentication:
 ```
@@ -192,8 +193,8 @@ beegfs_client_mounts:
     connAuthFile_enabled: false
 ```
 
-Tuning recommendations when mounting BeeGFS
--------------------------------------------
+
+## Tuning recommendations when mounting BeeGFS
 
 While the default parameters provided in beegfs-client.conf provide reasonable performance, adjusting the following `beegfs_client_config` parameters has been seen to improve performance with many workloads:
 
@@ -207,14 +208,21 @@ beegfs_client_mounts:
       connRDMABufSize: 65536 # Size of each allocated RDMA buffer (BeeGFS Client Default: 8192).
 ```
 
-BeeGFS commands
----------------
+
+## BeeGFS commands
+
     beegfs-check-servers -p <MOUNT_PATH>   # Checks connectivity for all BeeGFS servers.
     beegfs-net                             # Shows established connections to BeeGFS servers.
     beegfs-df -p <MOUNT_PATH>              # Shows available capacity information.
     beegfs-ctl                             # Comprehensive command-line tool for BeeGFS (see beegfs-ctl --help for more details)
 
-Limitations
------------
+
+## Limitations
 
 * When using the non-DKMS client, to allow support for mounting the same BeeGFS file system multiple times or mounting multiple BeeGFS file systems, mounting BeeGFS using the default BeeGFS mount point in combination with the default BeeGFS client conf file is not supported (`/mnt/beegfs /etc/beegfs/beegfs-client.conf`). The role will automatically remove this default entry from beegfs-mounts.conf.
+
+
+## Maintainer Information
+
+- Christian Whiteside (@mcwhiteside)
+- Vu Tran (@VuTran007)

@@ -1,0 +1,42 @@
+# stor_02 - BeeGFS HA Storage Resource Group
+
+# This is a template for BeeGFS HA storage resource group. Review all comments and update with all expected values.
+# IMPORTANT: All capitalized words in angled brackets must be updated.
+
+beegfs_ha_beegfs_storage_conf_resource_group_options:
+  connStoragePortTCP: 8023                # Storage service default: 8003
+  connStoragePortUDP: 8023
+  # NUMA node binding for BeeGFS HA service. This NUMA policy will be applied whenever and wherever the BeeGFS service # resides. This can provide significant performance increases by avoiding the cache misses between NUMA nodes.
+  tuneBindToNumaZone: 0
+
+# Node IPs for Pacemaker services.
+floating_ips:
+  - i2b:100.128.104.2/16
+  - i1b:100.127.103.2/16
+
+# Type of BeeGFS service the HA resource group will manage. Choices: management, metadata, storage.
+beegfs_service: storage
+
+beegfs_targets:
+  eseries_storage_system_01:                # 1st array of building block that defined in inventory
+    eseries_storage_pool_configuration:
+      - name: beegfs_s1_s2
+        # Storage pool/volume group RAID type. Choices: raid0, raid1, raid5, raid6, raidDiskPool
+        # RAID 6 stripes the data between across all drives with two parity stripes to allow for recovery of multiple 
+        # drive failures which is the recommended storage type for BeeGFS storage services.
+        raid_level: raid6
+
+        # Total drive count for the storage pool.
+        criteria_drive_count: 10
+
+        common_volume_configuration:
+          segment_size_kb: 128
+
+        # BeeGFS storage service volume list. In order to get the best performance, it is recommended that you use a 
+        # minimum of two volumes per storage service.
+        volumes:
+          # Size of each BeeGFS storage service volume in percentage of total storage pool capacity.
+          - size: 21.5
+            owning_controller: B
+          - size: 21.5
+            owning_controller: B

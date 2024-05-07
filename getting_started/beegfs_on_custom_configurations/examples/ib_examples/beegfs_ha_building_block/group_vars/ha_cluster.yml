@@ -1,0 +1,122 @@
+# ha_cluster Ansible group inventory file. Place all default/common variables for BeeGFS HA cluster resources below.
+
+# Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+# This is required when configuring additional static IPs (for example cluster IPs) when multiple IB ports are in the
+# same IPoIB subnet.
+eseries_ipoib_default_hook_templates:
+  - 99-multihoming.j2
+
+# If the following options are specified, then Ansible will automatically reboot nodes when necessary for changes to
+# take effect: 
+eseries_common_allow_host_reboot: true
+
+# Uncomment if NVMe IB is in use: 
+eseries_common_reboot_test_command: "! systemctl status eseries_nvme_ib.service || systemctl --state=exited | grep eseries_nvme_ib.service"
+
+# Enable virtual connection on BeeGFS servers and storage array.
+eseries_ib_opensm_options:
+  virt_enabled: "2"
+
+
+### Cluster information
+
+# The following variables should be adjusted depending on the desired configuration: 
+beegfs_ha_cluster_name: beegfs_hacluster
+beegfs_ha_cluster_username: "{{ ha_cluster_username }}"
+beegfs_ha_cluster_password: "{{ ha_cluster_password }}"
+beegfs_ha_cluster_password_sha512_salt: "{{ ha_cluster_password_sha512_salt }}"
+beegfs_ha_mgmtd_floating_ip: 100.127.101.0           # BeeGFS mgmt service IP (i.e: IP of i1b:mgmt_1).
+#beegfs_ha_filter_ip_ranges:                         # (Optional) Constrains the BeeGFS subnet.
+#  - 192.168.2.0/24
+
+# Email Alerts Configuration
+beegfs_ha_enable_alerts: True
+
+# E-mail recipient list for notifications when BeeGFS HA resources change or fail.
+beegfs_ha_alert_email_list: ["user@netapp.com"]
+
+# This dictionary is used to configure postfix service (/etc/postfix/main.cf) which is required to set email alerts.
+beegfs_ha_alert_conf_ha_group_options:
+  # This parameter specifies the local internet domain name. This is optional when the cluster nodes have fully
+  # qualified hostnames (i.e. host.example.com)
+  mydomain: netapp.com
+
+#  1) high-level node activity
+#  3) high-level node activity + fencing action information + resources (filter on X-monitor)
+#  5) high-level node activity + fencing action information + resources
+beegfs_ha_alert_verbosity: 3
+
+### Performance Configuration:
+beegfs_ha_enable_performance_tuning: True
+
+### Security Configuration:
+# If firewalld ports should be automatically opened for all deployed services.
+beegfs_ha_firewall_configure: True          # default: True
+eseries_beegfs_ha_disable_selinux: True     # default: True
+eseries_selinux_state: disabled
+beegfs_ha_conn_auth_enabled: True           # default: True
+
+### NTP Configuration:
+# BeeGFS requires time synchronization.
+# NTP or Chrony can be configured using `beegfs_ha_ntp_enabled` or `beegfs_ha_chrony_enabled` respectively.
+# Disable both of these flags if this requirement is already handled.
+
+# Installs and configures Chron and removes NTP if installed since they conflict with each other.
+beegfs_ha_chrony_enabled: true
+
+# NOTE: NTP may not be available on new distributions.
+# Installs and configures NTP and removes Chrony if installed since they conflict with each other.
+beegfs_ha_ntp_enabled: false
+
+### Fencing configuration: 
+beegfs_ha_cluster_crm_config_options:
+  stonith-enabled: True                  # Determines if fencing (STONITH) is globally enabled or disabled.
+
+# OPTION 1: To enable fencing using APC Power Distribution Units (PDUs): 
+#beegfs_ha_fencing_agents:
+# fence_apc:
+#   - ipaddr: <PDU_IP_ADDRESS>
+#     login: <PDU_USERNAME>
+#     passwd: <PDU_PASSWORD>
+#     pcmk_host_map: "<HOSTNAME>:<PDU_PORT>,<PDU_PORT>;<HOSTNAME>:<PDU_PORT>,<PDU_PORT>"
+
+# OPTION 2: To enable fencing using the Redfish APIs provided by the Lenovo XCC (and other BMCs):
+#redfish: &redfish
+#  username: <BMC_USERNAME>
+#  password: <BMC_PASSWORD>
+#  ssl_insecure: 1
+redfish: &redfish
+  username: "{{ bmc_username }}"
+  password: "{{ bmc_password }}"
+  ssl_insecure: 1
+
+beegfs_ha_fencing_agents:
+  fence_redfish:
+    - pcmk_host_list: node_mm1_ss1
+      ip: 10.113.12.226
+      <<: *redfish
+    - pcmk_host_list: node_mm2_ss2
+      ip: 10.113.15.216
+      <<: *redfish
+
+# 
+#beegfs_ha_fencing_agents:
+#  fence_redfish:
+#    - pcmk_host_list: <HOSTNAME>
+#      ip: <BMC_IP_ADDRESS>
+#      <<: *redfish
+#    - pcmk_host_list: <HOSTNAME>
+#      ip: <BMC_IP_ADDRESS>
+#      <<: *redfish
+#
+# OPTION 3: Define an alternative fencing agent: 
+#beegfs_ha_fencing_agents: # Fencing agent definitions. This variable takes a dictionary of fence agent types with a list of fence definitions.
+#  fence_<AGENT>:
+#    - <STDIN_PARAMETERS>
+#
+# To discover the fencing agent parameters:
+#   1) Search the BeeGFS HA node's package manager for fence- for your device and install it.
+#   2) Run 'man -w -I --wildcard fence_*' to get the manual page name for the need fencing agent.
+#   3) Use man to view the manual entry which contains the needed parameters (ie man fence_apc).
+#   4) Define any required parameters from the section entitled 'STDIN PARAMETERS'.

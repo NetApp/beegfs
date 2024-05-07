@@ -1,3 +1,10 @@
+- name: Create nvme_path_udev.sh (Storage/Metadata).
+  ansible.builtin.template:
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/nvme_path_udev.sh.j2') }}"
+    dest: "/etc/nvme/nvme_path_udev.sh"
+    mode: 0755
+  become: true
+
 - name: Create udev rule at /etc/udev/rules.d/99-eseries-beegfs.rules (Storage/Metadata).
   ansible.builtin.template:
     src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/eseries_beegfs_ha_udev_rule.j2') }}"

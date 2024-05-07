@@ -1,0 +1,30 @@
+- name: Stop and disable NFS server service
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  become: true
+  ignore_errors: true
+  loop:
+    - beegfs-nfs-server.service
+    - nfs-server.service
+
+- name: Remove NFS server configuration files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/systemd/system/beegfs-nfs-server.service
+    - /etc/default/nfs-kernel-server
+    - /etc/nfs.conf.d/nfs.conf
+    - /etc/sysctl.d/99-beegfs-nfs-server.conf
+    - /etc/exports.d/beegfs.exports
+
+- name: Unload kernel modules and make persistent through reboots
+  community.general.modprobe:
+    name: "{{ item['name'] }}"
+    params: "{{ item['params'] }}"
+    state: absent
+    persistent: absent
+  loop: "{{ beegfs_nfs_server_kernel_modules }}"
+  become: true

@@ -2,13 +2,13 @@
 # NVMe Devices
 ACTION=="add|change", \
   ATTRS{model}=="NetApp E-Series*", \
-  ENV{DEVTYPE}=="disk", \
+  SUBSYSTEMS=="nvme-subsystem", \
   SUBSYSTEM=="block", \
   KERNEL=="nvme*", \
 {% for attribute, value in (beegfs_ha_eseries_nvme_attributes.items() | list) %}
-  ATTR{ {{- attribute -}} }="{{ value }}"{% if not loop["last"] %}, \{% endif %}
-
+  ATTR{ {{- attribute -}} }="{{ value }}", \
 {% endfor %}
+  RUN+="/etc/nvme/nvme_path_udev.sh %k"
 
 # SSD Devices
 ACTION=="add|change", \
@@ -31,7 +31,7 @@ ACTION=="add|change", \
     export DEV=`/bin/basename $env{DEVNAME} || /usr/bin/basename $env{DEVNAME}`; \
     if grep INF-01-00 /sys/block/$DEV/slaves/sd*/device/model && [[ -f /sys$env{DEVPATH}/queue/scheduler ]]; then \
 {% for attribute, value in (beegfs_ha_eseries_ssd_attributes.items() | list) %}
-      echo {{ value }} > /sys$env{DEVPATH}/{{ attribute }} \
+      echo {{ value }} > /sys$env{DEVPATH}/{{ attribute }}; \
 {% endfor %}
     fi'"
 
@@ -56,7 +56,7 @@ ACTION=="add|change", \
     export DEV=`/bin/basename $env{DEVNAME} || /usr/bin/basename $env{DEVNAME}`; \
     if grep INF-01-00 /sys/block/$DEV/slaves/sd*/device/model && [[ -f /sys$env{DEVPATH}/queue/scheduler ]]; then \
 {% for attribute, value in (beegfs_ha_eseries_hdd_attributes.items() | list) %}
-      echo {{ value }} > /sys$env{DEVPATH}/{{ attribute }} \
+      echo {{ value }} > /sys$env{DEVPATH}/{{ attribute }}; \
 {% endfor %}
     fi'"
 

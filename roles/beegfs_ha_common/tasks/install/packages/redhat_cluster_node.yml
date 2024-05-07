@@ -18,12 +18,20 @@
   become: true
 
 - name: Ensure mail packages are installed for alerts (RedHat/CentOS - Cluster Node).
-  ansible.builtin.yum:
-    state: present
-    name: "{{ item }}"
+  block:
+    - name: Ensure mail packages are installed for alerts (RedHat/CentOS - Cluster Node).
+      ansible.builtin.yum:
+        state: present
+        name: "{{ item }}"
+      loop: ["postfix", "mailx"]
+  rescue:
+    - name: Ensure mail packages are installed for alerts (RedHat/CentOS - Cluster Node).
+      ansible.builtin.yum:
+        state: present
+        name: "{{ item }}"
+      loop: ["postfix", "s-nail"]
   when: beegfs_ha_enable_alerts == True
-  loop: ["postfix", "mailx"]
-  become: true
+  become: True
 
 - name: Ensure NTP is installed (RedHat/CentOS - Cluster Node).
   block:

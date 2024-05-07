@@ -1,0 +1,8 @@
+- name: Configure firewall for NFS server
+  ansible.builtin.include_tasks: install/firewall/{{ ansible_facts['os_family'] | lower }}.yml
+
+- name: Configure server exports
+  ansible.builtin.include_tasks: install/configure/exports.yml
+
+- name: Configure server and kernel
+  ansible.builtin.include_tasks: install/configure/common.yml

@@ -1,0 +1,5 @@
+- name: Unconfigure server, kernel, and export configurations
+  ansible.builtin.include_tasks: uninstall/unconfigure/common.yml
+
+- name: Remove NFS service from firewall
+  ansible.builtin.include_tasks: uninstall/firewall/{{ ansible_facts['os_family'] | lower }}.yml

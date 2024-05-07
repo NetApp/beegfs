@@ -1,0 +1,20 @@
+[Unit]
+Description=BeeGFS NFS server and services
+Requires=beegfs-client.service
+After=beegfs-client.service
+
+# Note: The following services will be masked by beegfs collection to ensure only NFSv4 is enabled.
+# - rpcbind.socket
+# - rpc-statd.service
+# - rpc-statd-notify.service
+
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/systemctl restart nfs-server.service
+ExecStop=/usr/bin/systemctl stop nfs-server.service
+ExecReload=/usr/bin/systemctl reload nfs-server.service
+
+[Install]
+WantedBy=multi-user.target

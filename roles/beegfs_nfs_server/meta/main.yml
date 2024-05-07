@@ -1,0 +1,10 @@
+galaxy_info:
+  author: NetApp
+  description: NFSv4.2 server that re-exports BeeGFS client mount points
+  company: NetApp
+  license: BSD-3-Clause
+  min_ansible_version: "2.13"
+  galaxy_tags:
+    - beegfs
+    - nfs
+dependencies: []

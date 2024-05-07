@@ -1,0 +1,60 @@
+# node_mm2_ss2 - BeeGFS HA node resource
+
+# Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+# # Parameter documentation
+# Parameter in nvme_ib role
+# https://github.com/netappeseries/host/blob/master/roles/nvme_ib/README.md
+
+ansible_host: 10.113.13.8
+ansible_ssh_user: "{{ ssh_ha_user }}"
+ansible_become_password: "{{ ssh_ha_become_pass }}"
+
+# # Uncomment ansible_ssh_pass if control node is not setup with passwordless SSH to remote servers.
+# ansible_ssh_pass: "{{ ssh_ha_pass }}"
+
+# Node IPs for Pacemaker to communicate with each other.
+beegfs_ha_cluster_node_ips:
+  - "{{ ansible_host }}"
+  - 100.127.100.4
+  - 100.128.100.4
+
+# NVMe over InfiniBand storage communication protocol information
+eseries_nvme_ib_interfaces:
+  - name: i1a
+    address: 192.168.2.10/24
+    configure: true
+  - name: i2a
+    address: 192.168.4.10/24
+    configure: true
+  - name: i3a
+    address: 192.168.6.10/24
+    configure: true
+  - name: i4a
+    address: 192.168.8.10/24
+    configure: true
+
+  # Node IPs to communicate with other BeeGFS servers.
+  # NOTE: do not configure IPs for i2b and i3b interface since it might cause conflict in Pacemaker communication.
+  - name: i1b
+    address: 100.127.100.4/16
+    configure: false
+  - name: i4b
+    address: 100.128.100.4/16
+    configure: false
+
+eseries_nvme_ib_udev_name: 99-beegfs-nvme_ib.rules
+
+# # NOTE: The interface name here + resource name specified in beegfs_ha_inventory.yml must be less than 15 characters.
+
+# Maps interface PCI slots to interface names for ensuring persistent interface names.
+# This information can be polled with "lshw -class network -businfo".
+eseries_nvme_ib_udev_rules:
+  "0000:41:00.0": i1a
+  "0000:41:00.1": i1b
+  "0000:01:00.0": i2a
+  "0000:01:00.1": i2b
+  "0000:a1:00.0": i3a
+  "0000:a1:00.1": i3b
+  "0000:81:00.0": i4a
+  "0000:81:00.1": i4b

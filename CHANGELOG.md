@@ -1,6 +1,18 @@
 # Changelog
 Notable changes to the BeeGFS collection will be documented in this file.
 
+[3.2.0] - 2024-03-30
+--------------------
+### Added
+- Add beegfs_ha_7_4 role to support BeeGFS 7.4.3 with RHEL/Rocky 9.
+- Add beegfs_nfs_server role to support NFSv4 export.
+
+### Fixed
+- Update udev rules to apply defined settings to NVMe devices and paths.
+
+### Deprecated
+- Remove deprecated beegfs_ha_7_2 role.
+
 [3.1.0] - 2023-01-30
 --------------------
 ### Added

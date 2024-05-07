@@ -1,0 +1,18 @@
+- name: Setup share directory
+  ansible.builtin.file:
+    state: directory
+    path: "{{ item['path'] }}"
+    mode: "{{ item['mode'] | default(omit) }}"
+    owner: "{{ item['owner'] | default(omit) }}"
+    group: "{{ item['group'] | default(omit) }}"
+  loop: "{{ beegfs_nfs_server_exports }}"
+  become: true
+
+- name: Define NFS exports
+  ansible.builtin.template:
+    src: beegfs_exports.j2
+    dest: /etc/exports.d/beegfs.exports
+    mode: "0644"
+  become: true
+  notify:
+    - Reload NFS server daemon

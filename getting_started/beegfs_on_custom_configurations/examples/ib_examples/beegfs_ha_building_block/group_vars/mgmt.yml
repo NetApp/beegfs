@@ -1,0 +1,43 @@
+# mgmt - BeeGFS HA Management Resource Group
+
+# This is a template for BeeGFS HA management resource groups. Review all comments and update with all expected values. 
+# IMPORTANT: All capitalized words in angled brackets must be updated.
+                                      
+beegfs_ha_beegfs_mgmtd_conf_resource_group_options:
+ connMgmtdPortTCP: 8008                             # Management service default: 8008
+ connMgmtdPortUDP: 8008
+
+# Node IPs for Pacemaker services.
+floating_ips:
+  - i1b:100.127.101.0/16
+  - i2b:100.128.102.0/16
+
+# Type of BeeGFS service the HA resource group will manage. Choices: management, metadata, storage.
+beegfs_service: management
+
+beegfs_targets:
+  eseries_storage_system_01:                        # 1st array of building block that defined in inventory
+    eseries_storage_pool_configuration:
+      # The management service does not require much storage since it is only used for sharing the BeeGFS configuration
+      # files among the management resource nodes. For this reason the storage pool's name is specified here to provide
+      # a common pool of drives to be used between this metadata services and the management service. If name is 
+      # changed, differs from the management storage pool's name, or is removed a common storage pool will not be 
+      # created.
+      - name: beegfs_m1_m2_m5_m6
+
+        # Storage pool/volume group RAID type. Choices: raid0, raid1, raid5, raid6, raidDiskPool
+        # RAID 1 mirrors the data between two drives which is the recommended storage type for management and metadata
+        # services. If this storage pool is shared with other services this value must be the same on all definitions.
+        raid_level: raid1
+
+        # Total drive count for the storage pool. RAID 1 requires even number of drives. If this storage pool is shared # with other services this value must be the same on all definitions.
+        criteria_drive_count: 4
+
+        common_volume_configuration:
+          segment_size_kb: 128
+
+        # BeeGFS management service requires only one volume.
+        volumes:
+          # Size of the BeeGFS management service volume in percentage of total storage pool capacity.
+          - size: 1
+            owning_controller: A

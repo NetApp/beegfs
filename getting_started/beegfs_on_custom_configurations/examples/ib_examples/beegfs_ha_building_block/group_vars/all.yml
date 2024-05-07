@@ -1,0 +1,13 @@
+# all Ansible group inventory file. Place all universally common or default variable values below.
+
+# Python is required on remote hosts to issuing commands.
+# Python 2 has been deprecated and should be used at your own risk!
+ansible_python_interpreter: /usr/bin/python3
+
+# Time synchronization tool configuration parameters (Chrony/NTP)
+beegfs_ha_ntp_server_pools:
+ - "pool 0.pool.ntp.org"
+ - "pool 1.pool.ntp.org"
+beegfs_ha_ntp_restricts:
+ - 127.0.0.1
+ - ::1

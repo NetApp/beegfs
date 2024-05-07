@@ -1,0 +1,23 @@
+# BeeGFS client playbook. 
+
+- hosts: beegfs_clients
+  collections:
+    - netapp_eseries.host
+    - netapp_eseries.beegfs
+  roles:
+    - geerlingguy.ntp
+  any_errors_fatal: true  #Fail on any error
+  become: True
+  tasks:
+    # # Uncomment this task to configure IPs on IB ports.
+    # - name: Configure IPs for IB ports
+    #   import_role:
+    #     name: ipoib
+
+    - name: tune_performance
+      import_role:
+        name: tune_performance
+
+    - name: Install BeeGFS client services
+      import_role:
+        name: beegfs_client
