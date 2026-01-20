@@ -1,0 +1,82 @@
+# Playbook objective
+#
+# 1. Update Lenovo server FWs to defined version.
+# 2. Reboot BMC to apply new BMC FW if applicable.
+# 3. Reboot server to apply new UEFI FW if applicable.
+# 4. Update BIOS attributes to defined values.
+# 4. Reboot host to apply BIOS changes.
+# 5. Validate BIOS attributes is correct.
+
+
+- hosts: ha_cluster
+  gather_facts: false
+  become: true
+  any_errors_fatal: true
+  vars_files:
+    - ../../global_params/passwords.yml
+    - "{{ ansible_inventory_sources[0] | dirname }}/user_defined_params.yml"
+  vars:
+    server_model: ThinkSystem SR665 V3
+    enable_debug: false
+
+    server_fw:
+      # url: "{{ repo_base_url }}/vendor/lenovo/server/SR665v3_System_FW"        # example
+      url: <USER_INPUT>
+      filenames:
+        # - lnvgy_fw_xcc_kax348m-4.60_anyos_comp.zip                      # example
+        # - lnvgy_fw_uefi_kae132i-5.30_anyos_comp.zip
+        # - lnvgy_fw_lxum_eal506h-1.11_anyos_comp.zip
+        # - lnvgy_fw_drvln_gnl218d-4.20.00_anyos_comp.zip
+        # - lnvgy_fw_lxpm_gnl118f-4.20.00_anyos_comp.zip
+        - <USER_INPUT>
+
+    bios_attributes:
+      OperatingModes_ChooseOperatingMode: CustomMode
+      Processors_cTDP: Manual
+      Processors_PackagePowerLimit: Manual
+      Power_EfficiencyMode: Disabled
+      Processors_GlobalC_stateControl: Disabled
+      Processors_SOCP_states: P0
+      Processors_DFC_States: Disabled
+      Processors_P_State: Disabled
+      Memory_MemoryPowerDownEnable: Disabled
+      DevicesandIOPorts_IOMMU: Disabled
+      Power_PCIePowerBrake: Disabled
+      Processors_SMTMode: Disabled
+      Processors_CPPC: Disabled
+      Memory_NUMANodesperSocket: NPS1
+
+  tasks:
+    - name: Set BMC IP.
+      ansible.builtin.set_fact:
+        bmc_ip: |-
+          {%- for bmc_agent in beegfs_ha_fencing_agents.fence_redfish | default([]) -%}
+            {%- if inventory_hostname in bmc_agent['pcmk_host_list'] -%}{{ bmc_agent['ip'] }}{%- endif -%}
+          {%- endfor -%}
+
+    - name: Fail if BMC IP is not set.
+      fail:
+        msg: "BMC IP is not set for {{ inventory_hostname }}."
+      when: bmc_ip == ""
+
+    - name: Get server hardware information.
+      community.general.redfish_info:
+        baseuri: "{{ bmc_ip }}"
+        username: "{{ bmc_username }}"
+        password: "{{ bmc_password }}"
+        timeout: 60
+      register: result
+
+    - name: Fail if server model is incorrect.
+      fail:
+        msg: "Reported server model '{{ result.redfish_facts.system.entries[0][1].Model}}' did not match to the defined model: '{{ server_model }}'"
+      when: "server_model != result.redfish_facts.system.entries[0][1].Model"
+
+    - name: Update server FWs.
+      include_tasks: "tasks/update_server_fw.yml"
+      loop: "{{ server_fw['filenames'] }}"
+      when: server_fw is defined
+
+    - name: Update BIOS settings.
+      include_tasks: "tasks/update_bios_settings.yml"
+      when: bios_attributes is defined

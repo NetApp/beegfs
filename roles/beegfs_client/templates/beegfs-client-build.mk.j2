@@ -6,4 +6,4 @@
 # Examples:
 #OFED_INCLUDE_PATH=/usr/src/ofa_kernel/default/include
 #OFED_INCLUDE_PATH=/usr/src/openib/include
-{% if beegfs_client_ofed_enable %}OFED_INCLUDE_PATH={{ beegfs_client_ofed_include_path }}{% endif %}
+{% if beegfs_client_ofed_enable | bool %}OFED_INCLUDE_PATH={{ beegfs_client_ofed_include_path }}{% endif %}

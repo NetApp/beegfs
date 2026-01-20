@@ -1,0 +1,197 @@
+### ha_cluster Ansible group inventory file. Place all default/common variables for BeeGFS HA cluster resources below.
+
+### Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+{% set eseries_initiator_protocol = eseries_storage_settings['eseries_initiator_protocol'] | default("<USER_INPUT>") %}
+
+
+########################
+### General settings ###
+########################
+
+### Set eseries_common_allow_host_reboot to True to instruct Ansible to auto-reboot nodes when required.
+eseries_common_allow_host_reboot: true
+
+### BeeGFS management service IP address.
+beegfs_ha_mgmtd_floating_ip: {{ file_node_settings['beegfs_ha_settings']['floating_ip_start']['mgmt_network'] | default('<USER_INPUT>') }}
+
+### (Optional) Constrains the BeeGFS subnet.
+# beegfs_ha_filter_ip_ranges:
+#   - 192.168.2.0/24
+
+
+
+{% if eseries_initiator_protocol in ['nvme_ib'] %}
+  {%- include 'ha_cluster_group_protocol/ha_cluster_group_ib_template.j2' %}
+{% endif %}
+
+
+
+
+###############################
+### Pacemaker Configuration ###
+###############################
+
+# Value should be equal or less than value of net.core.wmem_max and net.core.rmem_max.
+beegfs_ha_pacemaker_ipc_buffer_bytes: 13396332
+
+
+
+#################################
+### Performance Configuration ###
+#################################
+
+beegfs_ha_enable_performance_tuning: true
+
+tune_performance_sysctl:
+  kernel.sched_min_granularity_ns: 10000000
+  kernel.sched_wakeup_granularity_ns: 15000000
+  vm.swappiness: 0
+
+tune_performance_sysctl_rhel_amd:
+  type: sysctl
+  uname_regex: x86_64
+  cpuinfo_regex: ${amd_cpuinfo_regex}
+  kernel.sched_migration_cost_ns: 5000000
+
+beegfs_ha_required_sysctl_entries:
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.conf.all.arp_filter: 1
+  net.ipv4.conf.all.arp_announce: 2
+  net.ipv4.conf.all.arp_ignore: 2
+  net.ipv4.neigh.default.gc_thresh1: 256
+  net.ipv4.neigh.default.gc_thresh2: 1024
+  net.ipv4.neigh.default.gc_thresh3: 2048
+  net.core.wmem_max: 13396332
+  net.core.rmem_max: 13396332
+
+
+
+##############################
+### Security Configuration ###
+##############################
+
+### firewalld ports automatically opened for all deployed services if set beegfs_ha_firewall_configure to True.
+beegfs_ha_firewall_configure: true
+eseries_beegfs_ha_disable_selinux: true
+eseries_selinux_state: disabled
+beegfs_ha_conn_auth_enabled: true
+
+
+
+#############################
+### Fencing configuration ###
+#############################
+
+beegfs_ha_cluster_crm_config_options:
+  ### Determines if fencing (STONITH) is globally enabled or disabled.
+  stonith-enabled: true
+
+
+### To discover the fencing agent parameters:
+###   1) Search the BeeGFS HA node's package manager for fence- for your device and install it.
+###   2) Run 'man -w -I --wildcard fence_*' to get the manual page name for the need fencing agent.
+###   3) Use man to view the manual entry which contains the needed parameters (ie man fence_apc).
+###   4) Define any required parameters from the section entitled 'STDIN PARAMETERS'.
+
+{% if file_node_settings['beegfs_ha_settings']['beegfs_ha_fencing_agent'] == "fence_apc" %}
+### To enable fencing using APC Power Distribution Units (PDUs): 
+beegfs_ha_fencing_agents:
+  fence_apc:
+    - ipaddr: <PDU_IP_ADDRESS>
+      login: <PDU_USERNAME>
+      passwd: <PDU_PASSWORD>
+      pcmk_host_map: "<HOSTNAME>:<PDU_PORT>,<PDU_PORT>;<HOSTNAME>:<PDU_PORT>,<PDU_PORT>"
+
+{%- elif file_node_settings['beegfs_ha_settings']['beegfs_ha_fencing_agent'] == "fence_redfish" %}
+### To enable fencing using the Redfish APIs provided by the Lenovo XCC (and other BMCs):
+{%- raw %}
+redfish: &redfish
+  username: "{{ bmc_username }}"
+  password: "{{ bmc_password }}"
+  ssl_insecure: 1
+{% endraw %}
+
+{% set bmc_ip_start = file_node_settings['bmc_ip_start'] %}
+beegfs_ha_fencing_agents:
+  fence_redfish:
+    {% for hostname in file_node_names -%}
+    - pcmk_host_list: {{ hostname }}
+      {% set bmc_ip = hostvars[hostname]['bmc_ip'] %}
+      {%- if bmc_ip is defined -%}
+      ip: {{ bmc_ip }}
+      {% elif bmc_ip_start is defined -%}
+        {%- set node_id = hostname | regex_search('[0-9]+$') | int -%}
+        {%- set bmc_network_id = bmc_ip_start | regex_replace('(.*)\\.\\d+$', '\\1.') -%}
+        {%- set bmc_host_id = bmc_ip_start | regex_replace('(.*)\\.(\\d+)$', '\\2') | int -%}
+      ip: {{ bmc_network_id ~ (bmc_host_id - 1 + node_id) }}
+      {% else -%}
+      ip: <BMC_IP_ADDRESS>
+      {% endif -%}
+      <<: *redfish
+    {% endfor %}
+
+{%- else %}
+### Define an alternative fencing agent: 
+beegfs_ha_fencing_agents: # Fencing agent definitions. This variable takes a dictionary of fence agent types with a list of fence definitions.
+  fence_<AGENT>:
+    - <STDIN_PARAMETERS>
+{% endif %}
+
+
+
+####################################
+### BeeGFS service configuration ###
+####################################
+
+### How to override default BeeGFS service configuration: 
+### Except configuration specified elsewhere (sysMgmtdHost, connInterfacesFile, and connNetFilterFile), any options
+### found in the beegfs-*.conf files that should apply to all services in the file system can be specified here.
+###
+### For example: `tuneTargetChooser=randomrobin` as `tuneTargetChooser: randomrobin`
+
+beegfs_ha_beegfs_mgmtd_conf_ha_group_options:
+  ### Format: <OPTION>: <VALUE>
+{% if beegfs_supports_tls is true %}
+  quota-enable: {{ file_node_settings['beegfs_service_settings']['quota_enable_enforcement'] | string | default("false") | lower }}
+{% else %}
+  quotaEnableEnforcement: {{ file_node_settings['beegfs_service_settings']['quota_enable_enforcement'] | string | default("false") | lower }}
+{% endif %}
+{% if file_node_settings['beegfs_service_settings']['quota_enable_enforcement'] is true %}
+  quotaQueryType: system
+  quotaUpdateIntervalMin: 10
+{% endif %}
+
+beegfs_ha_beegfs_meta_conf_ha_group_options:
+  ### Format: <OPTION>: <VALUE>
+  connMaxInternodeNum: 128
+  tuneNumWorkers: 0
+  tuneTargetChooser: randomrobin
+  quotaEnableEnforcement: {{ file_node_settings['beegfs_service_settings']['quota_enable_enforcement'] | default(false) | lower }}
+
+beegfs_ha_beegfs_storage_conf_ha_group_options:
+  ### Format: <OPTION>: <VALUE>
+  connMaxInternodeNum: 128
+  tuneNumWorkers: 14
+  quotaEnableEnforcement: {{ file_node_settings['beegfs_service_settings']['quota_enable_enforcement'] | default(false) | lower }}
+
+beegfs_ha_service_volume_configuration:
+  management:
+    format_type: ext4
+    format_options: "-i 2048 -I 512 -J size=400 -Odir_index,filetype"
+    mount_options: "sync,noatime,nodiratime,nobarrier"
+    mount_dir: /mnt/
+  metadata:
+    format_type: ext4
+    format_options: "-i 2048 -I 512 -J size=400 -Odir_index,filetype"
+    mount_options: "sync,noatime,nodiratime,nobarrier"
+    mount_dir: /mnt/
+  storage:
+    format_type: xfs
+    format_options: "-d su=VOLUME_SEGMENT_SIZE_KBk,sw=VOLUME_STRIPE_COUNT -l version=2,su=256k"
+{% if file_node_settings['beegfs_service_settings']['quota_enable_enforcement'] is true %}
+    mount_options: "sync,noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k,uqnoenforce,gqnoenforce"
+{% else %}
+    mount_options: "sync,noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k"
+{% endif %}
+    mount_dir: /mnt/

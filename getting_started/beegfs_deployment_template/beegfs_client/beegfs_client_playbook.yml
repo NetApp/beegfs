@@ -1,0 +1,77 @@
+# BeeGFS client playbook. 
+
+# Playbook objective
+#
+# 1. Add local debian repo if applicable.
+# 2. Configure multihoming on Infiniband interfaces.
+# 3. Configure BeeGFS client services to communicate with BeeGFS clusters.
+# 4. Remove unnecessary package and service such as libbeegfs-ib, ibacm.
+# 5. Create symlink for beegfs-client.conf
+
+
+- hosts: beegfs_clients
+  gather_facts: true
+  any_errors_fatal: true  #Fail on any error
+  become: true
+  vars_files:
+    - ../global_params/passwords.yml
+  tasks:
+    - name: Add local_debian_repo_url
+      ansible.builtin.apt_repository:
+        repo: "deb [trusted=yes] {{ local_debian_repo_url }} {{ ansible_distribution_release }} main"
+        state: present
+        filename: local_debian_repo_url
+      when: local_debian_repo_url is defined
+
+    - name: Rename sources.list to use local_debian_repo
+      ansible.builtin.command:
+        cmd: mv /etc/apt/sources.list /etc/apt/sources.list.orig
+        removes: /etc/apt/sources.list
+      when: local_debian_repo_url is defined
+
+    - name: Generate 99-multihoming file for Infiniband interfaces.
+      ansible.builtin.template:
+        src: templates/99-multihoming.j2
+        dest: /etc/network/if-up.d/99-multihoming-{{ item['name'] }}
+        owner: root
+        group: root
+        mode: '0755'
+      loop: "{{ eseries_ipoib_interfaces }}"
+      notify:
+        - Bring down interfaces to apply changes.
+        - Bring up interfaces to apply changes.
+
+    - name: Create a symbolic link for 99-multihoming file in if-down.d
+      ansible.builtin.file:
+        src: /etc/network/if-up.d/99-multihoming-{{ item['name'] }}
+        dest: /etc/network/if-down.d/99-multihoming-{{ item['name'] }}
+        state: link
+      loop: "{{ eseries_ipoib_interfaces }}"
+
+    - name: Install BeeGFS client services
+      import_role:
+        name: netapp_eseries.beegfs.beegfs_client
+
+    - name: Uninstall libbeegfs-ib package
+      ansible.builtin.apt:
+        name: libbeegfs-ib
+        state: absent
+
+    - name: Stop ibacm due to this service causes RDMA connections attempts to stall
+      ansible.builtin.service:
+        name: ibacm
+        state: stopped
+        enabled: no
+
+    - name: Create symlink for beegfs-client.conf
+      ansible.builtin.command: ln -sf /etc/beegfs/{{ beegfs_ha_mgmtd_floating_ip }}_8004_beegfs-client.conf /etc/beegfs/beegfs-client.conf
+
+
+  handlers:
+    - name: Bring down interfaces to apply changes.
+      ansible.builtin.command: ifdown {{ item['name'] }}
+      loop: "{{ eseries_ipoib_interfaces }}"
+
+    - name: Bring up interfaces to apply changes.
+      ansible.builtin.command: ifup {{ item['name'] }}
+      loop: "{{ eseries_ipoib_interfaces }}"

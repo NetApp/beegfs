@@ -2,6 +2,9 @@
 {%   if mount["mounted"] | default(true) %}
 {%     set mgmt_ip = mount["sysMgmtdHost"] %}
 {%     set client_port = mount["beegfs_client_config"]["connClientPortUDP"] | default("") %}
+{%     if mount["beegfs_client_config"]["connClientPort"] is defined %}
+{%       set client_port = mount["beegfs_client_config"]["connClientPort"] %}
+{%     endif %}
 {%     if client_port %}
 {{       mount["mount_point"] }} /etc/beegfs/{{ mgmt_ip }}_{{ client_port }}_beegfs-client.conf
 {%     else %}

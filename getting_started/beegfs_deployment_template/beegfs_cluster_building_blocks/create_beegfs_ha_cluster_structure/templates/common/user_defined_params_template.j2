@@ -1,0 +1,186 @@
+### Cluster-Level Configuration Settings
+
+{%- set cluster_id = cluster_name | regex_search('\d+$') | int %}
+
+### This is a template. Review all comments and update with all expected values. 
+### IMPORTANT: All capitalized words in angled brackets must be updated.
+
+
+{% if beegfs_supports_tls is true %}
+###########################
+### BeeGFS TLS Settings ###
+###########################
+
+beegfs_ha_tls_enabled: true
+
+# beegfs_ha_ca_cert_src_path: files/beegfs/cert/local_ca_cert.pem       # Example
+beegfs_ha_ca_cert_src_path: <USER_INPUT>
+
+# beegfs_ha_ca_key_src_path: files/beegfs/cert/local_ca_key.pem         # Example
+beegfs_ha_ca_key_src_path: <USER_INPUT>
+
+# beegfs_ha_tls_cert_src_path: files/beegfs/cert/mgmtd_tls_cert.pem     # Example
+beegfs_ha_tls_cert_src_path: <USER_INPUT>
+
+# beegfs_ha_tls_key_src_path: files/beegfs/cert/mgmtd_tls_key.pem       # Example
+beegfs_ha_tls_key_src_path: <USER_INPUT>
+
+### If `beegfs_ha_tls_config_options.alt_names` is not empty, Ansible will automatically
+### generate a self-signed TLS certificate and key, using the provided alt_names as
+### Subject Alternative Names (SANs) in the certificate.
+###
+### To use your own custom TLS certificate and key (as specified by
+### `beegfs_ha_tls_cert_src_path` and `beegfs_ha_tls_key_src_path`), you must comment out
+### or remove the entire `beegfs_ha_tls_config_options` section. Otherwise, the self-signed
+### certificate generation will take precedence, and your custom certificate and key will
+### not be used.
+beegfs_ha_tls_config_options:
+  # alt_names: [{{ file_node_settings['beegfs_ha_settings']['floating_ip_start']['mgmt_network'] }}]                     # Example
+  alt_names: [<USER_INPUT>]
+
+
+
+###############################
+### BeeGFS License Settings ###
+###############################
+
+beegfs_ha_license_enabled: true
+
+# beegfs_ha_license_src: files/beegfs/license.pem       # Example
+beegfs_ha_license_src: <USER_INPUT>
+
+# beegfs_ha_license_dest: /etc/beegfs/license.pem       # Example
+beegfs_ha_license_dest: <USER_INPUT>
+{% endif %}
+
+
+
+##########################
+### Pacemaker Settings ###
+##########################
+
+### Set cluster name in Pacemaker configuration.
+beegfs_ha_cluster_name: {{ cluster_name }}
+
+### Email Alerts Configuration ###
+### Set to true to enable email alerts.
+beegfs_ha_enable_alerts: true
+
+###  1) high-level node activity
+###  3) high-level node activity + fencing action information + resources (filter on X-monitor)
+###  5) high-level node activity + fencing action information + resources
+beegfs_ha_alert_verbosity: 3
+
+### E-mail recipient list for notifications when BeeGFS HA resources change or fail.
+beegfs_ha_alert_email_list:
+  # - "user@netapp.com"           # example
+  - "<USER_INPUT>"
+
+### This dictionary is used to configure postfix service (/etc/postfix/main.cf) which is required to set email alerts.
+beegfs_ha_alert_conf_ha_group_options:
+  ### This parameter specifies the local internet domain name. This is optional when the cluster nodes have fully
+  ### qualified hostnames (i.e. hostname.netapp.com)
+  # mydomain: netapp.com          # example
+  mydomain: <USER_INPUT>
+
+
+
+######################################
+### Network Time Protocol Settings ###
+######################################
+
+### BeeGFS requires time synchronization.
+### NTP or Chrony can be configured using `beegfs_ha_ntp_enabled` or `beegfs_ha_chrony_enabled` respectively.
+### Chrony and NTP tools conflict with each other. Enable only one to activate the NTP service on file nodes.
+### Disable both of these flags if this requirement is already handled.
+beegfs_ha_chrony_enabled: {{ file_node_settings['beegfs_ha_chrony_enabled'] | lower }}
+beegfs_ha_ntp_enabled: {{ file_node_settings['beegfs_ha_ntp_enabled'] | lower }}
+
+### Time synchronization tool configuration parameters (Chrony/NTP)
+beegfs_ha_ntp_server_pools:
+  - "pool 0.pool.ntp.org"
+  - "pool 1.pool.ntp.org"
+
+{% if file_node_settings['beegfs_ha_ntp_enabled'] is true %}
+### Uncomment the block to apply the settings for NTP tool.
+### Restricts entries allow NTP to query for time and statistics on the network defined.
+# beegfs_ha_ntp_restricts:
+#   # - 192.168.1.0 mask 255.255.255.0 nomodify notrap nopeer         # example          
+#   - 127.0.0.1                   
+#   - ::1
+{% endif %}
+
+
+##########################
+### File Node Settings ###
+##########################
+
+### Set the OS version for file nodes.
+# os_version: rhel_9.4      # example
+os_version: <USER_INPUT>
+
+### Set the BeeGFS version for file nodes.
+# beegfs_version: beegfs_8.2    # example
+beegfs_version: <USER_INPUT>
+
+### Filename designated for storing udev rules for eseries_ip_udev_rules.
+eseries_ip_udev_name: 99-eseries_ip_udev.rules
+
+{% if identical_file_node_hardware | bool %}
+### Maps interface PCI slots to interface names for ensuring persistent interface names.
+### This information can be polled with "lshw -class network -businfo".
+### Show physical slots and interface PCI for Infiniband cards: lspci -nnvmm | egrep -A 4 -B 2 -i 'mellanox'
+eseries_ip_udev_rules:
+  # "0000:01:00.0": i1a           # example
+  # "0000:01:00.1": i1b
+  # "0000:41:00.0": i2a
+  # "0000:41:00.1": i2b
+  # "0000:81:00.0": i3a
+  # "0000:81:00.1": i3b
+  # "0000:a1:00.0": i4a
+  # "0000:a1:00.1": i4b
+  "<PCI_ID>": <INTERFACE_NAME>
+{% endif %}
+
+
+
+#################################
+### Local Repository Settings ###
+#################################
+
+### Set the URL domain for local repositories utilized during system deployment.
+# repo_base_url: http://10.11.13.15/Internal       # example
+repo_base_url: <USER_INPUT>
+
+{% if local_yum_repo | bool %}
+{%  raw %}
+### Uncomment yum_repos block to add local YUM repository to server.
+### Any repo listed under yum_repos will be added to the server.
+### Add/remove repo from yum_repos dictionary.
+###
+### Be sure to review the parameters for the provided yum repos and update them as needed
+yum_repos:
+  custom_yum_repo:
+    url: "{{ repo_base_url }}/os_distro/{{ os_version }}/repo_update"
+    name: InstallMediaUpdate
+    description: Red Hat Enterprise Linux {{ os_version }} Update
+    filename: media
+    enabled: true
+  app_stream_yum_repo:
+    url: "{{ repo_base_url }}/os_distro/{{ os_version }}/AppStream"
+    name: InstallMediaAppStream
+    description: Red Hat Enterprise Linux {{ os_version }} AppStream
+    filename: media
+    enabled: false
+  base_os_yum_repo:
+    url: "{{ repo_base_url }}/os_distro/{{ os_version }}/BaseOS"
+    name: InstallMediaBaseOS
+    description: Red Hat Enterprise Linux {{ os_version }} BaseOS
+    filename: media
+    enabled: false
+
+### Uncomment the block to use local BeeGFS repository.
+beegfs_ha_rhel_repository_base_url: "{{ repo_base_url }}/beegfs/{{ beegfs_version }}/dists/{{ os_version | regex_replace('\\..*$', '') | regex_replace('_', '') }}"
+beegfs_ha_rhel_repository_gpgkey: "{{ repo_base_url }}/beegfs/{{ beegfs_version }}/gpg/GPG-KEY-beegfs"
+{%  endraw %}
+{% endif %}

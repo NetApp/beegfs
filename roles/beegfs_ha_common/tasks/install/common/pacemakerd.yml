@@ -1,0 +1,41 @@
+- name: Ensure override directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/pacemaker.service.d
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Create an override config file for pacemakerd.
+  ansible.builtin.template:
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/pacemakerd_service.j2') }}"
+    dest: /etc/systemd/system/pacemaker.service.d/eseries_beegfs_ha.conf
+    mode: "0644"
+  become: true
+  register: pacemakerd_conf_overrided
+
+- name: Ensure pacemaker_remote is enabled and started on remote nodes.
+  ansible.builtin.systemd:
+    state: started
+    enabled: true
+    name: pacemaker_remote
+  when: not (beegfs_ha_pacemaker_cluster_node | bool)
+  become: true
+
+- name: Ensure cluster nodes have joined the cluster.
+  ansible.builtin.systemd:
+    state: started
+    enabled: "{{ beegfs_ha_pacemaker_enabled }}"
+    name: "{{ item }}"
+  when: beegfs_ha_pacemaker_cluster_node | bool
+  loop: ["corosync", "pacemaker"]
+  become: true
+
+- name: Restart pacemaker to apply new settings in pacemaker conf.
+  ansible.builtin.systemd:
+    state: restarted
+    name: "{{ item }}"
+  when:
+    - beegfs_ha_pacemaker_cluster_node | bool
+    - pacemakerd_conf_overrided['changed'] | bool
+  loop: ["pacemaker"]
+  become: true

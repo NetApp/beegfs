@@ -4,12 +4,14 @@
     state: started
     enabled: true
   register: firewalld_service
-  when: allow_ports and beegfs_ha_firewall_start_and_enable
+  when:
+    - allow_ports | bool
+    - beegfs_ha_firewall_start_and_enable | bool
   become: true
 
 - name: Update list of all current systemd services.
   ansible.builtin.service_facts:
-  when: firewalld_service
+  when: firewalld_service is defined
   become: true
 
 - name: Determine port information for BeeGFS communications.
@@ -37,6 +39,13 @@
             {%- if service["service_configuration_options"]["connMgmtdPortUDP"] is defined -%}
               {%- if ports.append(service["service_configuration_options"]["connMgmtdPortUDP"] ~ "/udp") -%}{%- endif -%}
             {%- endif -%}
+            {%- if service["service_configuration_options"]["beemsg-port"] is defined -%}
+              {%- if ports.append(service["service_configuration_options"]["beemsg-port"] ~ "/tcp") -%}{%- endif -%}
+              {%- if ports.append(service["service_configuration_options"]["beemsg-port"] ~ "/udp") -%}{%- endif -%}
+            {%- endif -%}
+            {%- if service["service_configuration_options"]["grpc-port"] is defined -%}
+              {%- if ports.append(service["service_configuration_options"]["grpc-port"] ~ "/tcp") -%}{%- endif -%}
+            {%- endif -%}
           {%- elif service_type == "metadata" -%}
             {%- if service["service_configuration_options"]["connMetaPortTCP"] is defined -%}
               {%- if ports.append(service["service_configuration_options"]["connMetaPortTCP"] ~ "/tcp") -%}{%- endif -%}
@@ -44,12 +53,20 @@
             {%- if service["service_configuration_options"]["connMetaPortUDP"] is defined -%}
               {%- if ports.append(service["service_configuration_options"]["connMetaPortUDP"] ~ "/udp") -%}{%- endif -%}
             {%- endif -%}
+            {%- if service["service_configuration_options"]["connMetaPort"] is defined -%}
+              {%- if ports.append(service["service_configuration_options"]["connMetaPort"] ~ "/tcp") -%}{%- endif -%}
+              {%- if ports.append(service["service_configuration_options"]["connMetaPort"] ~ "/udp") -%}{%- endif -%}
+            {%- endif -%}
           {%- elif service_type == "storage" -%}
             {%- if service["service_configuration_options"]["connStoragePortTCP"] is defined -%}
               {%- if ports.append(service["service_configuration_options"]["connStoragePortTCP"] ~ "/tcp") -%}{%- endif -%}
             {%- endif -%}
             {%- if service["service_configuration_options"]["connStoragePortUDP"] is defined -%}
               {%- if ports.append(service["service_configuration_options"]["connStoragePortUDP"] ~ "/udp") -%}{%- endif -%}
+            {%- endif -%}
+            {%- if service["service_configuration_options"]["connStoragePort"] is defined -%}
+              {%- if ports.append(service["service_configuration_options"]["connStoragePort"] ~ "/tcp") -%}{%- endif -%}
+              {%- if ports.append(service["service_configuration_options"]["connStoragePort"] ~ "/udp") -%}{%- endif -%}
             {%- endif -%}
           {%- endif -%}
 
@@ -189,7 +206,9 @@
       ansible.builtin.systemd:
         state: reloaded
         name: firewalld.service
-      when: 'firewall_zone["changed"] and ansible_facts["services"]["firewalld.service"]["state"] == "running"'
+      when:
+        - firewall_zone["changed"] | bool
+        - ansible_facts["services"]["firewalld.service"]["state"] == "running"
 
     - name: Add all interfaces to "{{ beegfs_ha_firewall_zone }} zone."
       ansible.posix.firewalld:
@@ -241,7 +260,9 @@
         immediate: true
         offline: true
       loop: "{{ remove_ha_port_info }}"
-  when: allow_ports and beegfs_ha_firewall_allow_required_ports
+  when:
+    - allow_ports | bool
+    - beegfs_ha_firewall_allow_required_ports | bool
   become: true
 
 # This block is for the uninstall code path and will only be executed beegfs_ha_firewall_allow_required_ports==True
@@ -268,5 +289,7 @@
         offline: true
       when: item[0] in zones["stdout"]
       loop: "{{ ha_port_info_list }}"
-  when: not allow_ports and beegfs_ha_firewall_allow_required_ports
+  when:
+    - not (allow_ports | bool)
+    - beegfs_ha_firewall_allow_required_ports | bool
   become: true

@@ -1,0 +1,10 @@
+- name: Gather system facts including kernel version
+  setup:
+    filter: ansible_kernel
+
+- name: Validate that the running kernel is the expected version
+  assert:
+    that:
+      - ansible_kernel == expected_kernel
+    fail_msg: "The system is running an unexpected kernel version. Expected: {{ expected_kernel }}, Got: {{ ansible_kernel }}."
+    success_msg: "The system is running the expected kernel version: {{ expected_kernel }}."

@@ -42,7 +42,7 @@
     path: /etc/modprobe.d/10-unsupported-modules.conf
     regexp: 'allow_unsupported_modules 0'
     replace: 'allow_unsupported_modules 1'
-  when: beegfs_ha_suse_allow_unsupported_module
+  when: beegfs_ha_suse_allow_unsupported_module | bool
 
 - name: Ensure the BeeGFS client package is installed (SUSE - Client).
   zypper:

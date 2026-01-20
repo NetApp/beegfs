@@ -5,7 +5,35 @@
     tasks_from: host_facts.yml
   when: eseries_volumes is not defined and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
-- name: Update node_info structure with host paths.
+- name: Get fs-uuid based on eui of mapped volumes.
+  block:
+    - name: Set beegfs_ha_netapp_scripts_path.
+      set_fact:
+        beegfs_ha_netapp_scripts_path: "{{ beegfs_ha_netapp_path }}/bin"
+
+    - name: Ensure {{ beegfs_ha_netapp_path }}/bin exists.
+      ansible.builtin.file:
+        path: "{{ beegfs_ha_netapp_scripts_path }}"
+        state: directory
+        mode: "0755"
+
+    - name: Render get_eui_fs_uuid.j2 template.
+      ansible.builtin.template:
+        src: "common/get_eui_fs_uuid.j2"
+        dest: "{{ beegfs_ha_netapp_scripts_path }}/get_eui_fs_uuid.sh"
+        mode: "0755"
+
+    - name: Execute the script to retrieve eui_fs_uuid_output.
+      ansible.builtin.command: "{{ beegfs_ha_netapp_scripts_path }}/get_eui_fs_uuid.sh"
+      become: true
+      register: eui_fs_uuid_output
+
+    - name: Parse JSON output to dict.
+      set_fact:
+        eui_fs_uuid_dict: "{{ eui_fs_uuid_output.stdout | from_json }}"
+  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+
+- name: Update node_info structure with host paths and volume fs-uuid.
   set_fact:
     node_info: |-
       {%- set info = node_info -%}
@@ -13,7 +41,10 @@
         {%- for resource in info[service] -%}
           {%- for target_volume in resource["volumes"] -%}
             {%- for volume in eseries_volumes if target_volume["name"] == volume["name"] -%}
-              {%- if target_volume.update({"path": volume["path"]}) -%}{%- endif -%}
+              {%- if target_volume.update({
+                  "path": volume["path"],
+                  "fs_uuid": (eui_fs_uuid_dict[volume["path"] | basename] | default('')) if beegfs_ha_fs_uuid_enabled else ''
+                }) -%}{%- endif -%}
             {%- endfor -%}
           {%- endfor -%}
         {%- endfor -%}

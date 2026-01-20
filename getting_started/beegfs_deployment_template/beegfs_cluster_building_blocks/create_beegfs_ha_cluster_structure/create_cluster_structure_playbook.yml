@@ -1,0 +1,77 @@
+- hosts: localhost
+  gather_facts: false
+  run_once: true
+  vars:
+    beegfs_ha_ansible_cluster_group: ha_cluster
+    beegfs_ha_ansible_storage_group: eseries_storage_systems
+    beegfs_service_group: beegfs_services
+    beegfs_mgmt_basename: mgmt
+    beegfs_meta_basename: meta
+    beegfs_stor_basename: stor
+    building_block_basename: building_block
+    cluster_group_basename: ha_cluster
+
+
+  tasks:
+    - name: Load create_cluster_structure_inventory.yml file to variable.
+      include_vars:
+        name: unmerged_inventory
+        file: "{{ ansible_inventory_sources[0] }}"
+
+    - name: Define cluster layout of the HA clusters.
+      ansible.builtin.set_fact:
+        clusters_structure: |-
+          {% set clusters_structure = {} %}
+          {%- for cluster_name, cluster_components in unmerged_inventory['all']['children'].items() -%}
+            {%- if clusters_structure.update({cluster_name: cluster_components}) -%}{%- endif -%}
+          {%- endfor -%}
+          {{- clusters_structure -}}
+
+    - name: Extract the names of building blocks listed under beegfs_services for each cluster.
+      ansible.builtin.set_fact:
+        building_block_names_by_clusters: |-
+          {%- set building_block_names_by_clusters = {} -%}
+
+          {#- groups[beegfs_service_group] retrieves every host assigned to the beegfs_services from all clusters. -#}
+          {%- set beegfs_services_groups_names = groups[beegfs_service_group] | map('extract', hostvars, 'group_names') | flatten(1) | unique -%}
+
+          {%- for cluster_name, cluster_structure in clusters_structure.items() -%}
+            {%- set building_block_names = [] -%}
+            {%- for building_block_name, building_block in cluster_structure['children'].items() %}
+              {%- if building_block_name in beegfs_services_groups_names and building_block_basename in building_block_name -%}
+                {%- if building_block_names.append(building_block_name) -%}{%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {%- if building_block_names_by_clusters.update({cluster_name: building_block_names}) -%}{%- endif -%}
+          {%- endfor -%}
+          {{- building_block_names_by_clusters -}}
+
+    - name: Define the number of BeeGFS stor services within each building block.
+      ansible.builtin.set_fact:
+        stor_count_by_building_blocks: |-
+          {% set stor_count_by_building_blocks = {} %}
+          {%  set fip_ifaces = file_node_settings.beegfs_service_settings.floating_ip_interfaces -%}
+
+          {%- set file_node_beegfs_stor_counts = [] %}
+          {%- for interface, value in fip_ifaces.items() %}
+            {%- if file_node_beegfs_stor_counts.append(value.get('stor_count', 0)) %}{% endif %}
+          {%- endfor -%}
+          {%- set file_node_beegfs_stor_count = file_node_beegfs_stor_counts | length %}
+
+          {%- for cluster_name, cluster_structure in clusters_structure.items() -%}
+            {% set building_blocks = cluster_structure['children'] %}
+            {%- for building_block_name in building_block_names_by_clusters[cluster_name] -%}
+              {%- set file_nodes = building_blocks[building_block_name]['children']['file_node']['hosts'].keys() | list %}
+              {%- set file_nodes_count = file_nodes | length %}
+              {%- set stor_services_count = file_nodes_count * file_node_beegfs_stor_count %}
+              {%- if stor_count_by_building_blocks.update({building_block_name: stor_services_count}) -%}{%- endif -%}
+            {%- endfor -%}
+          {%- endfor -%}
+          {{- stor_count_by_building_blocks -}}
+
+    - name: Generate inventory structure for each defined clusters.
+      ansible.builtin.include_tasks:
+        file: tasks/cluster_structure.yml
+      loop: "{{ clusters_structure | dict2items }}"
+      loop_control:
+        loop_var: cluster_structure

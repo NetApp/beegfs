@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -eu
+
+
+dev_by_id_path="/dev/disk/by-id"
+first=1
+
+echo "{"
+for eui_device in $(ls $dev_by_id_path | grep -i eui); do
+    eui_path="$dev_by_id_path/$eui_device"
+    [ -e "$eui_path" ] || continue
+    fs_uuid=$(blkid -s UUID -o value "$eui_path" 2>/dev/null)
+    if [ -z "$fs_uuid" ]; then
+        fs_uuid=""
+    fi
+    if [ $first -eq 0 ]; then
+        echo ","
+    fi
+    printf '  "%s": "%s"' "$eui_device" "$fs_uuid"
+    first=0
+done
+echo
+echo "}"

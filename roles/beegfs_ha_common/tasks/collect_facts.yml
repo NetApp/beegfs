@@ -26,7 +26,7 @@
   ansible.builtin.set_fact:
     eseries_common_firewall_zone: "{{ beegfs_ha_firewall_zone }}"
     eseries_common_firewall_configure: "{{ beegfs_ha_firewall_configure }}"
-  when: beegfs_ha_firewall_allow_required_ports
+  when: beegfs_ha_firewall_allow_required_ports | bool
 
 # Include all distribution-version variables that are prefixed with default_
 #   This will not fail when the particular distribution version file does not exist.
@@ -181,7 +181,6 @@
         {%- endfor -%}
       {%- endfor -%}
       {{- resource_node_order -}}
-    run_once: true
 
 
 # Collect resource group's inventory files and add their content to the resource group variable for each Ansible-BeeGFS HA host.
@@ -206,13 +205,15 @@
     files_matching: "{{ item }}.(yml|yaml)"
   loop: "{{ cluster_resource_groups }}"
   failed_when: false
-  when: inventory_group_vars_stat["stat"]["exists"] == True
+  when: inventory_group_vars_stat["stat"]["exists"] | bool
 
 - name: Set top-level variables.
   set_fact:
     "{{ item['key'] }}": "{{ item['value'] }}"
   loop: "{{ (cluster_group_vars | default({}) | combine(cluster_group_raw_inventory['vars'] | default({}))) | dict2items }}"
-  when: 'item["key"] | regex_search(beegfs_ha_top_level_variable_inclusion_pattern) and not (item["key"] | regex_search(beegfs_ha_top_level_variable_exclusion_pattern))'
+  when:
+    - (item["key"] | regex_search(beegfs_ha_top_level_variable_inclusion_pattern)) is not none
+    - (item["key"] | regex_search(beegfs_ha_top_level_variable_exclusion_pattern)) is none
   run_once: true
   #when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
@@ -361,6 +362,23 @@
             {%- if scratch.update({"volume_metadata": beegfs_ha_service_volume_configuration[resource["beegfs_service"]]}) -%}{%- endif -%}
             {%- if storage_pool["common_volume_configuration"]["volume_metadata"] is defined -%}
               {%- if scratch.update({"volume_metadata": storage_pool["common_volume_configuration"]["volume_metadata"]}) -%}{%- endif -%}
+            {%- endif -%}
+
+            {%- set mount_options = scratch["volume_metadata"]["mount_options"] -%}
+            {%- set options_to_add = [] -%}
+            {%- if scratch['service_configuration_options'].get('quotaEnableEnforcement', false) -%}
+              {%- if 'uqnoenforce' not in mount_options -%}
+                {%- if options_to_add.append('uqnoenforce') -%}{%- endif -%}
+              {%- endif -%}
+              {%- if 'gqnoenforce' not in mount_options -%}
+                {%- if options_to_add.append('gqnoenforce') -%}{%- endif -%}
+              {%- endif -%}
+              {%- if options_to_add -%}
+                {%- if mount_options -%}
+                  {%- set mount_options = mount_options + ',' + options_to_add | join(',') -%}
+                {%- endif -%}
+                {%- if scratch["volume_metadata"].update({"mount_options": mount_options}) -%}{%- endif -%}
+              {%- endif -%}
             {%- endif -%}
 
             {#- Determine storage pool name -#}

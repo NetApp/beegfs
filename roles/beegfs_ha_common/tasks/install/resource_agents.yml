@@ -11,6 +11,15 @@
     dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-monitor"
     mode: 0755
   become: true
+  when: beegfs_ha_tls_enabled is not defined
+
+- name: Install E-Series BeeGFS HA resource agent for monitoring individual resources.
+  ansible.builtin.template:
+    src: common/beegfs_v8-monitor.j2
+    dest: "{{ beegfs_ha_resource_agent_path }}eseries/beegfs-monitor"
+    mode: 0755
+  become: true
+  when: beegfs_ha_tls_enabled is defined
 
 - name: Install E-Series BeeGFS HA resource agent for managing floating IP resources.
   ansible.builtin.copy:

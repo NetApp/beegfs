@@ -1,0 +1,28 @@
+- name: Check subscription status.
+  command: subscription-manager status
+  register: sub_status
+  ignore_errors: true
+  no_log: true
+
+- name: Set OS release version with subscription-manager (if registered).
+  command: subscription-manager release --set={{ os_version | regex_replace('rhel_', '') }}
+  when:
+    - sub_status.rc == 0
+
+- name: Add RHEL repository when subscription is missing.
+  ansible.builtin.yum_repository:
+    name: "{{ item.value['name'] }}"
+    description: "{{ item.value['description'] }}"
+    file: "{{ item.value['filename'] }}"
+    baseurl: "{{ item.value['url'] }}"
+    gpgcheck: "{{ item.value['gpgcheck'] | default(false) }}"
+    sslverify: "{{ item.value['sslverify'] | default(false) }}"
+    enabled: "{{ item.value['enabled'] | default(true) }}"
+  loop: "{{ yum_repos | dict2items }}"
+  when:
+    - yum_repos is defined
+    - sub_status != 0
+
+- name: Clean Yum cache.
+  yum:
+    update_cache: yes

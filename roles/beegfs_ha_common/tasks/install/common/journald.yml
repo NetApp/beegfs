@@ -24,5 +24,5 @@
 - name: Restart journald
   ansible.builtin.systemd:
     name: systemd-journald.service
-    state: '{% if journald_conf["changed"] %}restarted{% else %}started{% endif %}'
+    state: '{% if journald_conf["changed"] | bool %}restarted{% else %}started{% endif %}'
   become: true

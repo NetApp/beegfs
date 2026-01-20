@@ -1,0 +1,90 @@
+{# =============================================================================
+   Extract Host Bus Adapter and Interface Settings
+   -----------------------------------------------------------------------------
+   - Retrieve the host bus adapter settings from file_node_settings.
+   - Extract both the cluster communication interfaces and eSeries storage interfaces.
+============================================================================= #}
+{%- set host_bus_adapter = file_node_settings['host_bus_adapter'] %}
+{%- set cluster_comm_interfaces = host_bus_adapter['cluster_comm_interfaces'] %}
+{%- set eseries_storage_interfaces = host_bus_adapter['eseries_storage_interfaces'] %}
+
+
+{#- =============================================================================
+   Compute Counts and Building Block Configuration
+   -----------------------------------------------------------------------------
+   - Calculate:
+        The total number of building blocks.
+        The number of file nodes per building block.
+        The number of block nodes per building block.
+   - Retrieve the building block configuration attribute.
+============================================================================= #}
+{%- set building_blocks_count = building_block_names | length %}
+{%- set file_nodes_count = ((file_node_names | length) / building_blocks_count) | int %}
+{%- set block_nodes_count = ((block_node_names | length) / building_blocks_count) | int %}
+{%- set building_block_configuration = building_block['attributes']['building_block_configuration'] %}
+
+
+{#- =============================================================================
+   Prepare Eseries Storage Ports List
+   -----------------------------------------------------------------------------
+   - Iterate through the eseries_storage_interfaces.
+   - For nodes with even node_id and a specific building block configuration (H2_A4):
+        Append the reversed port order.
+   - Otherwise, append the port in its original order.
+============================================================================= #}
+{%- set eseries_storage_ports = [] %}
+{%- for block_node_index, eseries_port in eseries_storage_interfaces.items() %}
+{%    if (node_id % 2) == 0 and building_block_configuration in ['H2_A4'] %}
+{%      if eseries_storage_ports.append(eseries_port | reverse) %}{% endif %}
+{%    else %}
+{%      if eseries_storage_ports.append(eseries_port) %}{% endif %}
+{%    endif %}
+{%  endfor %}
+
+# NVMe over InfiniBand storage communication protocol information between E-series and file nodes.
+eseries_nvme_ib_interfaces:
+  # - name: ib0                       # Host interface name used to communicate with E-Series storage system.
+  #   address: 192.168.1.100/24       # Host interface address and subnet (i.e. 192.168.1.100/24)
+{% for eseries_port in (eseries_storage_ports | flatten) %}
+{% if (node_id % 2) == 1 %}
+{%   set interface_address = "192.168." ~ ((loop.index * 2) - 1) ~ ".10/24" %}
+{% else %}
+{%   set interface_address = "192.168." ~ (loop.index * 2) ~ ".10/24" %}
+{% endif %}
+  - name: {{ eseries_port }}
+    address: {{ interface_address }}
+    configure: true
+{% endfor %}
+
+# Cluster node IPs to communicate with other BeeGFS servers.
+# NOTE: do not configure IPs for i2b and i3b interface since it might cause conflict in Pacemaker communication.
+eseries_ipoib_interfaces:
+{% for cluster_port in cluster_comm_interfaces %}
+  - name: {{ cluster_port }}
+    address: {{ beegfs_ha_cluster_node_ip_network[loop.index0] }}/16
+{% endfor %}
+
+
+{%- if not identical_file_node_hardware %}
+
+
+## Filename for applying below eseries_ip_udev_rules to override default interface names.
+# eseries_ip_udev_name: 99-beegfs-nvme_ib.rules
+
+## Maps interface PCI slots to interface names for ensuring persistent interface names.
+## This information can be polled with "lshw -class network -businfo".
+## NOTE: The interface name here + resource name specified in beegfs_ha_inventory.yml must be less than 15 characters.
+## Uncomment this section to specify udev rules that are different than the one defined in inventory.
+# eseries_ip_udev_rules:
+#   "0000:41:00.0": i1a
+#   "0000:41:00.1": i1b
+#   "0000:01:00.0": i2a
+#   "0000:01:00.1": i2b
+#   "0000:a1:00.0": i3a
+#   "0000:a1:00.1": i3b
+#   "0000:81:00.0": i4a
+#   "0000:81:00.1": i4b
+{% endif %}
+
+
+# Reference https://github.com/netappeseries/host/blob/master/roles/nvme_ib/README.md for other available options.

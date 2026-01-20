@@ -1,0 +1,63 @@
+---
+- name: Add BeeGFS environment variables to /etc/profile.d/beegfs_env.sh
+  blockinfile:
+    path: /etc/profile.d/beegfs_env.sh
+    block: |
+      # ---- BEEGFS_REMOTE_ADDR configuration ----
+
+      export BEEGFS_REMOTE_ADDR={{ beegfs_remote_config['server']['address'] }}
+
+      # ---- End BEEGFS_REMOTE_ADDR configuration ----
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: BEEGFS_REMOTE_ADDR"
+    create: yes
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Add /etc/profile.d/beegfs_env.sh to ~/.bashrc
+  blockinfile:
+    path: ~/.bashrc
+    block: |
+      # ---- BEEGFS_REMOTE_ADDR configuration ----
+
+      source /etc/profile.d/beegfs_env.sh
+
+      # ---- End BEEGFS_REMOTE_ADDR configuration ----
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: BEEGFS_REMOTE_ADDR"
+    create: yes
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Create directory for beegfs-remote service.
+  ansible.builtin.file:
+    path: "{{ beegfs_remote_config_path }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Create beegfs-remote.toml configuration file.
+  ansible.builtin.template:
+    src: beegfs_remote_toml.j2
+    dest: "{{ beegfs_remote_config_path }}beegfs-remote.toml"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Copy beegfs-remote.service to /etc/systemd/system
+  ansible.builtin.copy:
+    src: /lib/systemd/system/beegfs-remote.service
+    dest: /etc/systemd/system/beegfs-remote.service
+    remote_src: yes
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Update systemd unit file for beegfs-remote service.
+  ansible.builtin.replace:
+    path: /etc/systemd/system/beegfs-remote.service
+    regexp: '^ExecStart=.*--cfg-file=/etc/beegfs/beegfs-remote\.toml'
+    replace: 'ExecStart=/opt/beegfs/sbin/beegfs-remote --cfg-file={{ beegfs_remote_config_path }}beegfs-remote.toml'
+  notify:
+    - Reload systemd

@@ -1,0 +1,62 @@
+- block:
+    - name: Get BIOS attributes before changes.
+      community.general.redfish_info:
+        category: Systems
+        command: GetBiosAttributes
+        baseuri: "{{ bmc_ip }}"
+        username: "{{ bmc_username }}"
+        password: "{{ bmc_password }}"
+      register: result
+
+    - name: Print BIOS attributes before changes.
+      ansible.builtin.debug:
+        msg: "{{ result.redfish_facts }}"
+  when:
+    - enable_debug | default(false)
+
+- name: Update BIOS attributes
+  community.general.redfish_config:
+    category: Systems
+    command: SetBiosAttributes
+    baseuri: "{{ bmc_ip }}"
+    username: "{{ bmc_username }}"
+    password: "{{ bmc_password }}"
+    timeout: 60
+    bios_attributes: "{{ bios_attributes }}"
+  register: bios_update_status
+
+- ansible.builtin.debug:
+    msg: "{{ bios_update_status }}"
+
+- name: Reboot host to apply new BIOS settings.
+  ansible.builtin.reboot:
+    test_command: "systemctl is-active default.target"
+    reboot_timeout: 3600
+    post_reboot_delay: 120
+  when: bios_update_status.changed
+
+- name: Verify BIOS attributes after changes.
+  community.general.redfish_command:
+    category: Systems
+    command: VerifyBiosAttributes
+    baseuri: "{{ bmc_ip }}"
+    username: "{{ bmc_username }}"
+    password: "{{ bmc_password }}"
+    timeout: 60
+    bios_attributes: "{{ bios_attributes }}"
+
+- block:
+    - name: Get BIOS attributes after changes.
+      community.general.redfish_info:
+        category: Systems
+        command: GetBiosAttributes
+        baseuri: "{{ bmc_ip }}"
+        username: "{{ bmc_username }}"
+        password: "{{ bmc_password }}"
+      register: result
+
+    - name: Print BIOS registry after changes.
+      ansible.builtin.debug:
+        msg: "{{ result.redfish_facts }}"
+  when:
+    - enable_debug | default(false)

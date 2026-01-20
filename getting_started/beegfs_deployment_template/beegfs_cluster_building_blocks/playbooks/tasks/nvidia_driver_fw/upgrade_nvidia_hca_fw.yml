@@ -1,0 +1,20 @@
+- name: Set local path for NVIDIA HCA FWs.
+  set_fact:
+    hca_dir: "/tmp/hca_firmwares"
+
+- name: Create directory to store NVIDIA HCA FWs.
+  ansible.builtin.file:
+    path: "{{ hca_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Download NVIDIA HCA FWs.
+  ansible.builtin.get_url:
+    url: "{{ nvidia_hca_settings.hca_url }}/{{ item }}"
+    dest: "{{ hca_dir }}/{{ item }}"
+    mode: '0440'
+  loop: "{{ nvidia_hca_settings.hca_firmwares }}"
+
+- name: Install HCA FW. This will take a while to complete. DO NOT reboot the server while the operation is in process.
+  ansible.builtin.command: mlxfwmanager -y -u -i {{ hca_dir }}/{{ item }}
+  loop: "{{ nvidia_hca_settings.hca_firmwares }}"

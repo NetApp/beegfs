@@ -1,0 +1,9 @@
+{% macro calc_ip_address(ip_address, device_id) %}
+
+{%- set parts = ip_address.split('.') %}
+{% set last_octet = (parts[-1] | int) + (device_id - 1) %}
+{% set new_ip = parts[0:3] | join('.') + '.' + (last_octet | string) %}
+
+{{- new_ip -}}
+
+{%- endmacro %}

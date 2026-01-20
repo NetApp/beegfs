@@ -1,0 +1,41 @@
+# beegfs_ha_mgmtd_floating_ip: 100.1.10.1     # Example
+beegfs_ha_mgmtd_floating_ip: <USER_INPUT>
+
+# beegfs_version: beegfs_8.2                # Example
+beegfs_version: <USER_INPUT>
+
+eseries_ip_manager_tools:
+  - ifupdown
+
+### Directory on ansible control node to store files for beegfs-client setup.
+beegfs_files_dir: "{{ playbook_dir | dirname }}/beegfs_cluster_building_blocks/playbooks/files/beegfs"
+
+### Uncomment and set these as needed
+# repo_base_url: http://10.11.13.15/Internal    # Example
+# repo_base_url: <USER_INPUT>
+
+### Uncomment apt_repos block to add local APT repository to server.
+### NOTE: Public BeeGFS and Ubuntu repos will be disabled.
+### Any repo listed under apt_repos will be added to the server.
+### Add/remove repo from apt_repos dictionary.
+###
+### Be sure to review the parameters for the provided yum repos and update them as needed
+# apt_repos:
+#   ubuntu_apt_repo:
+#     url: "{{ repo_base_url }}/os_distro/ubuntu_22.04/"
+#     gpgkey: ""
+#     options:
+#       - trusted=yes
+#     component: main
+#   beegfs_apt_repo:
+#     url: "{{ repo_base_url }}/beegfs/{{ beegfs_version }}"
+#     gpgkey: "{{ repo_base_url }}/beegfs/{{ beegfs_version }}/gpg/GPG-KEY-beegfs"
+#     options:
+#       - arch=amd64
+#     component: non-free
+
+eseries_ib_skip: true
+beegfs_client_ofed_enable: true
+beegfs_client_ofed_include_path: "/usr/src/ofa_kernel/default/include"
+
+ansible_python_interpreter: /usr/bin/python3

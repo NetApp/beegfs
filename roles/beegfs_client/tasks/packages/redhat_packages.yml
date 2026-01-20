@@ -1,12 +1,5 @@
-- name: Add BeeGFS YUM repository (RedHat/CentOS).
-  ansible.builtin.yum_repository:
-    name: beegfs
-    description: BeeGFS YUM Repo
-    file: beegfs_rhel
-    baseurl: "{{ beegfs_ha_rhel_repository_base_url }}"
-    enabled: true
-    gpgcheck: true
-    gpgkey: "{{ beegfs_ha_rhel_repository_gpgkey }}"
+- name: Configure package manager (RedHat/CentOS)
+  ansible.builtin.include_tasks: redhat_package_manager.yml
 
 - name: Get kernel version (RedHat/CentOS - Client).
   ansible.builtin.command: "uname -r"
@@ -34,7 +27,7 @@
       {%- if beegfs_client_force_upgrade %}latest{%- else %}present{%- endif %}
     name:
       - "{%- if beegfs_client_dkms_install %}beegfs-client-dkms{%- else %}beegfs-client{%- endif %}"
-      - beegfs-helperd
+      - "{%- if beegfs_tls_enabled is not defined %}beegfs-helperd{%- else %}beegfs-tools{%- endif %}"
       - beegfs-utils
       - beegfs-client-devel
   register: package_mgr_result
@@ -43,4 +36,4 @@
   ansible.builtin.yum:
     state: present
     name: "{{ beegfs_client_gds_packages }}"
-  when: beegfs_client_gds_support
+  when: beegfs_client_gds_support | bool

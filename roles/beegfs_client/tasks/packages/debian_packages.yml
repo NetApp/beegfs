@@ -3,18 +3,8 @@
     state: present
     name: software-properties-common
 
-- name: Add BeeGFS apt key (Debian/Ubuntu).
-  ansible.builtin.apt_key:
-    url: "{{ beegfs_ha_debian_repository_gpgkey }}"
-    state: present
-  become: true
-
-- name: Add BeeGFS apt repository (Debian/Ubuntu).
-  ansible.builtin.apt_repository:
-    state: present
-    repo: "deb [arch=amd64] {{ beegfs_ha_debian_repository_base_url }} buster non-free"
-    update_cache: true
-  become: true
+- name: Configure package manager (Debian/Ubuntu).
+  ansible.builtin.include_tasks: debian_package_manager.yml
 
 # At least when installing the DKMS version it will skip the module build if the kernel headers aren't installed.
 - name: Get kernel version (Debian/Ubuntu).
@@ -33,7 +23,7 @@
       {%- if beegfs_client_force_upgrade %}latest{%- else %}present{%- endif %}
     name:
       - "{%- if beegfs_client_dkms_install %}beegfs-client-dkms{%- else %}beegfs-client{%- endif %}"
-      - beegfs-helperd
+      - "{%- if beegfs_tls_enabled is not defined %}beegfs-helperd{%- else %}beegfs-tools{%- endif %}"
       - beegfs-utils
       - libelf-dev
   register: package_mgr_result
@@ -42,4 +32,4 @@
   ansible.builtin.apt:
     state: present
     name: "{{ beegfs_client_gds_packages }}"
-  when: beegfs_client_gds_support
+  when: beegfs_client_gds_support | bool

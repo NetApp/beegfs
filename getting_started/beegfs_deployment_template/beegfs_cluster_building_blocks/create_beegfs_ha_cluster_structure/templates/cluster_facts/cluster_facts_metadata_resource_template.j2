@@ -1,0 +1,76 @@
+{% import 'cluster_facts.macros' as macros %}
+
+
+{#- =============================================================================
+   Generate Block Node Mapping for Floating IP Interfaces
+   -----------------------------------------------------------------------------
+   - Use a macro to generate the mapping between block nodes and their respective
+     floating IP interfaces based on the provided input objects.
+   - Replace single quotes with double quotes and parse the resulting JSON.
+============================================================================= #}
+{%- set block_node_by_fip_ifaces = macros.block_node_by_fip_ifaces(fip_ifaces_by_block_nodes, converged_block_nodes) | replace("'", '"') | from_json %}
+
+
+{#- =============================================================================
+   Count the Number of Floating IP Interface Mappings
+   -----------------------------------------------------------------------------
+   - Determine the number of keys in the generated mapping, which represents
+     the count of different floating IP interface assignments.
+============================================================================= #}
+{% set fip_ifaces_count = block_node_by_fip_ifaces.keys() | length %}
+
+
+
+{%- for meta_index in range(bb_service_offset, bb_service_offset + beegfs_meta_count_per_bb) %}
+
+{#- =============================================================================
+   Calculate Basic Indices
+   -----------------------------------------------------------------------------
+   - Compute the host index based on the current stor_index, the offset, and
+     the total number of file node beegfs meta services.
+   - Compute the index for the floating IP interface.
+============================================================================= #}
+{%    set host_index = ((meta_index - bb_service_offset) / file_node_beegfs_meta_count) | int %}
+{%    set fip_ifaces_index = ((meta_index - bb_service_offset) % fip_ifaces_count) | int %}
+
+
+{#- =============================================================================
+   Select Floating IP Interface and Corresponding Block Node
+   -----------------------------------------------------------------------------
+   - Select the floating IP interface from the list based on the computed index.
+   - Determine the block node associated with this floating IP interface.
+============================================================================= #}
+{%-   set fip_iface = fip_ifaces_list[fip_ifaces_index] %}
+{%-   set block_node = block_node_by_fip_ifaces[fip_iface] %}
+
+
+{#- =============================================================================
+   Adjust Floating IP Interfaces Order Based on Primary Interface
+   -----------------------------------------------------------------------------
+   - Retrieve the list of floating IP interfaces for the selected block node.
+   - If the current interface isn't the primary one (first element),
+     reverse the ordering of interfaces.
+============================================================================= #}
+{%-   set fip_ifaces_by_block_node = fip_ifaces_by_block_nodes[block_node] %}
+{%    if fip_iface != fip_ifaces_by_block_node[0] %}
+{%      set fip_ifaces_by_block_node = fip_ifaces_by_block_nodes[block_node] | reverse %}
+{%    endif %}
+
+
+{#- =============================================================================
+   Generate Metadata Service Name
+   -----------------------------------------------------------------------------
+   - Format the meta service name into the pattern "meta_XX", where XX is a
+     zero-padded number derived from meta_index.
+============================================================================= #}
+{%-      set meta_name = "meta_" ~ '{:02d}'.format(meta_index) %}
+
+      {{ meta_name }}:
+        file_nodes:
+          {{ file_nodes_rotations[host_index] | to_nice_yaml(indent=2) | trim() | indent(width=10, first=false) }}
+        block_nodes:
+          {{ [block_node] | to_nice_yaml(indent=2) | trim() | indent(width=10, first=false) }}
+        floating_ip_interfaces:
+          {{ fip_ifaces_by_block_node | to_nice_yaml(indent=2) | trim() | indent(width=10, first=false) }}
+        owning_controller: {{ macros.owning_controller(bb_configuration, controllers_per_array, host_index, meta_index) }}
+{%    endfor %}

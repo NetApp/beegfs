@@ -1,0 +1,50 @@
+# Playbook objective
+#
+# 1. Download CFW package to storage array.
+# 2. Download NVSRAM package to storage array.
+# 3. Download Drive FW package to storage array.
+# 4. Configure NTP settings on storage array.
+# 5. Configure mail server and alert notification on storage array. 
+
+
+- hosts: eseries_storage_systems
+  gather_facts: false
+  any_errors_fatal: true
+  # serial: 1     # Uncomment this line to execute tasks on one host at a time.
+  collections:
+    - netapp_eseries.santricity
+  vars_files:
+    - ../../global_params/passwords.yml
+  vars:
+    ##- Firmware, NVSRAM, and Drive Firmware (modify the filenames as needed).
+    ##- Comment out the block to skip the configuration.
+
+    # eseries_firmware_firmware: "packages/RCB_11.80GA_6000_64cc0ee3.dlp"     # example
+    eseries_firmware_firmware: <USER_INPUT>
+
+    # eseries_firmware_nvsram: "packages/N6000-880834-D08.dlp"                # example
+    eseries_firmware_nvsram: <USER_INPUT>
+
+    eseries_drive_firmware_upgrade_drives_online: false
+    eseries_drive_firmware_firmware_list:
+      # - "packages/D_MZWLR15THBLA-0G5_30604900_NA51_XXXX_000_SIGNED.dlp"     # example
+      - <USER_INPUT>
+
+    ##- Configure NTP service. Comment out the block to skip the configuration.
+    eseries_management_interfaces:
+      ntp_config_method: static               # choices: disabled, dhcp, static
+      ntp_address: <USER_INPUT>               # example: "time.netapp.com"
+      ntp_address_backup: <USER_INPUT>        # example: "time.netapp.com"
+
+    ##- Configure mail server and alert notification. Comment out the block to skip the configuration.
+    eseries_alerts_state: enabled             # choices: enabled, disabled
+    eseries_alerts_recipients:
+      # - receiver@netapp.com                 # example
+      - <USER_INPUT>
+    eseries_alerts_sender: <USER_INPUT>       # example: sender@netapp.com
+    eseries_alerts_server: <USER_INPUT>       # example: 10.10.10.10
+
+  tasks:
+    - name: Configure NetApp E-Series block nodes.
+      import_role:
+        name: nar_santricity_management

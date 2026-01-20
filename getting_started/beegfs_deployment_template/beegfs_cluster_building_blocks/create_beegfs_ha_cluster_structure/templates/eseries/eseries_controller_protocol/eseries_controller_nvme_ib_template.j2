@@ -1,0 +1,29 @@
+{# =============================================================================
+  Compute the host interface port offset by multiplying the block node index with the number of ports per block node. This offset is used to select or assign the correct port for the given block node.
+============================================================================= #}
+{% set block_nodes_count_per_building_block = (block_node_names | length) / (building_block_names | length) %}
+{% set block_node_index = ((storage_id - 1) % block_nodes_count_per_building_block) + 1 %}
+
+# IP addresses used for communication between the storage array and the file node.
+eseries_controller_nvme_ib_port:
+  # controller_a:    # Ordered list of controller A channel address definition.
+  #   -              # Port IPv4 address for channel 1
+  #   - (...)        # So on and so forth
+  # controller_b:    # Ordered list of controller B channel address definition.
+{% if eseries_storage_settings['eseries_controller_hic_ports'] is defined %}
+{% for block_node, controllers in eseries_storage_settings['eseries_controller_hic_ports'].items() %}
+{% if block_node_index == (block_node | regex_search('\\d+$') | int) %}
+{% for controller, ports in controllers.items() %}
+  {{ controller }}:
+{% for ip in ports %}
+    - {{ ip }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% else %}
+  <USER_INPUT>
+{% endif %}
+
+
+# See https://github.com/netappeseries/santricity/blob/master/roles/nar_santricity_host/README.md for all available parameters.

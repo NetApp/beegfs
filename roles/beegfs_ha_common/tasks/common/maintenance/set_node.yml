@@ -8,8 +8,10 @@
 
 - name: "Ensure {{ cluster_node }} is now in maintenance."
   ansible.builtin.command: "crm_attribute --node {{ cluster_node }} --name maintenance --update true"
-  when: "maintenance_query['rc'] == 105 or (maintenance_query['rc'] == 0
-         and maintenance_query['stdout'] | regex_search(beegfs_ha_common_pacemaker_false_regex, ignorecase=true))"
+  when: >
+    maintenance_query['rc'] == 105 or
+    (maintenance_query['rc'] == 0 and
+     (maintenance_query['stdout'] | regex_search(beegfs_ha_common_pacemaker_false_regex, ignorecase=true)) is not none)
   failed_when: node_maintenance_mode["rc"] != 0
   register: node_maintenance_mode
   delegate_to: "{{ cluster_automation_node }}"
@@ -22,4 +24,4 @@
       maintenance mode. If you are still in the process of deploying the cluster this can be safely ignored. If you are
       attempting to make changes to an existing cluster, continuing may temporarily disrupt filesystem operations, but
       will likely correct any outstanding issues with the cluster. Press enter to continue, Ctrl+C to interrupt
-  when: node_maintenance_mode["failed"] | default(false)
+  when: (node_maintenance_mode["failed"] | default(false)) | bool

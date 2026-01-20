@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+
+import subprocess
+import json
+import time
+import os
+
+from datetime import datetime
+
+workdir = "/opt/netapp/beegfs/bin"
+script_path = os.path.join(workdir, 'connectx_hw.sh')
+json_data = subprocess.run([script_path], capture_output=True, text=True)
+data = json.loads(json_data.stdout)
+
+ifaces = sorted(list(data.keys()))
+
+interval = 1.0  # seconds
+
+def get_stats(ifaces):
+    stats = {}
+    for iface in ifaces:
+        try:
+            with open(f'/sys/class/net/{iface}/statistics/tx_bytes') as f:
+                tx = int(f.read())
+            with open(f'/sys/class/net/{iface}/statistics/rx_bytes') as f:
+                rx = int(f.read())
+        except Exception:
+            tx, rx = 0, 0
+        stats[iface] = (tx, rx)
+    return stats
+
+# Initial stats
+prev_stats = get_stats(ifaces)
+
+while True:
+    time.sleep(interval)
+    curr_stats = get_stats(ifaces)
+    tx_mbps = {}
+    rx_mbps = {}
+
+    for iface in ifaces:
+        tx_diff = curr_stats[iface][0] - prev_stats[iface][0]
+        rx_diff = curr_stats[iface][1] - prev_stats[iface][1]
+        tx_mbps[iface] = tx_diff / (1024 * 1024) / interval
+        rx_mbps[iface] = rx_diff / (1024 * 1024) / interval
+
+    prev_stats = curr_stats
+
+    # Clear screen
+    os.system('clear')
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"InfiniBand HCA Throughput @ {now}")
+    print("  {0:<9} {1:<13} {2:<12} {3:<12}".format("HCA", "Interface", "TX (MB/s)", "RX (MB/s)"))
+    print("  " + "-" * 50)
+
+    aggregate_tx = 0.0
+    aggregate_rx = 0.0
+
+    for iface in ifaces:
+        ca_name = data[iface]['ca_name']
+        tx = tx_mbps[iface]
+        rx = rx_mbps[iface]
+        print(f"  {ca_name:<9} {iface:<13} {tx:<12.2f} {rx:<12.2f}")
+        aggregate_tx += tx
+        aggregate_rx += rx
+
+    print("  " + "-" * 50)
+    print(f"  {'Aggregate':<23} {aggregate_tx:<12.2f} {aggregate_rx:<12.2f}")

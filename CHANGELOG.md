@@ -1,6 +1,37 @@
 # Changelog
 Notable changes to the BeeGFS collection will be documented in this file.
 
+[4.0.0] - 2025-12-15
+--------------------
+### Added
+- Added support for BeeGFS v8, including new config layout and TLS encryption.
+- Added new roles for beegfs-sync and beegfs-remote services.
+- Added support for Ansible-Core 2.19.
+- Added custom scripts to show hardware info for ConnectX adapters.
+- Added custom scripts to to monitor connectx_port_statistics.
+- Added tasks to generate local CA for self-signed certificates.
+- Added support for FS-UUID in BeeGFS configuration.
+- Added OCF monitor script for BeeGFS v8 resources.
+- Added quota options to XFS mount points if enforcement is enabled.
+- Added deployment templates for standard BeeGFS configurations.
+
+### Fixed
+- Fixed undefined variables in playbooks and roles.
+- Corrected syntax errors in various tasks and handlers.
+- Made conditional logic explicit in Ansible tasks.
+- Set eseries_ip_manager_tools to a list instead of a string to prevent type errors.
+- Specified ansible_python_interpreter to ensure correct Python usage.
+- Fixed incorrect keyword usage for multirail_enabled.
+- Fixed bug where pacemaker credential was not set correctly.
+- Fixed lint issues and ensured proper base64 decoding of authkeys.
+
+### Deprecated
+- Removed unnecessary wrapping quotes in conditional logic.
+- Removed obsolete package (mailx).
+- Removed beegfs-helperd installation for BeeGFS v8 (replaced by beegfs-tools).
+- Removed unused and invalid variables from configuration files and templates.
+
+
 [3.2.0] - 2024-03-30
 --------------------
 ### Added
@@ -12,6 +43,7 @@ Notable changes to the BeeGFS collection will be documented in this file.
 
 ### Deprecated
 - Remove deprecated beegfs_ha_7_2 role.
+
 
 [3.1.0] - 2023-01-30
 --------------------
@@ -34,6 +66,7 @@ Notable changes to the BeeGFS collection will be documented in this file.
 ### Deprecated
 - Deprecated the beegfs_ha_7_2 role and will be removed in a future release.
 
+
 [3.0.1] - 2022-08-15
 --------------------
 ### Added
@@ -49,6 +82,7 @@ Notable changes to the BeeGFS collection will be documented in this file.
   were stopped before configuring corosync.
 - Handle scenarios where the node running the BeeGFS management service is not listed first in the inventory file and
   used as the preferred management node for the cluster.
+
 
 [3.0.0] - 2022-04-05
 --------------------
@@ -105,6 +139,7 @@ Notable changes to the BeeGFS collection will be documented in this file.
   - Note: At this time Ansible Galaxy will be the primary distribution/installation mechanism for this and other
     collections it depends on.
 
+
 [2.0.0] - 2020-08-16
 --------------------
 ### Added
@@ -132,6 +167,7 @@ Notable changes to the BeeGFS collection will be documented in this file.
     reboot.
   - Updated the role to work with both new and legacy versions of the SANtricity collection.
 
+
 [1.1.0] - 2020-04-10
 --------------------
 
@@ -144,6 +180,7 @@ Notable changes to the BeeGFS collection will be documented in this file.
 ### Changed
 - Updates to the provided examples.
 - Required version of the netapp_eseries.santricity collection in galaxy.yml.
+
 
 [1.0.0] - 2020-03-19
 --------------------

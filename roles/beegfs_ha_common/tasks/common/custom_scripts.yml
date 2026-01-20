@@ -1,0 +1,26 @@
+- name: Set facts for custom_scripts.yml.
+  ansible.builtin.set_fact:
+    beegfs_ha_netapp_bin_path: "{{ beegfs_ha_netapp_path }}/bin"
+
+- name: Ensure beegfs_ha_netapp_bin_path directory exists.
+  ansible.builtin.file:
+    path: "{{ beegfs_ha_netapp_bin_path }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  become: true
+
+- name: Ensure connectx_hw.sh exists on cluster node.
+  ansible.builtin.template:
+    src: common/connectx_hw.sh.j2
+    dest: "{{ beegfs_ha_netapp_bin_path }}/connectx_hw.sh"
+    mode: "0755"
+  become: true
+
+- name: Ensure connectx_port_statistics.py exits on cluster node.
+  ansible.builtin.template:
+    src: common/connectx_port_statistics.py.j2
+    dest: "{{ beegfs_ha_netapp_bin_path }}/connectx_port_statistics.py"
+    mode: "0755"
+  become: true

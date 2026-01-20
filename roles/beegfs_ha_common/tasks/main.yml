@@ -22,10 +22,16 @@
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and eseries_common_allow_host_reboot is not defined
   tags: always
 
+- name: Ensure custom scripts is copied to BeeGFS HA cluster nodes.
+  ansible.builtin.import_tasks: common/custom_scripts.yml
+  when:
+    - not (beegfs_ha_uninstall | bool)
+    - inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+
 - name: Ensure BeeGFS HA cluster is installed.
   ansible.builtin.import_tasks: install/main.yml
-  when: not beegfs_ha_uninstall
+  when: not (beegfs_ha_uninstall | bool)
 
 - name: Ensure BeeGFS HA cluster is uninstalled.
   ansible.builtin.import_tasks: uninstall/main.yml
-  when: beegfs_ha_uninstall
+  when: beegfs_ha_uninstall | bool

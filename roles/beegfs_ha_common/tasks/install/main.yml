@@ -10,7 +10,9 @@
   retries: 10
   until: force_file_system['user_input'] | lower in ["yes", "no"]
   failed_when: force_file_system["user_input"] | lower == "no"
-  when: eseries_mount_force_format is defined and eseries_mount_force_format
+  when:
+    - eseries_mount_force_format is defined
+    - eseries_mount_force_format | bool
   tags: always
 
 - name: Ask user whether to disable SELinux or not.
@@ -40,7 +42,9 @@
     - name: Set eseries_selinux_state to disabled.
       ansible.builtin.set_fact:
         eseries_selinux_state: disabled
-      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and eseries_beegfs_ha_disable_selinux
+      when:
+        - inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+        - eseries_beegfs_ha_disable_selinux | bool
   tags:
     - beegfs_ha_configure
     - beegfs_ha
@@ -68,12 +72,16 @@
     - name: Ensure InfiniBand IPoIB is configured.
       ansible.builtin.include_role:
         name: netapp_eseries.host.ipoib
-      when: eseries_ipoib_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+      when:
+        - eseries_ipoib_interfaces is defined
+        - inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
 
     - name: Ensure RoCE is configured.
       ansible.builtin.include_role:
         name: netapp_eseries.host.roce
-      when: eseries_roce_interfaces is defined and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+      when:
+        - eseries_roce_interfaces is defined
+        - inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   tags:
     - beegfs_ha_configure
     - beegfs_ha
@@ -93,7 +101,9 @@
     - name: Ensure multipath and protocol are setup.
       ansible.builtin.include_role:
         name: netapp_eseries.host.storage_setup
-      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
+      when:
+        - inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+        - node_info["services"] | length > 0
   tags:
     - storage_communication
     - storage
@@ -103,7 +113,9 @@
     - name: Ensure volumes are formatted but not mounted.
       ansible.builtin.include_role:
         name: netapp_eseries.host.mount
-      when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
+      when:
+        - inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+        - node_info["services"] | length > 0
       vars:
         eseries_mount_volumes: []   # This ensures that no volumes get mounted
         eseries_mount_skip_unmount: true
@@ -115,7 +127,9 @@
   block:
     - name: Ensure journald configuration options are configured.
       ansible.builtin.include_tasks: common/journald.yml
-  when: beegfs_ha_journald_allow_changes and inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+  when:
+    - beegfs_ha_journald_allow_changes | bool
+    - inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
   become: true
   tags:
     - journald
@@ -144,7 +158,7 @@
 
     - name: Ensure BeeGFS HA cluster nodes are in maintenance mode.
       ansible.builtin.include_tasks: common/maintenance/set.yml
-  when: beegfs_ha_force_upgrade
+  when: beegfs_ha_force_upgrade | bool
   tags:
     - beegfs_ha_package
     - beegfs_ha
@@ -162,7 +176,9 @@
   block:
     - name: Ensure E-Series BeeGFS HA resources agents are installed.
       ansible.builtin.include_tasks: resource_agents.yml
-  when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and node_info["services"] | length > 0
+  when:
+    - inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+    - node_info["services"] | length > 0
   tags:
     - beegfs_ha_resource_agent
     - beegfs_ha_configure
@@ -173,8 +189,10 @@
   block:
     - name: BeeGFS performance tuning (Storage/Metadata).
       ansible.builtin.include_tasks: performance_tuning.yml
-      when: 'beegfs_ha_enable_performance_tuning == True and (inventory_hostname in groups[beegfs_ha_ansible_cluster_group] and
-                                                              ("metadata" in node_info["services"] or "storage" in node_info["services"]))'
+      when:
+        - beegfs_ha_enable_performance_tuning == True
+        - inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
+        - '"metadata" in node_info["services"] or "storage" in node_info["services"]'
   tags:
     - beegfs_ha
     - beegfs_ha_performance_tuning
@@ -197,7 +215,15 @@
 
     - name: Ensure BeeGFS HA management resource group is configured.
       ansible.builtin.include_tasks: services/management.yml
-      when: '"management" in node_info["services"]'
+      when:
+        - '"management" in node_info["services"]'
+        - beegfs_ha_tls_enabled is not defined
+
+    - name: Ensure BeeGFS HA management (TLS supported) resource group is configured.
+      ansible.builtin.include_tasks: services/management_v8.yml
+      when:
+        - '"management" in node_info["services"]'
+        - beegfs_ha_tls_enabled is defined
 
     - name: Ensure BeeGFS HA metadata resource group is configured.
       ansible.builtin.include_tasks: services/metadata.yml
@@ -221,24 +247,9 @@
     - beegfs_ha_configure
     - beegfs_ha
 
-- name: Ensure pacemaker services are started and enabled.
-  block:
-    - name: Ensure pacemaker_remote is enabled and started on remote nodes.
-      ansible.builtin.systemd:
-        state: started
-        enabled: true
-        name: pacemaker_remote
-      when: not beegfs_ha_pacemaker_cluster_node
-
-    - name: Ensure cluster nodes have joined the cluster.
-      ansible.builtin.systemd:
-        state: started
-        enabled: "{{ beegfs_ha_pacemaker_enabled }}"
-        name: "{{ item }}"
-      when: beegfs_ha_pacemaker_cluster_node
-      loop: ["corosync", "pacemaker"]
+- name: Ensure pacemakerd services are started and enabled.
+  ansible.builtin.include_tasks: common/pacemakerd.yml
   when: inventory_hostname in groups[beegfs_ha_ansible_cluster_group]
-  become: true
   tags:
     - beegfs_ha_move_all_to_preferred
     - beegfs_ha_configure_resource

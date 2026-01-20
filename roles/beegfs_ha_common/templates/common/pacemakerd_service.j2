@@ -1,0 +1,4 @@
+[Service]
+{% for key, value in beegfs_ha_pacemaker_conf_options.items() %}
+{{ key }}={{ value }}
+{% endfor %}

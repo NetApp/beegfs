@@ -1,0 +1,63 @@
+# Playbook objective
+#
+# 1. Ensure storage array is configured to defined values in eseries_storage_systems.yml in cluster inventories.
+# 2. Set host name to match hostname defined in inventory.
+# 3. Install OpenSM package if defined in cluster inventories.
+# 4. Configure BeeGFS HA cluster.
+
+
+# Comment out this play or any tasks in this play if it's not applicable to your environment.
+- hosts: eseries_storage_systems
+  gather_facts: false
+  any_errors_fatal: true
+  vars_files:
+    - ../../global_params/passwords.yml
+    - "{{ ansible_inventory_sources[0] | dirname }}/user_defined_params.yml"
+  tasks:
+    - name: Configure NetApp E-Series block nodes.
+      import_role:
+        name: netapp_eseries.santricity.nar_santricity_management
+
+
+- hosts: ha_cluster
+  gather_facts: false
+  become: true
+  any_errors_fatal: true
+  vars_files:
+    - ../../global_params/passwords.yml
+    - "{{ ansible_inventory_sources[0] | dirname }}/user_defined_params.yml"
+  tasks:
+    - name: Set hostname on BeeGFS servers
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname | replace('_', '-') }}"
+
+    - name: Add RHEL repository
+      ansible.builtin.yum_repository:
+        name: "{{ item.value['name'] }}"
+        description: "{{ item.value['description'] }}"
+        file: "{{ item.value['filename'] }}"
+        baseurl: "{{ item.value['url'] }}"
+        gpgcheck: "{{ item.value['gpgcheck'] | default(false) }}"
+        sslverify: "{{ item.value['sslverify'] | default(false) }}"
+        enabled: "{{ item.value['enabled'] | default(true) }}"
+      loop: "{{ yum_repos | dict2items }}"
+      when: yum_repos is defined
+
+
+- hosts: all
+  gather_facts: false
+  become: true
+  any_errors_fatal: true
+  vars_files:
+    - ../../global_params/passwords.yml
+    - "{{ ansible_inventory_sources[0] | dirname }}/user_defined_params.yml"
+  pre_tasks:
+    - name: Verify any provided tags are supported. 
+      fail:
+        msg: "{{ item }} tag is not a supported BeeGFS HA tag. Rerun your playbook command with --list-tags to see all valid playbook tags."
+      when: 'item not in ["all", "storage", "beegfs_ha", "beegfs_ha_package", "beegfs_ha_configure", "beegfs_ha_configure_resource", "beegfs_ha_performance_tuning", "beegfs_ha_backup", "beegfs_ha_client"]'
+      loop: "{{ ansible_run_tags }}"
+  tasks:
+    - name: Ensure BeeGFS HA cluster is setup.
+      ansible.builtin.import_role:
+        name: netapp_eseries.beegfs.beegfs_ha_8_0

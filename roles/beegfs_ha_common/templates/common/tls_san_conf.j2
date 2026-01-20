@@ -1,0 +1,24 @@
+[ req ]
+default_bits       = 2048
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
+x509_extensions    = v3_ca # The extensions to add to the self signed cert
+
+[ req_distinguished_name ]
+commonName                  = {{ beegfs_ha_tls_config['common_name'] }} (eg, fully qualified host name)
+commonName_default          = localhost
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ v3_ca ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+{% for alt_name in beegfs_ha_tls_config['alt_names'] %}
+{%     if alt_name is match('^\\d{1,3}(\\.\\d{1,3}){3}$') %}
+IP.{{ loop.index }} = {{ alt_name }}
+{%     else %}
+DNS.{{ loop.index }} = {{ alt_name }}
+{%     endif %}
+{% endfor %}

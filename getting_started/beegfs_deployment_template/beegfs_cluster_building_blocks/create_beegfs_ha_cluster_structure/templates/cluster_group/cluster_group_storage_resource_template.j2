@@ -1,0 +1,178 @@
+{% import 'cluster_group.macros' as macros %}
+{% import 'template_macros.j2' as template_macros %}
+
+{%- set resource_group_name = item -%}
+# {{ resource_group_name }} - BeeGFS HA Storage Resource Group
+
+# This is a template for BeeGFS HA storage resource group. Review all comments and update with all expected values.
+# IMPORTANT: All capitalized words in angled brackets must be updated.
+
+
+{#- =============================================================================
+   Extract target settings and BeeGFS service settings.
+============================================================================= #}
+{%- set beegfs_target_settings = eseries_storage_settings['beegfs_target_settings'] %}
+{%- set beegfs_service_settings = file_node_settings['beegfs_service_settings'] -%}
+
+
+{#- =============================================================================
+   Determine Storage Identifier and HA Settings
+   -----------------------------------------------------------------------------
+   - Extract numeric storage ID from resource_group_name.
+   - Retrieve BeeGFS high availability settings and floating IP start info.
+============================================================================= #}
+{%- set stor_id = resource_group_name | regex_search('\d+$') | int -%}
+{%- set beegfs_ha_settings = file_node_settings['beegfs_ha_settings'] %}
+{%- set beegfs_ha_floating_ip_start = beegfs_ha_settings['floating_ip_start'] %}
+
+
+{#- =============================================================================
+   Iterate over cluster facts to collect building block data that defines
+     beegfs_services for the current resource group.
+============================================================================= #}
+{%- set building_block = {} %}
+{%- for building_block_name, building_block_data in cluster_facts[cluster_name].items() %}
+{%    if building_block_data['beegfs_services'][resource_group_name] is defined %}
+{%      if building_block.update(building_block_data) %}{% endif %}
+{%    endif %}
+{%  endfor %}
+
+
+{#- =============================================================================
+   Extract BeeGFS Service Entries and Related Attributes
+   -----------------------------------------------------------------------------
+   - Retrieve beegfs_services and storage (stor) specific entries.
+   - Extract controllers per block node, primary floating IP interface, and file nodes.
+============================================================================= #}
+{%- set beegfs_services = building_block['beegfs_services'] %}
+{%- set stor_entries = beegfs_services[resource_group_name] %}
+{%- set controllers_per_array = building_block['attributes']['controllers_per_block_node'] %}
+{%- set primary_floating_ip_interface = stor_entries['floating_ip_interfaces'] | first %}
+
+
+{#- =============================================================================
+   Select appropriate storage volume parameters depending on converged_storage status.
+============================================================================= #}
+{%    set converged_block_nodes = building_block['converged_block_nodes'] %}
+{%    set converged_storage = true if stor_entries['block_nodes'][0] in converged_block_nodes else false %}
+
+{%-   if converged_storage %}
+{%      set stor_volume_params = beegfs_target_settings['converged_bb']['stor'] %}
+{%    else %}
+{%      set stor_volume_params = beegfs_target_settings['storage_only_bb']['stor'] %}
+{%    endif %}
+
+{%- set file_nodes_per_storage_pool = stor_volume_params.get('file_nodes_per_storage_pool', 1) %}
+{%- set volumes_per_beegfs_service = stor_volume_params['volumes_per_beegfs_service'] %}
+{%- set storage_pools_per_beegfs_service = stor_volume_params.get('storage_pools_per_beegfs_service', 1) %}
+{%- set volumes_per_storage_pools = (volumes_per_beegfs_service / storage_pools_per_beegfs_service) | int %}
+{%- set volumes_per_storage_pools = [volumes_per_storage_pools, 1] | max %}
+
+
+{#- =============================================================================
+   Organize BeeGFS Services by Block Node
+   -----------------------------------------------------------------------------
+   - Utilize the custom macro to group services by block node.
+   - Convert the generated JSON string into a JSON object.
+============================================================================= #}
+{%- set beegfs_services_by_block_node = macros.beegfs_services_by_block_node(beegfs_services, resource_group_name, file_nodes_per_storage_pool)  | replace("'", '"') | from_json -%}
+
+
+{#- =============================================================================
+   Map Floating IP Interfaces to Storage Network Addresses
+   -----------------------------------------------------------------------------
+   - Sort the list of floating IP interfaces from stor_entries.
+   - For each network declared in the "stor_network", compute the base network address.
+   - Create a mapping of sorted floating IP interfaces to the respective network addresses appended with stor_id.
+============================================================================= #}
+{%- set floating_ip_interfaces = {} -%}
+{%- set sorted_floating_ip_interfaces = stor_entries['floating_ip_interfaces'] | sort %}
+{%- for network_name, start_ip_address in beegfs_ha_floating_ip_start["stor_network"].items() -%}
+{%-   set network_address = template_macros.calc_ip_address(start_ip_address, stor_id) %}
+{%-   set floating_ip_interface = sorted_floating_ip_interfaces[loop.index0] %}
+{%    if floating_ip_interfaces.update({floating_ip_interface: network_address}) %}{% endif %}
+{% endfor %}
+
+
+# Type of BeeGFS service the HA resource group will manage. Choices: management, metadata, storage.
+beegfs_service: storage
+
+
+beegfs_ha_beegfs_storage_conf_resource_group_options:
+  # BeeGFS HA resource service port. 8003 is the default BeeGFS storage service port number; Each BeeGFS HA
+  # storage service resource must have a unique port number.
+{% if beegfs_supports_tls is true %}
+  connStoragePort: 8{{ '{:02d}'.format(stor_id) }}3
+{% else %}
+  connStoragePortTCP: 8{{ '{:02d}'.format(stor_id) }}3
+  connStoragePortUDP: 8{{ '{:02d}'.format(stor_id) }}3
+{% endif %}
+
+  # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be
+  # applied whenever and wherever the BeeGFS service resides. This can provide significant performance increases by
+  # avoiding the cache misses between NUMA nodes.
+  tuneBindToNumaZone: {{  beegfs_service_settings['floating_ip_interfaces'][primary_floating_ip_interface]['numa_zone'] }}
+
+
+# List of storage floating IP definitions in the form host_interface:ip_address/cidr_subnet_mask.
+# This information is used to communicate with the BeeGFS management resource. Therefore, these definitions must
+# be on the same subnet as beegfs_ha_mgmtd_floating_ip value in group_vars/ha_cluster.yml. Any unusable definitions
+# will be ignored which is specially useful when the definitions differ based on the host.
+floating_ips:
+  # - <IFACE>:<IP_ADDRESS>/<CIDR_MASK>
+{# i.e: replace 11.22.33.0 to 11.22.33 -#}
+{% for floating_ip_interface in stor_entries['floating_ip_interfaces'] %}
+  - {{ floating_ip_interface }}:{{ floating_ip_interfaces[floating_ip_interface] }}/16
+{% endfor %}
+
+
+beegfs_targets:
+  # E-Series storage target. Change this to any desired E-Series storage.
+{% for block_node in stor_entries['block_nodes'] %}
+
+{#- Example for storage pool name: beegfs_s1_s2 #}
+  {{ block_node }}:
+    eseries_storage_pool_configuration:
+{% for storage_pool in range(storage_pools_per_beegfs_service) %}
+
+{%- set storage_pool_name = macros.storage_pool_name(
+      beegfs_services_by_block_node[block_node],
+      [beegfs_stor_basename],
+      stor_volume_params,
+      loop.index0,
+      storage_pools_per_beegfs_service,
+      file_nodes_per_storage_pool
+    ) | from_yaml %}
+{%- set ddp_raid_levels = ['raid1_DiskPool', 'raid6_DiskPool'] %}
+{%- set storage_pool_raid_level = stor_volume_params['raid_level'] | default('raid6') %}
+      - name: {{ storage_pool_name }}
+        # Storage pool/volume group RAID type. Choices: raid0, raid1, raid5, raid6, raidDiskPool
+        # RAID 6 stripes the data between across all drives with two parity stripes to allow for recovery of multiple
+        # drive failures which is the recommended storage type for BeeGFS storage services.
+        raid_level: {{ 'raidDiskPool' if storage_pool_raid_level in ddp_raid_levels else storage_pool_raid_level }}
+
+        # Total drive count for the storage pool.
+        criteria_drive_count: {{ stor_volume_params['criteria_drive_count'] | default(10) }}
+
+        secure_pool: {{ stor_volume_params['secure_pool'] | default(true) | lower }}
+        common_volume_configuration:
+          segment_size_kb: {{ stor_volume_params['segment_size_kb'] | default(512) }}
+
+        # BeeGFS storage service volume list. In order to get the best performance it is recommended that you use a
+        # minimum of two volumes per storage service.
+        volumes:
+          # Size of each BeeGFS storage service volume in percentage of total storage pool capacity.
+          # Depending on your configuration, adjust the percentage to account for overprovisioning.
+{%    for count in range(volumes_per_storage_pools) %}
+          - owning_controller: {{ stor_entries['owning_controller'] }}
+            size: {{ stor_volume_params['volume_size'] | default(24) }}
+{% if storage_pool_raid_level in ddp_raid_levels %}
+            raid_level: {{ storage_pool_raid_level.split('_')[0] }}
+{% endif %}
+            read_cache_enable: true
+            read_ahead_enable: true
+{%    endfor %}
+
+{%    endfor %}
+
+{%- endfor %}

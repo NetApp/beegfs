@@ -36,7 +36,7 @@
         state: absent
         name: chrony
       become: true
-  when: beegfs_ha_ntp_enabled
+  when: beegfs_ha_ntp_enabled | bool
 
 - name: Ensure Chrony is installed (SUSE - Cluster Node).
   block:
@@ -50,11 +50,11 @@
         state: absent
         name: ntp
       become: true
-  when: beegfs_ha_chrony_enabled
+  when: beegfs_ha_chrony_enabled | bool
 
 - name: Ensure the firewalld is installed (SUSE).
   community.general.zypper:
-    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade | bool %}latest{% else %}present{% endif %}"
     name: firewalld
-  when: beegfs_ha_firewall_start_and_enable
+  when: beegfs_ha_firewall_start_and_enable | bool
   become: true

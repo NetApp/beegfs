@@ -1,0 +1,62 @@
+### Enables TLS encryption for secure communication in BeeGFS v8 between clients,
+### remote storage targets, and the mgmtd service. Set to 'false' to disable TLS.
+beegfs_tls_enabled: true
+
+# beegfs_ca_cert_src_path: "{{ beegfs_tls_ca_cert_src }}"        # Example
+beegfs_ca_cert_src_path: <USER_INPUT>
+
+# beegfs_ca_key_src_path: "{{ beegfs_tls_ca_cert_src | dirname }}/local_ca_key.pem"          # Example
+beegfs_ca_key_src_path: <USER_INPUT>
+
+# beegfs_remote_tls_cert_src_path: files/beegfs/beegfs_remote/remote_cert.pem     # Example
+beegfs_remote_tls_cert_src_path: <USER_INPUT>
+
+# beegfs_remote_tls_key_src_path: files/beegfs/beegfs_remote/remote_key.pem       # Example
+beegfs_remote_tls_key_src_path: <USER_INPUT>
+
+beegfs_remote_tls_config_options:
+  common_name: beegfs_remote.netapp.com
+  alt_names:
+    - "{{ ansible_host }}"
+
+
+beegfs_remote_config_options:
+  mount-point: /mnt/beegfs_remote_sync
+  management:
+    address: "{{ beegfs_ha_mgmtd_floating_ip }}:8010"
+    auth-file: "/etc/beegfs/conn.auth"
+    tls-cert-file: "/etc/beegfs/cert.pem"
+    tls-disable-verification: false
+    tls-disable: false
+  log:
+    level: 3
+    type: syslog
+  server:
+    address: "{{ ansible_host }}:9010"
+    tls-cert-file: /etc/beegfs/beegfs_remote/{{ beegfs_remote_tls_cert_src_path | basename }}
+    tls-key-file: /etc/beegfs/beegfs_remote/{{ beegfs_remote_tls_key_src_path | basename }}
+    tls-disable: false
+  job:
+    path-db: /var/lib/beegfs/remote/path.badger
+  workers:
+    ### Example
+    # - id: 1
+    #   name: beesync-01
+    #   type: beesync
+    #   address: "{{ ansible_host }}:9011"          # Set to the beegfs-sync service address.
+    #   tls-cert-file: /etc/beegfs/cert.pem
+    #   tls-disable-verification: false
+    #   tls-disable: false
+    - <USER_INPUT>
+  remote-storage-targets:
+    ### Example
+    # - id: 1
+    #   name: storageGRID
+    #   policies:
+    #     FastStartMaxSize: 104857600
+    #   s3.endpoint-url: "https://sgdemo.netapp.com"
+    #   s3.region: "us-east-1"
+    #   s3.bucket: "beegfs-export"
+    #   s3.access-key: "1P1ZNE550MBI5WGQ"
+    #   s3.secret-key: "leL75SbGyTj5yPoyJ2i5nXa"
+    - <USER_INPUT>

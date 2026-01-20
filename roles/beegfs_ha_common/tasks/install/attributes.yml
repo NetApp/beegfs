@@ -57,7 +57,7 @@
         {%- set results = line | regex_search('<nvpair.*name=\\\"(?P<name>.*?)\\\".*value=\\\"(?P<value>.*?)\\\"', '\\g<name>', '\\g<value>') -%}
         {%- if results is iterable and results | length == 2 -%}
           {%- set name, value = results[0], results[1] -%}
-          {% if value and name in defaults_parameters and name not in expected_keys -%}
+          {% if value is truthy and name in defaults_parameters and name not in expected_keys -%}
             {%- if attributes.append(name) -%}{%- endif -%}
           {%- endif -%}
         {%- endif -%}

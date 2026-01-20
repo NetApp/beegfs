@@ -5,6 +5,8 @@
       {%- set mgmt_ip = item['sysMgmtdHost'] -%}
       {%- if item['beegfs_client_config']['connClientPortUDP'] is defined -%}
         {{- mgmt_ip }}_{{ item['beegfs_client_config']['connClientPortUDP'] -}}
+      {%- elif item['beegfs_client_config']['connClientPort'] is defined -%}
+        {{- mgmt_ip }}_{{ item['beegfs_client_config']['connClientPort'] -}}
       {%- else -%}
         {{- mgmt_ip -}}
       {%- endif -%}
@@ -15,23 +17,23 @@
       {%- elif item['connInterfaces'] is defined -%}
         /etc/beegfs/{{ generated_conf_prefix }}_connInterfaces.conf
       {%- endif -%}
-    multirail_enabled: "{{ (item['connRDMAInterfacesFile'] | default([])) | length > 0 }}"
+    multirail_enabled: "{{ (item['connRDMAInterfaces'] | default([])) | length > 0 }}"
     connRDMAInterfacesFile_path: |-
       {%- if item['beegfs_client_config']['connRDMAInterfacesFile'] is defined -%}
         {{- item['beegfs_client_config']['connRDMAInterfacesFile'] -}}
-      {%- elif item['connRDMAInterfacesFile'] is defined -%}
-        /etc/beegfs/{{ generated_conf_prefix }}_client-rdma.conf
+      {%- elif item['connRDMAInterfaces'] is defined -%}
+        /etc/beegfs/{{ generated_conf_prefix }}_connRDMAInterfaces.conf
       {%- endif -%}
     connAuthFile_src: |-
       {%- if item['connAuthFile_src'] is defined -%}
         {{- item['connAuthFile_src'] -}}
-      {%- elif item['connAuthFile_secret'] is not defined -%}
+      {%- else -%}
         {{- beegfs_client_connAuthFile_src -}}
       {%- endif -%}
     connAuthFile_secret: |-
       {%- if item['connAuthFile_secret'] is defined -%}
         {{- item['connAuthFile_secret'] -}}
-      {%- elif item['connAuthFile_src'] is not defined -%}
+      {%- else -%}
         {{- beegfs_client_connAuthFile_secret -}}
       {%- endif -%}
     connAuthFile_dest: |-
@@ -48,14 +50,16 @@
         msg: |
           Only one connection authentication method maybe chosen for each mount! Each mount may only specify one of the
           following options: connAuthFile_src or connAuthFile_secret
-      when: connAuthFile_src and connAuthFile_secret
+      when: connAuthFile_src | length > 0 and connAuthFile_secret | length > 0
 
     - name: Ensure BeeGFS connection authentication file exists copied from source file.
       ansible.builtin.copy:
         src: "{{ connAuthFile_path }}"
         dest: "{{ connAuthFile_dest }}"
         mode: "0400"
-      when: connAuthFile_enabled and connAuthFile_path
+      when:
+        - connAuthFile_enabled | bool
+        - connAuthFile_path | length > 0
       notify:
         - Restart BeeGFS Client
       vars:
@@ -73,9 +77,20 @@
         content: "{{ connAuthFile_secret }}"
         dest: "{{ connAuthFile_dest }}"
         mode: "0400"
-      when: connAuthFile_enabled and connAuthFile_secret
+      when:
+        - connAuthFile_enabled | bool
+        - connAuthFile_secret | length > 0
       notify:
         - Restart BeeGFS Client
+
+    - name: Create symlink for /etc/beegfs/conn.auth for beegfs cli.
+      vars:
+        src_path: "{{ connAuthFile_dest }}"
+        dest_path: /etc/beegfs/conn.auth
+      ansible.builtin.include_role:
+        name: netapp_eseries.beegfs.beegfs_ha_common
+        tasks_from: common/create_symlink.yml
+      when: (src_path | realpath) != (dest_path | realpath)
 
     - name: Create/populate the connInterfaces file at {{ connInterfaces_path }}.
       ansible.builtin.template:
@@ -90,7 +105,7 @@
         src: beegfs_rdma_connection_interfaces.j2
         dest: "{{ connRDMAInterfacesFile_path }}"
         mode: 0644
-      when: multirail_enabled
+      when: multirail_enabled | bool
       notify:
         - Restart BeeGFS Client
 
@@ -125,6 +140,15 @@
             fstype: beegfs
             opts: "rw,relatime,cfgFile={{ client_conf_path }},_netdev,x-systemd.after=beegfs-helperd"
             state: "{%- if item['mounted'] is defined and item['mounted'] == False  %}unmounted{%- else %}mounted{%- endif %}"
-      when: beegfs_client_dkms_install
+      when: beegfs_client_dkms_install | bool
+
+    - name: Create symlink for /etc/beegfs/beegfs-client.conf for beegfs cli.
+      vars:
+        src_path: "{{ client_conf_path }}"
+        dest_path: /etc/beegfs/beegfs-client.conf
+      ansible.builtin.include_role:
+        name: netapp_eseries.beegfs.beegfs_ha_common
+        tasks_from: common/create_symlink.yml
+      when: (src_path | realpath) != (dest_path | realpath)
 
   tags: beegfs_client_mount

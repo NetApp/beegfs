@@ -1,0 +1,26 @@
+- name: Check if {{ dest_path }} exists.
+  ansible.builtin.stat:
+    path: "{{ dest_path }}"
+  register: dest_path_status
+
+- name: Back up existing {{ dest_path }}.
+  ansible.builtin.copy:
+    src: "{{ dest_path }}"
+    dest: "{{ dest_path }}.orig"
+    remote_src: yes
+    force: false
+  when:
+    - dest_path_status.stat.exists
+    - not (dest_path_status.stat.islnk | bool)
+
+- name: Remove existing {{ dest_path }}.
+  ansible.builtin.file:
+    path: "{{ dest_path }}"
+    state: absent
+  when: dest_path_status.stat.exists
+
+- name: Create symlink for {{ dest_path }}.
+  ansible.builtin.file:
+    src: "{{ src_path }}"
+    dest: "{{ dest_path }}"
+    state: link

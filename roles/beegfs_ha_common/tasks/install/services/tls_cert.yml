@@ -1,0 +1,166 @@
+# This file configures BeeGFS TLS cert and key file
+- name: Ensure expected BeeGFS TLS cert file exists on Ansible control node.
+  delegate_to: localhost
+  run_once: true
+  vars:
+    tls_cert_path: |-
+      {#- Check whether beegfs_ha_tls_cert_src_path is a relative path. Prepend playbook_dir if it is. -#}
+      {%- if beegfs_ha_tls_cert_src_path == beegfs_ha_tls_cert_src_path | realpath -%}
+        {{- playbook_dir + '/' + beegfs_ha_tls_cert_src_path }}
+      {%- else -%}
+        {{- beegfs_ha_tls_cert_src_path }}
+      {%- endif -%}
+    tls_key_path: |-
+      {#- Check whether beegfs_ha_tls_key_src_path is a relative path. Prepend playbook_dir if it is. -#}
+      {%- if beegfs_ha_tls_key_src_path == beegfs_ha_tls_key_src_path | realpath -%}
+        {{- playbook_dir + '/' + beegfs_ha_tls_key_src_path }}
+      {%- else -%}
+        {{- beegfs_ha_tls_key_src_path }}
+      {%- endif -%}
+    tls_csr_path: "{{ tls_cert_path | dirname }}/tls_csr.pem"
+  block:
+    - name: Get the stat of {{ tls_cert_path }} on the Ansible control node.
+      ansible.builtin.stat:
+        path: "{{ tls_cert_path }}"
+      register: tls_cert_path_stats
+
+    - name: Get the stat of {{ tls_key_path }} on the Ansible control node.
+      ansible.builtin.stat:
+        path: "{{ tls_key_path }}"
+      register: tls_key_path_stats
+
+    - name: Determine the TLS key and cert file's source.
+      ansible.builtin.set_fact:
+        beegfs_ha_tls_key_src: |-
+          {%- set src_exists = tls_key_path_stats["stat"]["exists"] -%}
+          {%- if '.' in (tls_key_path | basename) %}
+            {{-  tls_key_path -}}
+          {%- elif src_exists and tls_key_path_stats["stat"]["isreg"] -%}
+            {{-  tls_key_path -}}
+          {%- elif not src_exists or tls_key_path_stats["stat"]["isdir"] -%}
+            {%- if tls_key_path.endswith("/") %}
+              {{- tls_key_path }}{{ beegfs_ha_tls_config['common_name'] }}_tls_key.pem
+            {%- else -%}
+              {{- tls_key_path }}/{{ beegfs_ha_tls_config['common_name'] }}_tls_key.pem
+            {%- endif -%}
+          {%- endif -%}
+        beegfs_ha_tls_cert_src: |-
+          {%- set src_exists = tls_cert_path_stats["stat"]["exists"] -%}
+          {%- if '.' in (tls_cert_path | basename) %}
+            {{-  tls_cert_path -}}
+          {%- elif src_exists and tls_cert_path_stats["stat"]["isreg"] -%}
+            {{-  tls_cert_path -}}
+          {%- elif not src_exists or tls_cert_path_stats["stat"]["isdir"] -%}
+            {%- if tls_cert_path.endswith("/") %}
+              {{- tls_cert_path }}{{ beegfs_ha_tls_config['common_name'] }}_tls_cert.pem
+            {%- else -%}
+              {{- tls_cert_path }}/{{ beegfs_ha_tls_config['common_name'] }}_tls_cert.pem
+            {%- endif -%}
+          {%- endif -%}
+
+    - name: Ensure the directory exists for BeeGFS TLS cert file on Ansible control node.
+      ansible.builtin.file:
+        path: "{{ beegfs_ha_tls_cert_src | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Determine the TLS key and cert file's destination.
+      ansible.builtin.set_fact:
+        beegfs_ha_tls_key_dest: |-
+          {%- set src_filename = beegfs_ha_tls_key_src | basename -%}
+          {%- if '.' in (beegfs_ha_tls_key_dest_path | basename) %}
+            {{- beegfs_ha_tls_key_dest_path -}}
+          {%- elif beegfs_ha_tls_key_dest_path.endswith("/") -%}
+            {{- beegfs_ha_tls_key_dest_path }}{{ src_filename -}}
+          {%- else -%}
+            {{- beegfs_ha_tls_key_dest_path }}/{{ src_filename -}}
+          {%- endif -%}
+        beegfs_ha_tls_cert_dest: |-
+          {%- set src_filename = beegfs_ha_tls_cert_src | basename -%}
+          {%- if '.' in (beegfs_ha_tls_cert_dest_path | basename) %}
+            {{- beegfs_ha_tls_cert_dest_path -}}
+          {%- elif beegfs_ha_tls_cert_dest_path.endswith("/") -%}
+            {{- beegfs_ha_tls_cert_dest_path }}{{ src_filename -}}
+          {%- else -%}
+            {{- beegfs_ha_tls_cert_dest_path }}/{{ src_filename -}}
+          {%- endif -%}
+
+    - name: Set facts for tls_cert.yml
+      ansible.builtin.set_fact:
+        beegfs_ha_tls_config: "{{ beegfs_ha_tls_config_defaults | combine(beegfs_ha_tls_config_options) }}"
+        tls_san_conf_path: "{{ beegfs_ha_tls_cert_src | dirname }}/tls_san.cnf"
+
+    - name: Generate TLS private key
+      command: openssl genrsa -out "{{ beegfs_ha_tls_key_src }}" 4096
+      args:
+        creates: "{{ beegfs_ha_tls_key_src }}"
+
+    - name: Generate tls_san.cnf file on Ansible control node.
+      ansible.builtin.template:
+        src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'common/tls_san_conf.j2') }}"
+        dest: "{{ tls_san_conf_path }}"
+        mode: 0755
+      register: tls_san_conf_generated
+      when: (beegfs_ha_tls_config['alt_names'] | length) > 0
+
+    - name: Configure local CA.
+      ansible.builtin.include_tasks: tasks/install/services/ca_cert.yml
+      when: tls_san_conf_generated['changed']
+
+    - name: Generate TLS certificate signing request with SAN.
+      command: >
+        openssl req -new -batch -key "{{ beegfs_ha_tls_key_src }}"
+        -out "{{ tls_csr_path }}"
+        -config "{{ tls_san_conf_path }}"
+      when: tls_san_conf_generated['changed']
+
+    - name: Generate TLS certificate with local CA certificate.
+      command: >
+        openssl x509 -req -in "{{ tls_csr_path }}"
+        -CA "{{ ca_cert_path }}" -CAkey "{{ ca_key_path }}"
+        -CAcreateserial -out "{{ tls_cert_path }}"
+        -days 36500 -sha256
+        -extensions v3_ca -extfile "{{ tls_san_conf_path }}"
+      when: tls_san_conf_generated['changed']
+
+    - name: Get stats for BeeGFS TLS key file on Ansible control node.
+      ansible.builtin.stat:
+        path: "{{ beegfs_ha_tls_key_src }}"
+      register: tls_key_src_stat
+
+    - name: Get stats for BeeGFS TLS cert file on Ansible control node.
+      ansible.builtin.stat:
+        path: "{{ beegfs_ha_tls_cert_src }}"
+      register: tls_cert_src_stat
+
+    - name: Fail if BeeGFS TLS key and cert file is missing.
+      ansible.builtin.fail:
+        msg: "Unable to locate BeeGFS TLS key and cert file on Ansible control node at {{ beegfs_ha_tls_cert_src | dirname }}."
+      when:
+        - not (tls_cert_src_stat["stat"]["exists"] | bool)
+        - not (tls_key_src_stat["stat"]["exists"] | bool)
+
+- name: Ensure the directory exists for BeeGFS TLS cert file on the the BeeGFS cluster nodes.
+  ansible.builtin.file:
+    state: directory
+    path: "{{ beegfs_ha_tls_cert_dest | ansible.builtin.dirname }}"
+  become: true
+
+- name: Ensure BeeGFS cluster nodes have the expected TLS key file.
+  ansible.builtin.copy:
+    src: "{{ beegfs_ha_tls_key_src }}"
+    dest: "{{ beegfs_ha_tls_key_dest }}"
+  become: true
+  register: tls_key_copied
+
+- name: Ensure BeeGFS cluster nodes have the expected TLS cert file.
+  ansible.builtin.copy:
+    src: "{{ beegfs_ha_tls_cert_src }}"
+    dest: "{{ beegfs_ha_tls_cert_dest }}"
+  become: true
+  register: tls_cert_copied
+
+- name: Determine whether BeeGFS mgmtd service will needed to be restarted due to TLS cert changes.
+  ansible.builtin.set_fact:
+    beegfs_ha_force_restart_mgmtd_service: |-
+      {{ (beegfs_ha_force_restart_services or tls_key_copied['changed'] or tls_cert_copied['changed']) | bool }}

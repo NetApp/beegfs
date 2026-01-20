@@ -1,0 +1,178 @@
+# BeeGFS management service configuration file
+#
+# This file configures the BeeGFS management node and can be used as an alternative or together with
+# command line arguments. Command line arguments overwrite arguments specified here,
+# arguments specified here overwrite the internal defaults.
+#
+# The command line help might have more information on a specific setting. Run the management
+# binary with `--help` to display it.
+
+
+# Managements database file location.
+# db-file = "/var/lib/beegfs/mgmtd.sqlite"
+
+# The log target to use. Valid options are:
+#   "journald": Log to the systemd journal
+#   "stderr": Log to the standard error output
+# log-target = "journald"
+
+# The log level to use (valid are "error", "warn", "info", "debug", "trace").
+# log-level = "warn"
+
+
+### Connection ###
+
+# Sets the BeeMsg / "classic" port (TCP and UDP) to listen on.
+# beemsg-port = 8008
+
+# Sets the gRPC port to listen on.
+# grpc-port = 8010
+
+# Disables TLS for gRPC communication.
+# tls-disable = false
+
+# The PEM encoded .X509 certificate file that provides the identity of the gRPC server.
+# tls-cert-file = "/etc/beegfs/cert.pem"
+
+# The private key file belonging to the above certificate.
+# tls-key-file = "/etc/beegfs/key.pem"
+
+# Restricts network interfaces reported to other nodes for incoming BeeMsg communication.
+# The interfaces are reported in the given order. If not given, all suitable interfaces can be used.
+# interfaces = ["eth0", "eth1"]
+
+# Maximum number of outgoing connections per node.
+# connection-limit = 12
+
+# Disables requiring authentication (BeeMsg and gRPC).
+# auth-disable = false
+
+# The authentication file location.
+# auth-file = "/etc/beegfs/conn.auth"
+
+
+### General ###
+
+# Disables registration of new nodes and targets (clients excluded).
+# registration-disable = false
+
+# Defines after which time without contact a node/target is considered offline.
+# IMPORTANT: This setting must be the same on all nodes in the system, especially when using
+# mirroring.
+# node-offline-timeout = "180s"
+
+# Defines after which time without contact a client is considered gone and will be removed.
+# client-auto-remove-timeout = "30m"
+
+# Disables loading the license library. This disables all enterprise features.
+# license-disable = false
+
+# The BeeGFS license certificate file.
+# license-cert-file = "/etc/beegfs/license.pem"
+
+# The BeeGFS license library file.
+# license-lib-file = "/opt/beegfs/lib/libbeegfs_license.so"
+
+# Maximum number of blocking worker threads.
+# These are started on demand and kept running for some time in idle state before being dropped
+# again. Currently, they are only used for parallel database operations. Each thread uses its own
+# sqlite connection, meaning an extra open file. Therefore, this settings also limits the maximum
+# number of open sqlite files of the process. This setting only affects systems with high read
+# operation load and should usually be left alone.
+# max-blocking-threads = 128,
+
+
+### Quota ###
+
+# Enables quota data collection and checks.
+# Allows querying the state and setting limits (which do nothing without enforcement being enabled).
+# Causes higher system load.
+# quota-enable = false
+
+# Enables quota enforcement.
+# Exceeded IDs are calculated and pushed to the servers on a regular basis. Requires quota_enable =
+# true. Causes higher system load.
+# quota-enforce = false
+
+# Update interval of quota information.
+# Defines how often the management pulls the quota information from all storage nodes, calculates
+# the IDs that exceed the limits and reports them back to the server nodes.
+# quota-update-interval = 30
+
+# The following options specify the User/Group IDs to be fetched from storage services for quota
+# checking and enforcement. They are disabled by default and least one needs to be enabled for
+# quota enforcement having any effect. They can be mixed.
+
+# Defines the minimum id of the existing system users to be quota checked and enforced.
+# Note that this uses the users from the local machine the management is running on.
+# quota-user-system-ids-min = 1000
+
+# Loads the user ids to be quota queried and enforced from a file.
+# Ids must be numeric only and separated by any whitespace.
+# quota-user-ids-file = ""
+
+# Defines a range of user ids to be quota queried and enforced.
+# quota-user-ids-range = "1000-1100"
+
+# Same as above, but for group IDs
+
+# quota-group-system-ids-min = 1000
+# quota-group-ids-file = ""
+# quota-group-ids-range = "1000-1100"
+
+
+### Capacity pools ### 
+
+# Sets the limits / boundaries of the meta capacity pools. If changed, the whole block must
+# be uncommented and set. These cannot be lower than the cap-pool-dynamic-meta-limits below.
+# [cap-pool-meta-limits]
+# inodes-low = "10M"
+# inodes-emergency = "1M"
+# space-low = "10GiB"
+# space-emergency = "3GiB"
+
+# Enables dynamic meta capacity pools and sets the thresholds that determine which limits shall
+# be used. Disabled by default. If enabled, the whole block must be uncommented and set.
+# [cap-pool-dynamic-meta-limits]
+# inodes-normal-threshold = "10M"
+# inodes-low-threshold = "1M"
+# space-normal-threshold = "10GiB"
+# space-low-threshold = "3GiB"
+# inodes-low = "20M"
+# inodes-emergency = "2M"
+# space-low = "20GiB"
+# space-emergency = "6GiB"
+
+# Sets the limits / boundaries of the storage capacity pools. If changed, the whole block must
+# be uncommented and set. These cannot be lower than the cap-pool-dynamic-storage-limits below.
+# [cap-pool-storage-limits]
+# inodes-low = "10M"
+# inodes-emergency = "1M"
+# space-low = "512GiB"
+# space-emergency = "10GiB"
+
+# Enables dynamic storage capacity pools and sets the thresholds that determine which limits shall
+# be used. Disabled by default. If enabled, the whole block must be uncommented and set.
+# [cap-pool-dynamic-storage-limits]
+# inodes-normal-threshold = "10M"
+# inodes-low-threshold = "1M"
+# space-normal-threshold = "512GiB"
+# space-low-threshold = "10GiB"
+# inodes-low = "20M"
+# inodes-emergency = "2M"
+# space-low = "1024GiB"
+# space-emergency = "20GiB"
+
+# BEGIN ANSIBLE NETAPP_ESERIES MANAGED BLOCK
+
+{% for key, value in beegfs_ha_beegfs_mgmtd_conf.items() %}
+{%  if value is boolean %}
+{{ key }} = {{ value | lower }}
+{%  elif value is integer or (value | type_debug) == 'list'%}
+{{ key }} = {{ value }}
+{%  else %}
+{{ key }} = "{{ value }}"
+{%  endif %}
+{% endfor %}
+
+# END ANSIBLE NETAPP_ESERIES MANAGED BLOCK

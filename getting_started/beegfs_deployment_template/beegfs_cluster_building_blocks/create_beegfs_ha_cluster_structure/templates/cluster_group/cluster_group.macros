@@ -1,0 +1,102 @@
+{# =============================================================================
+    beegfs_services_by_block_node organizes BeeGFS service entries by their associated block nodes based on the value of storage_pool_per_eseries_storage:
+
+    1. When storage_pool_per_eseries_storage equals 1:
+        - It indicates that the BeeGFS service across all file nodes is managed by a single volume group on the block node.
+        - It iterates over all services in beegfs_services.
+        - It builds a dictionary (beegfs_services_by_block_node) where each key is a block node and the value is a list of the services associated with that block node.
+
+    2. Otherwise:
+        - It indicates that each file node's BeeGFS service is managed individually by a corresponding volume group on the block node.
+        - It determines the primary file node (the first file node listed in the service entries).
+        - It then iterates over all services but only processes those whose first file node matches the primary file node.
+============================================================================= #}
+{% macro beegfs_services_by_block_node(beegfs_services, resource_group_name, file_nodes_per_storage_pool) %}
+
+{%- set beegfs_services_by_block_node = {} %}
+{%- set beegfs_service_entries = beegfs_services[resource_group_name] %}
+{%- if file_nodes_per_storage_pool != 1 %}
+{%-   for beegfs_service, beegfs_service_value in beegfs_services.items() %}
+{%-     for block_node in beegfs_service_value['block_nodes'] %}
+{%-       if beegfs_services_by_block_node.get(block_node) %}
+{%-         if beegfs_services_by_block_node[block_node].append(beegfs_service) %}{% endif %}
+{%-       else %}
+{%-         if beegfs_services_by_block_node.update({block_node: [beegfs_service]}) %}{% endif %}
+{%-       endif %}
+{%-     endfor %}
+{%-   endfor %}
+{%- else %}
+{%-   set primary_file_node = beegfs_service_entries['file_nodes'] | first %}
+{%-   for beegfs_service, beegfs_service_value in beegfs_services.items() %}
+{%-     if primary_file_node == (beegfs_service_value['file_nodes'] | first) %}
+{%-       for block_node in beegfs_service_value['block_nodes'] %}
+{%-         if beegfs_services_by_block_node.get(block_node) %}
+{%-           if beegfs_services_by_block_node[block_node].append(beegfs_service) %}{% endif %}
+{%-         else %}
+{%-           if beegfs_services_by_block_node.update({block_node: [beegfs_service]}) %}{% endif %}
+{%-         endif %}
+{%-       endfor %}
+{%-     endif %}
+{%-   endfor %}
+{%- endif %}
+
+{{ beegfs_services_by_block_node }}
+
+{%- endmacro %}
+
+
+{% macro beegfs_service_ids(
+    block_node_beegfs_services,
+    beegfs_service_basenames
+) %}
+
+{%- set beegfs_service_ids = [] %}
+{%  for beegfs_service in block_node_beegfs_services %}
+{%    for basename in beegfs_service_basenames %}
+{%      if basename in beegfs_service %}
+{%        set beegfs_service_id = beegfs_service | regex_search('\d+$') | int %}
+{%        if beegfs_service_ids.append(beegfs_service_id) %}{% endif %}
+{%      endif %}
+{%    endfor %}
+{%  endfor %}
+
+{{ beegfs_service_ids }}
+
+{%- endmacro %}
+
+
+{% macro storage_pool_name(
+    block_node_beegfs_services,
+    beegfs_service_basenames,
+    volume_params,
+    storage_pool_index,
+    storage_pools_per_beegfs_service,
+    file_nodes_per_storage_pool
+) %}
+
+{%- set storage_pool_names = volume_params.get('storage_pool_names', []) %}
+{%  set beegfs_service_ids = beegfs_service_ids(
+      block_node_beegfs_services,
+      beegfs_service_basenames
+    ) | from_yaml %}
+
+{% if storage_pool_names %}
+{%  set storage_pool_name = storage_pool_names[storage_pool_index] %}
+{%  if file_nodes_per_storage_pool == 1 %}
+{%    set storage_pool_name = storage_pool_name ~ "_" ~ beegfs_service_ids | map('regex_replace', '^(.*)$', 's\\1') | join('_') %}
+{%  endif %}
+{% else %}
+{%  if 'meta' in beegfs_service_basenames or 'mgmt' in beegfs_service_basenames %}
+{%    set storage_pool_name = "beegfs_" ~ beegfs_service_ids | reject('equalto', 0) | map('regex_replace', '^(.*)$', 'm\\1') | join('_') %}
+{%  else %}
+{%    set storage_pool_name = "beegfs_" ~ beegfs_service_ids | map('regex_replace', '^(.*)$', 's\\1') | join('_') %}
+{%  endif %}
+
+{%- if storage_pools_per_beegfs_service > 1 %}
+{%    set storage_pool_name = storage_pool_name ~ "_vg" ~ storage_pool_index %}
+{%  endif %}
+{% endif %}
+
+{{ storage_pool_name }}
+
+{%- endmacro %}

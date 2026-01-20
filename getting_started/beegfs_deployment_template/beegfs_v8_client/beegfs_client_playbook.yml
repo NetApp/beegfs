@@ -1,0 +1,72 @@
+# BeeGFS client playbook. 
+
+# Playbook objective
+#
+# 1. Add local debian repo if applicable.
+# 2. Configure multihoming on Infiniband interfaces.
+# 3. Configure BeeGFS client services to communicate with BeeGFS clusters.
+# 4. Remove unnecessary package and service such as libbeegfs-ib, ibacm.
+# 5. Create symlink for beegfs-client.conf
+
+
+- name: Configure BeeGFS client
+  hosts: beegfs_clients
+  gather_facts: true
+  any_errors_fatal: true
+  become: true
+  vars_files:
+    - ../global_params/passwords.yml
+  pre_tasks:
+    - name: Ensure IPoIB is configured
+      vars:
+        eseries_ipoib_default_hook_templates:
+          - 99-multihoming.j2
+      import_role:
+        name: netapp_eseries.host.ipoib
+      when: eseries_ipoib_interfaces is defined
+
+    - name: Configure multi-homing if interfaces already setup.
+      block:
+        - name: Generate 99-multihoming file for Infiniband interfaces.
+          ansible.builtin.template:
+            src: templates/99-multihoming.j2
+            dest: /etc/network/if-up.d/99-multihoming-{{ item }}
+            owner: root
+            group: root
+            mode: '0755'
+          loop: "{{ beegfs_client_conn_interfaces }}"
+          notify:
+            - Bring down interfaces to apply changes
+            - Bring up interfaces to apply changes
+
+        - name: Create a symbolic link for 99-multihoming file in if-down.d
+          ansible.builtin.file:
+            src: /etc/network/if-up.d/99-multihoming-{{ item }}
+            dest: /etc/network/if-down.d/99-multihoming-{{ item }}
+            state: link
+          loop: "{{ beegfs_client_conn_interfaces }}"
+      when: eseries_ipoib_interfaces is not defined
+
+  roles:
+    - role: netapp_eseries.beegfs.beegfs_client
+
+  tasks:
+    - name: Uninstall libbeegfs-ib package
+      ansible.builtin.apt:
+        name: libbeegfs-ib
+        state: absent
+
+    - name: Stop and disable ibacm service
+      ansible.builtin.service:
+        name: ibacm
+        state: stopped
+        enabled: no
+
+  handlers:
+    - name: Bring down interfaces to apply changes
+      ansible.builtin.command: ifdown {{ item }}
+      loop: "{{ beegfs_client_conn_interfaces }}"
+
+    - name: Bring up interfaces to apply changes
+      ansible.builtin.command: ifup {{ item }}
+      loop: "{{ beegfs_client_conn_interfaces }}"

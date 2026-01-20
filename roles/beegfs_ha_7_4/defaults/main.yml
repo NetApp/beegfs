@@ -13,6 +13,7 @@ beegfs_ha_cluster_password: hapassword                    # BeeGFS HA cluster us
 beegfs_ha_cluster_password_sha512_salt: randomSalt        # BeeGFS HA cluster username's password salt
 beegfs_ha_mgmtd_group: mgmt                               # BeeGFS HA management resource group name
 # beegfs_ha_mgmtd_floating_ip:                            # (Required) BeeGFS HA management service IP address.
+beegfs_ha_netapp_path: /opt/netapp/beegfs/                # A directory for storing general NetApp files.
 beegfs_ha_cluster_node_ips: []                            # Defines an ordered list of IP addresses or hostnames with
                                                           #   the first having the highest priority. When
                                                           #   there are no IPs listed then the node names will be used.
@@ -36,7 +37,7 @@ beegfs_ha_conn_auth_dest_path: /etc/beegfs/   # Destination directory for beegfs
                                               #   authentication file. The file's name will be same as
                                               #   beegfs_ha_conn_auth_src_path when a file is specified or
                                               #   <beegfs_ha_mgmtd_floating_ip>_connAuthFile.
-beegfs_ha_conn_auth_secret:                   # This is the secret used in the connAuthFile. If used, consider using
+beegfs_ha_conn_auth_secret: ""                # This is the secret used in the connAuthFile. If used, consider using
                                               #   ansible-vault. When not specified and beegfs_ha_conn_auth_src_path
                                               #   file does not exist then a random secret will be generated.
 
@@ -76,6 +77,8 @@ beegfs_ha_pacemaker_cluster_node: true    # True to indicate the node should be 
                                           #   corosync 2 only supports 32 cluster nodes. (Default: true)
 beegfs_ha_pacemaker_enabled: false        # True to have pacemaker and corosync be started by systemd
                                           #   during the boot process; otherwise, false.
+beegfs_ha_pacemaker_conf_options:
+  LimitNOFILE: 65536
 beegfs_ha_filter_ip_ranges: []
 beegfs_ha_node_preference_scope_step: 200
 
@@ -234,6 +237,11 @@ beegfs_ha_required_sysctl_entries:
   net.ipv4.neigh.default.gc_thresh3: 2048
 
 
+## General BeeGFS Service Configuration
+beegfs_ha_fs_uuid_enabled: false          # When set to True, BeeGFS services will identify and manage filesystems
+                                          # using their unique UUIDs rather than device paths.
+
+
 ## BeeGFS Management Service Configuration
 beegfs_ha_beegfs_mgmtd_conf_path: /etc/beegfs/beegfs-mgmtd.conf   # Default BeeGFS management service
                                                                   #   configuration file path.
@@ -274,6 +282,7 @@ beegfs_ha_beegfs_meta_conf_default_options:               # Default metadata con
   sysTargetOfflineTimeoutSecs: 900    # This is required to avoid the mgmt service prematurely
                                       #   placing targets offline if the preferred meta/storage
                                       #   interface fails (ESOLA-116).
+  storeFsUUID: ""
 
 
 ## BeeGFS Storage Service Configuration
@@ -299,6 +308,7 @@ beegfs_ha_beegfs_storage_conf_default_options:                # Default storage 
   sysTargetOfflineTimeoutSecs: 900    # This is required to avoid the mgmt service prematurely
                                       #   placing targets offline if the preferred meta/storage
                                       #   interface fails (ESOLA-116).
+  storeFsUUID: ""
 
 
 ## Journald Logging Defaults
@@ -400,7 +410,7 @@ beegfs_ha_debian_repository_gpgkey: "https://www.beegfs.io/release/{{ beegfs_ver
 
 # RedHat / CentOS Repository
 beegfs_ha_rhel_repository_base_url: "https://www.beegfs.io/release/{{ beegfs_version }}/dists/{{ rhel_version }}"
-  
+
 beegfs_ha_rhel_repository_gpgkey: "https://www.beegfs.io/release/{{ beegfs_version }}/gpg/GPG-KEY-beegfs"
 
 # SUSE Repository

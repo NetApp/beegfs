@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+
+set -e
+
+
+## Usage Examples
+
+# Default (JSON-like):
+# ./connectx_hw.sh
+
+# Table format for all ConnectX interfaces:
+# ./connectx_hw --table
+
+# Table format for specific interfaces:
+# ./connectx_hw --table ib0 i1a
+
+# JSON-like for specific interfaces:
+# ./connectx_hw ib0 i1a
+
+
+print_header() {
+    printf "%-13s %-5s %-5s %-10s %-11s %-11s %-11s %-25s %s\n" \
+        "PCI_ADDR" "SLOT" "NUMA" "DEVICE" "MODEL" "LNKCAP" "LNKSTA" "VENDOR_SPEC" ""
+}
+
+print_table_row() {
+    local pci_addr="$1"
+    local slot="$2"
+    local numa="$3"
+    local device="$4"
+    local model="$5"
+    local lnkcap="$6"
+    local lnksta="$7"
+    local vendor_spec="$8"
+    printf "%-13s %-5s %-5s %-10s %-11s %-11s %-11s %-25s %s\n" \
+        "$pci_addr" "$slot" "$numa" "$device" "$model" "$lnkcap" "$lnksta" "$vendor_spec" ""
+}
+
+print_json_block() {
+    local iface="$1"
+    local ca_name="$2"
+    local model="$3"
+    local vendor_spec="$4"
+    local guid="$5"
+    local pci_addr="$6"
+    local slot="$7"
+    local numa="$8"
+    local ip_json="$9"
+    local dac_device="${10}"
+    local lnkcap="${11}"
+    local lnksta="${12}"
+    local link_layer="${13}"
+
+    echo "    \"$iface\": {"
+    echo "        \"ca_name\": \"$ca_name\","
+    echo "        \"model\": \"$model\","
+    echo "        \"vendor_spec\": \"$vendor_spec\","
+    echo "        \"guid\": \"0x$guid\","
+    echo "        \"pci_address\": \"$pci_addr\","
+    echo "        \"slot\": $slot,"
+    echo "        \"numa\": $numa,"
+    echo "        \"ip\": $ip_json,"
+    echo "        \"dac_device\": \"$(echo $dac_device)\","
+    echo "        \"lnkcap\": \"$lnkcap\","
+    echo "        \"lnksta\": \"$lnksta\","
+    echo "        \"link_layer\": \"$link_layer\""
+    echo "    }"
+}
+
+main() {
+    local output_format="json"
+    if [[ "$1" == "--table" ]]; then
+        output_format="table"
+        shift
+    fi
+
+    local user_ifaces=("$@")
+    local show_all=0
+{% raw %}
+    if [ ${#user_ifaces[@]} -eq 0 ]; then
+        show_all=1
+    fi
+{% endraw %}
+
+    if [[ "$output_format" == "json" ]]; then
+        echo "{"
+    elif [[ "$output_format" == "table" ]]; then
+        print_header
+    fi
+
+    local first_item=true
+
+    lshw -class net -businfo | grep 'ConnectX' | while read -r line; do
+        iface=$(echo "$line" | awk '{print $2}')
+
+        # If user specified interfaces, skip others
+        if [ "$show_all" -eq 0 ]; then
+            found=0
+            for user_iface in "${user_ifaces[@]}"; do
+                if [ "$iface" == "$user_iface" ]; then
+                    found=1
+                    break
+                fi
+            done
+            if [ "$found" -eq 0 ]; then
+                continue
+            fi
+        fi
+
+        bus_info=$(echo "$line" | awk '{print $1}')
+        model=$(echo "$line" | sed -n 's/.*\[\(ConnectX-[0-9]\+\)\].*/\1/p')
+        pci_addr=$(echo "$bus_info" | sed 's/pci@//')
+        guid=$(cat /sys/class/net/$iface/address 2>/dev/null | tr -d ':')
+        ca_name=$(ls /sys/class/net/$iface/device/infiniband/ 2>/dev/null)
+        phys_state=$(cat /sys/class/infiniband/$ca_name/ports/1/phys_state 2>/dev/null)
+        link_layer=$(cat /sys/class/infiniband/$ca_name/ports/1/link_layer 2>/dev/null)
+
+        lspci_out=$(lspci -vvv -s "$pci_addr")
+
+        slot=$(echo "$lspci_out" | grep "Physical Slot" | awk -F': ' '{print $2}')
+        numa=$(echo "$lspci_out" | grep -i  "numa node" | awk -F': ' '{print $2}')
+        lnkcap=$(echo "$lspci_out" | grep "LnkCap:" | sed -n 's/.*LnkCap:.*Speed \([^,]*\), Width \([^,]*\).*/\1 \2/p')
+        lnksta=$(echo "$lspci_out" | grep "LnkSta:" | sed -n 's/.*LnkSta:.*Speed \([^ ]*\).*Width \([^ ]*\).*/\1 \2/p')
+        vendor_spec=$(echo "$lspci_out" | grep '\[V0\] Vendor specific' | head -1 | sed 's/.*Vendor specific:[[:space:]]*//')
+
+        ip_list=$(ip -o -4 addr show "$iface" | awk '{print $4}' | xargs)
+        ip_json="[ $(echo "$ip_list" | sed 's/ /", "/g; s/^/"/; s/$/"/') ]"
+
+        dac_device=""
+        if echo "$phys_state" | grep -qi "linkup"; then
+            if echo "$link_layer" | grep -qi "infiniband"; then
+                iblinkinfo_output=$(iblinkinfo -C "$ca_name")
+
+                if ! echo "$iblinkinfo_output" | grep -qi "switch"; then
+                    dac_device=$(ibnetdiscover -C "$ca_name" | grep '^Ca' | grep -v "$ca_name" | sed -n 's/.*# "\(.*\)"/\1/p' | awk 'NR==1{a=$0; next} {print a " <==> " $0}')
+                fi
+            fi
+        fi
+
+        if [[ "$output_format" == "json" ]]; then
+            if [ "$first_item" = true ]; then
+                first_item=false
+            else
+                echo ","
+            fi
+
+            print_json_block "$iface" "$ca_name" "$model" "$vendor_spec" "$guid" "$pci_addr" "$slot" "$numa" "$ip_json" "$dac_device" "$lnkcap" "$lnksta" "$link_layer"
+        elif [[ "$output_format" == "table" ]]; then
+            print_table_row "$pci_addr" "$slot" "$numa" "$iface" "$model" "$lnkcap" "$lnksta" "$vendor_spec"
+        fi
+    done
+
+    if [[ "$output_format" == "json" ]]; then
+        echo "}"
+    fi
+}
+
+main "$@"

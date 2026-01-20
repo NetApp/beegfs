@@ -3,7 +3,7 @@
     name: beegfs-client
     state: stopped
   listen: "Restart BeeGFS Client"
-  when: not beegfs_client_dkms_install
+  when: not (beegfs_client_dkms_install | bool)
   become: true
 
 # This task will capture all BeeGFS mounts whereas if beegfs_client_mounts variable is relied on, it is possible for
@@ -47,7 +47,9 @@
     name: beegfs-helperd
     state: stopped
   listen: "Restart BeeGFS Client"
-  when: not beegfs_client_dkms_install
+  when:
+    - not (beegfs_client_dkms_install | bool)
+    - beegfs_tls_enabled is not defined
   become: true
 
 - name: Start BeeGFS Helper
@@ -55,7 +57,9 @@
     name: beegfs-helperd
     state: started
   listen: "Restart BeeGFS Client"
-  when: not beegfs_client_dkms_install
+  when:
+    - not (beegfs_client_dkms_install | bool)
+    - beegfs_tls_enabled is not defined
   become: true
 
 - name: Start BeeGFS Client
@@ -63,5 +67,5 @@
     name: beegfs-client
     state: started
   listen: "Restart BeeGFS Client"
-  when: not beegfs_client_dkms_install
+  when: not (beegfs_client_dkms_install | bool)
   become: true

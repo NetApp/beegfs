@@ -1,0 +1,16 @@
+{# =============================================================================
+   Set the first converged block node for BeeGFS management service
+   -----------------------------------------------------------------------------
+   - Retrieve the first block node from the list of converged block nodes.
+============================================================================= #}
+{%- set block_node = converged_block_nodes[0] %}
+
+      mgmt:
+        file_nodes:
+          {{ file_nodes | to_nice_yaml(indent=2) | trim() | indent(width=10, first=false) }}
+        block_nodes:
+          {{ [block_node] | to_nice_yaml(indent=2) | trim() | indent(width=10, first=false) }}
+        floating_ip_interfaces:
+          {{ fip_ifaces_by_block_nodes[block_node] | to_nice_yaml(indent=2) | trim() | indent(width=10, first=false) }}
+        owning_controller: A
+{{ "" }}

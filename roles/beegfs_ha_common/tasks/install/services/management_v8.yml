@@ -1,0 +1,159 @@
+# Determine expected BeeGFS HA management service information required for configuration.
+- name: Ensure BeeGFS license is installed.
+  vars:
+    beegfs_license_src: "{{ beegfs_ha_license_src }}"
+    beegfs_license_dest: "{{ beegfs_ha_license_dest }}"
+  ansible.builtin.include_tasks: license_cert.yml
+  when:
+    - beegfs_ha_license_enabled is defined
+    - beegfs_ha_license_enabled | bool
+
+- name: Ensure TLS certificate is installed.
+  ansible.builtin.include_tasks: tls_cert.yml
+  when:
+    - beegfs_ha_tls_enabled is defined
+    - beegfs_ha_tls_enabled | bool
+
+- name: Select details about management service.
+  ansible.builtin.set_fact:
+    mgmt_volume: "{{ management_info['volumes'][0] }}"
+    resource_group: "{{ management_info['resource_group'] }}"
+    floating_ips: "{{ management_info['floating_ips'] }}"
+    filter_ip_ranges: "{{ management_info['filter_ip_ranges'] | default(beegfs_ha_filter_ip_ranges) }}"
+
+- name: Select details about the management volume.
+  ansible.builtin.set_fact:
+    mgmt_volume_name: "{{ mgmt_volume['name'] }}"
+    mgmt_volume_mount_device: "{{ mgmt_volume['path'] }}"
+    mgmt_volume_format_type: "{{ mgmt_volume['metadata']['format_type'] }}"
+    mgmt_volume_mount_options: "{{ mgmt_volume['metadata']['mount_options'] }}"
+    mgmt_volume_mount: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}"
+    mgmt_config_path: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}/mgmt_config/"
+    mgmt_data_path: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}/data"
+
+- name: Set management interfaces.
+  ansible.builtin.set_fact:
+    mgmtd_interfaces: "{{ lookup('template', 'templates/common/connInterfacesFile_conf.j2', vars=item) | split('\n') }}"
+  loop: "{{ node_info['management'] }}"
+
+- name: Determine the required options for the beegfs-mgmt.toml file.
+  ansible.builtin.set_fact:
+    beegfs_ha_beegfs_mgmtd_conf_required_options:
+      auth-disable: "{{ (not beegfs_ha_conn_auth_enabled) }}"
+      auth-file: "{{ beegfs_ha_conn_auth_dest | default(omit) }}"
+      db-file: "{{ (mgmt_data_path ~ '/mgmtd.sqlite') }}"
+      license-disable: "{{ (not beegfs_ha_license_enabled) }}"
+      license-cert-file: "{{ beegfs_ha_license_dest }}"
+      tls-disable: "{{ (not beegfs_ha_tls_enabled) }}"
+      tls-cert-file: "{{ beegfs_ha_tls_cert_dest }}"
+      tls-key-file: "{{ beegfs_ha_tls_key_dest }}"
+      interfaces: "{{ mgmtd_interfaces | reject('equalto', '') | list }}"
+
+- name: "Create {{ mgmt_volume_mount }} directory as the mount point for the management volume."
+  ansible.builtin.file:
+    state: directory
+    path: "{{ mgmt_volume_mount }}"
+    mode: "0755"
+  become: true
+
+# This would catch if for some reason we remove earlier logic that prevents running this block against
+# a node that doesn't contain any "node_info['management']" instances which would return a confusing error.
+# It also helps us avoid trying to configure multiple management services on the same node, which is not
+# supported in current versions of BeeGFS.
+
+- name: Warn if there isn't exactly one management service configured for this node.
+  pause:
+    prompt:
+      WARNING! There is more than one BeeGFS management service in the inventory for this node OR we should
+      have skipped trying to configure the management service on this node, but earlier logic was removed that
+      would prevent this from happening. In either case it is recommended you terminate the deployment and
+      verify your inventory is correct. If your inventory is correct and you are still seeing this message,
+      please open a case with NetApp support before bypassing this warning and continuing the deployment.
+  when: node_info['management'] | length != 1
+
+# Ensure the BeeGFS HA management service configuration.
+- name: Ensure the BeeGFS HA management service is configured.
+  block:
+
+    # Ensure volumes are mounted to determine the BeeGFS HA management service configuration.
+    - name: Retrieve currently mounted volumes.
+      ansible.builtin.command:
+        cmd: mount
+        warn: "{{ omit if ansible_version.major >= 2 and ansible_version.minor >= 14 else false }}"
+      changed_when: false
+      register: current_mounted_volumes
+
+    - name: Mount management volume.
+      ansible.builtin.command:
+        cmd: "mount -t {{ mgmt_volume_format_type }} -o {{ mgmt_volume_mount_options }} {{ mgmt_volume_mount_device }} {{ mgmt_volume_mount }}"
+        warn: "{{ omit if ansible_version.major >= 2 and ansible_version.minor >= 14 else false }}"
+      register: management_volume_mount
+      when: not (volume_mounted | bool)
+      vars:
+        volume_mounted: |-
+          {%- set scratch = {"mounted": False} -%}
+          {%- for entry in current_mounted_volumes["stdout_lines"] if mgmt_volume_mount in entry -%}
+            {%- if scratch.update({"mounted": True}) -%}{%- endif -%}
+          {%- endfor -%}
+          {{- scratch["mounted"] -}}
+
+    - name: Ensure directory structure is configured on management configuration volume.
+      ansible.builtin.file:
+        state: directory
+        path: "{{ mgmt_volume['metadata']['mount_dir'] }}{{ mgmt_volume['name'] }}/{{ item }}"
+        mode: "0755"
+      loop: ["data", "mgmt_config"]
+
+    - name: Ensure beegfs-mgmtd.toml file is configured.
+      vars:
+        beegfs_ha_beegfs_mgmtd_conf: "{{ item['service_configuration_options'] | combine(beegfs_ha_beegfs_mgmtd_conf_required_options) }}"
+      ansible.builtin.template:
+        src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'management/beegfs_mgmtd_toml.j2') }}"
+        dest: "{{ mgmt_config_path }}beegfs-mgmtd.toml"
+        mode: "0644"
+      loop: "{{ node_info['management'] }}"
+      register: mgmtd_service_conf
+
+    - name: Initialize sqlite database for beegfs-mgmtd server daemon if not existed.
+      ansible.builtin.command:
+        cmd: "/opt/beegfs/sbin/beegfs-mgmtd --init --db-file {{mgmt_data_path}}/mgmtd.sqlite"
+        creates: "{{ mgmt_data_path ~ '/mgmtd.sqlite' }}"
+
+    - name: Restart the BeeGFS management service when changes have been made.
+      ansible.builtin.systemd:
+        name: beegfs-mgmtd.service
+        state: restarted
+      when:
+        - ansible_facts.services['beegfs-mgmtd.service']['state'] | default('') == 'running'
+        - mgmtd_service_conf['changed']
+
+    - name: Unmount management volume.
+      ansible.builtin.command: "umount {{ mgmt_volume_mount }}"
+      when: management_volume_mount['changed']
+  # This works because there should only ever be one BeeGFS management service running per cluster.
+  when: inventory_hostname == node_info['management'][0]['preferred_node_order'][0]
+  become: true
+
+# Update beegfs-mgmtd.service to point to beegfs-mgmtd.conf.
+- name: Override the default beegfs-mgmtd.service file.
+  ansible.builtin.template:
+    src: "{{ lookup('netapp_eseries.beegfs.eseries_template_path', 'management/beegfs_v8_mgmtd_service.j2') }}"
+    dest: /etc/systemd/system/beegfs-mgmtd.service
+    mode: "0644"
+  register: beegfs_mgmtd_service_override
+  become: true
+
+- name: Ensure BeeGFS management systemd service is up to date.
+  ansible.builtin.systemd:
+    name: beegfs-mgmtd.service
+    enabled: false
+    daemon_reload: "{% if beegfs_mgmtd_service_override['changed'] %}true{% else %}false{% endif %}"
+  register: beegfs_mgmtd_service
+  become: true
+
+- name: Restart BeeGFS management service.
+  ansible.builtin.systemd:
+    name: beegfs-mgmtd.service
+    state: restarted
+  when: beegfs_ha_force_restart_services | bool or beegfs_ha_force_restart_mgmtd_service | bool or beegfs_mgmtd_service['changed'] | bool
+  become: true

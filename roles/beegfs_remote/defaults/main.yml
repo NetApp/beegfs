@@ -1,0 +1,197 @@
+---
+# Forces upgrade of beegfs-remote package if set to true.
+# Type: boolean
+# Example: true
+beegfs_remote_force_upgrade: false
+
+# Path where beegfs_remote configurations are stored.
+# Type: string
+# Example: /etc/beegfs/beegfs_remote/
+beegfs_remote_config_path: /etc/beegfs/beegfs_remote/
+
+# Enables TLS encryption for beegfs-client, beegfs-sync, beegfs-remote in BeeGFS v8.
+# Type: boolean
+# Example: true
+beegfs_tls_enabled: true
+
+# Path to the CA certificate used for BeeGFS TLS encryption.
+# Type: string
+# Example: files/beegfs/beegfs_remote/local_ca_cert.pem
+beegfs_ca_cert_src_path: files/beegfs/beegfs_remote/local_ca_cert.pem
+
+# Path to the CA private key used for BeeGFS TLS encryption.
+# Type: string
+# Example: files/beegfs/beegfs_remote/local_ca_key.pem
+beegfs_ca_key_src_path: files/beegfs/beegfs_remote/local_ca_key.pem
+
+# Source directory for TLS certificate files.
+# Type: string
+# Example: files/beegfs/
+beegfs_remote_tls_cert_src_path: files/beegfs/
+
+# Source directory for TLS private key files.
+# Type: string
+# Example: files/beegfs/
+beegfs_remote_tls_key_src_path: files/beegfs/
+
+# Override beegfs_remote_tls_config_defaults parameters.
+# Type: dict
+# Example: { common_name: "custom.example.com" }
+beegfs_remote_tls_config_options: {}
+
+# Default TLS certificate parameters.
+# Type: dict
+# Example:
+# beegfs_remote_tls_config_defaults:
+#   common_name: netapp.com
+#   alt_names:
+#     - beegfs-mgmt.example.com
+#     - 192.168.1.100
+beegfs_remote_tls_config_defaults:
+  # Common Name (CN) for the TLS certificate.
+  # Type: string
+  # Example: beegfs_remote.netapp.com
+  common_name: beegfs_remote.netapp.com
+
+  # List of Subject Alternative Names (SANs) such as IP or DNS.
+  # Type: list
+  # Example:
+  #   - beegfs-mgmt.example.com
+  #   - 192.168.1.100
+  # NOTE: If the alt_names list contains any values, a self-signed certificate and key will be generated.
+  # The generated files will be named according to beegfs_tls_cert_src_path and beegfs_tls_key_src_path.
+  # If alt_names is empty, files specified by beegfs_tls_cert_src_path and beegfs_tls_key_src_path must already exist.
+  alt_names:
+    - "{{ ansible_host }}"
+
+# BeeGFS version to install.
+# Type: string
+# Example: "beegfs_8.1"
+beegfs_version: "beegfs_8.2"
+
+# RHEL/CentOS version for repository URLs.
+# Type: string
+# Example: "rhel9"
+rhel_version: "rhel9"
+
+# SUSE version for repository URLs.
+# Type: string
+# Example: "sles15"
+sles_version: "sles15"
+
+# Debian / Ubuntu repository base URL.
+# Type: string
+# Example: "https://www.beegfs.io/release/beegfs_8.1.0"
+beegfs_ha_debian_repository_base_url: "https://www.beegfs.io/release/{{ beegfs_version }}"
+
+# Debian / Ubuntu repository GPG key URL.
+# Type: string
+# Example: "https://www.beegfs.io/release/beegfs_8.1.0/gpg/GPG-KEY-beegfs"
+beegfs_ha_debian_repository_gpgkey: "https://www.beegfs.io/release/{{ beegfs_version }}/gpg/GPG-KEY-beegfs"
+
+# RedHat / CentOS repository base URL.
+# Type: string
+# Example: "https://www.beegfs.io/release/beegfs_8.1.0/dists/rhel9"
+beegfs_ha_rhel_repository_base_url: "https://www.beegfs.io/release/{{ beegfs_version }}/dists/{{ rhel_version }}"
+
+# RedHat / CentOS repository GPG key URL.
+# Type: string
+# Example: "https://www.beegfs.io/release/beegfs_8.1.0/gpg/GPG-KEY-beegfs"
+beegfs_ha_rhel_repository_gpgkey: "https://www.beegfs.io/release/{{ beegfs_version }}/gpg/GPG-KEY-beegfs"
+
+# Allow unsupported SUSE modules.
+# Type: boolean
+# Example: true
+beegfs_ha_suse_allow_unsupported_module: true
+
+# SUSE repository base URL.
+# Type: string
+# Example: "https://www.beegfs.io/release/beegfs_8.1.0/dists/sles15"
+beegfs_ha_suse_repository_base_url: "https://www.beegfs.io/release/{{ beegfs_version }}/dists/{{ sles_version }}"
+
+# SUSE repository GPG key URL.
+# Type: string
+# Example: "https://www.beegfs.io/release/beegfs_8.1.0/gpg/GPG-KEY-beegfs"
+beegfs_ha_suse_repository_gpgkey: "https://www.beegfs.io/release/{{ beegfs_version }}/gpg/GPG-KEY-beegfs"
+
+# Override beegfs_remote_config_defaults parameters.
+# Type: dict
+# Example: { mount-point: "/mnt/custom_beegfs" }
+beegfs_remote_config_options: {}
+
+# Defines the default configuration for beegfs-remote service.
+# Type: dict
+# Example:
+# beegfs_remote_config_defaults:
+#   mount-point: /mnt/beegfs_remote_sync
+#   management:
+#     address: beegfs_mgmtd_ip:8010
+#     auth-file: /etc/beegfs/conn.auth
+#     tls-cert-file: /etc/beegfs/cert.pem
+#     tls-disable-verification: false
+#     tls-disable: false
+#   log:
+#     level: 3
+#     type: syslog
+#   server:
+#     address: beegfs_remote_ip:9010
+#     tls-cert-file: /etc/beegfs/beegfs_remote/beegfs_remote_cert.pem
+#     tls-key-file: /etc/beegfs/beegfs_remote/beegfs_remote_key.pem
+#     tls-disable: false
+#   job:
+#     path-db: /var/lib/beegfs/remote/path.badger
+#   workers:
+#     - id: 1
+#       name: beesync-01
+#       type: beesync
+#       address: beegfs_sync_ip:9011
+#       tls-cert-file: /etc/beegfs/beegfs_sync/beegfs_sync_cert.pem
+#       tls-disable-verification: false
+#       tls-disable: false
+#   remote-storage-targets:
+#     - id: 1
+#       name: storageGRID
+#       policies:
+#         FastStartMaxSize: 104857600
+#       s3.endpoint-url: http://sgdemo.netapp.com:10444
+#       s3.region: us-east-1
+#       s3.bucket: beegfs-export
+#       s3.access-key: access_key
+#       s3.secret-key: secret_key
+beegfs_remote_config_defaults:
+  # Local mount point for BeeGFS.
+  mount-point: /mnt/beegfs_remote_sync
+
+  # Settings for beegfs-mgmtd service.
+  management:
+    # Management daemon address and port.
+    address: "{{ beegfs_ha_mgmtd_floating_ip }}:8010"
+    # connAuth file from beegfs-mgmtd service.
+    auth-file: "/etc/beegfs/conn.auth"
+    # CA certificate file for beegfs-mgmtd service certificate.
+    tls-cert-file: "/etc/beegfs/cert.pem"
+    # Disable verification of TLS certificates.
+    tls-disable-verification: "{{ not beegfs_tls_enabled }}"
+    # Disable TLS for management connection.
+    tls-disable: "{{ not beegfs_tls_enabled }}"
+
+  # Logging configuration.
+  log:
+    level: 3
+    type: syslog
+
+  # Define configuration for beegfs-remote server.
+  server:
+    # The IP address and port where the server will listen, formatted like 0.0.0.0:0000.
+    address: "{{ ansible_host }}:9010"
+    # Certificate file from beegfs-remote service.
+    tls-cert-file: /etc/beegfs/beegfs_remote/beegfs_remote_cert.pem
+    # Key file from beegfs-remote service.
+    tls-key-file: /etc/beegfs/beegfs_remote/beegfs_remote_key.pem
+    # Disable TLS for the remote server.
+    tls-disable: "{{ not beegfs_tls_enabled }}"
+
+  # Job database configuration.
+  job:
+    # Path to the job database.
+    path-db: /var/lib/beegfs/remote/path.badger

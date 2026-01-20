@@ -1,0 +1,51 @@
+- name: Set MOFED facts.
+  set_fact:
+    basename: "{{ nvidia_driver_settings.filenames[0] | regex_replace('(\\.[^.]+)$','') }}"
+    mofed_dependencies:
+      - perl
+      - gcc-gfortran
+      - tk
+      - lsof
+      - libusbx
+
+- name: Get stats of {{ basename }}
+  ansible.builtin.stat:
+    path: /tmp/{{ basename }}
+  register: stat_result
+  changed_when: true
+  notify:
+    - Validate kernel
+
+- name: Extract {{ nvidia_driver_settings.filenames[0] }}
+  ansible.builtin.unarchive:
+    src: "{{ nvidia_driver_settings.driver_fw_url }}/{{ nvidia_driver_settings.filenames[0] }}"
+    dest: /tmp/
+    remote_src: yes
+  when: not (stat_result.stat.exists | bool)
+
+- name: Install Perl, gcc-gfortran, and tk for MOFED installation
+  ansible.builtin.yum:
+    name: "{{ mofed_dependencies }}"
+    state: present
+
+- name: Install MOFED in {{ basename }} with external HCA FW. The process can take up to 1 hour to complete.
+  ansible.builtin.command:
+    cmd: ./mlnxofedinstall --with-nvmf -q --fw-image-dir {{ nvidia_hca_settings.hca_url }}
+    chdir: /tmp/{{ basename }}
+  when: nvidia_hca_settings.hca_url is defined
+
+- name: Install MOFED in {{ basename }} with default HCA FW
+  ansible.builtin.command:
+    cmd: ./mlnxofedinstall --with-nvmf -q
+    chdir: /tmp/{{ basename }}
+  when: nvidia_hca_settings.hca_url is not defined
+
+- name: Update initramfs
+  ansible.builtin.command:
+    cmd: dracut -f
+
+- name: Reboot host to apply new changes.
+  ansible.builtin.reboot:
+    test_command: "systemctl is-active default.target"
+    reboot_timeout: 3600
+    post_reboot_delay: 120
