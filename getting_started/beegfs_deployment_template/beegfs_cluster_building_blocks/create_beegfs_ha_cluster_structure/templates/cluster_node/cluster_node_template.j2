@@ -1,0 +1,123 @@
+{% import 'template_macros.j2' as template_macros %}
+
+{%- set resource_group_name = item -%}
+# {{ resource_group_name }} - BeeGFS HA node resource
+
+# Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+
+{#- =============================================================================
+   Extract the initiator protocol, cluster node IP start, and management IP start.
+============================================================================= #}
+{%- set protocol = eseries_storage_settings['eseries_initiator_protocol'] %}
+{%- set beegfs_ha_cluster_node_ip_start = file_node_settings['cluster_node_ip_start'] %}
+{%- set mgmt_ip_start = file_node_settings['mgmt_ip_start'] %}
+
+{#- Extract the numeric node_id from resource_group_name. #}
+{% set node_id = resource_group_name | regex_search('\d+$') | int -%}
+
+
+{#- =============================================================================
+   Build the Building Block Dictionary
+   -----------------------------------------------------------------------------
+   - Iterate through cluster_facts for the current cluster.
+   - Update the building_block dictionary if resource_group_name is found in file_nodes.
+============================================================================= #}
+{%- set building_block = {} %}
+{%- for building_block_name, building_block_data in cluster_facts[cluster_name].items() %}
+{%    if resource_group_name in building_block_data['file_nodes'] %}
+{%      if building_block.update(building_block_data) %}{% endif %}
+{%    endif %}
+{%  endfor %}
+
+
+{# =============================================================================
+   Generate Cluster Node IP Network List
+   -----------------------------------------------------------------------------
+   - For each starting IP address in beegfs_ha_cluster_node_ip_start:
+        Compute the network address by keeping the first three octets.
+        Extract the host address (the fourth octet) as an integer.
+        If there are multiple starting IP addresses, adjust the host address based on node_id.
+        If there is only one starting IP, generate two host addresses for redundancy.
+        Append the constructed full IP addresses to beegfs_ha_cluster_node_ip_network.
+============================================================================= #}
+{%- set beegfs_ha_cluster_node_ip_network = [] -%}
+{%- for start_ip_address in beegfs_ha_cluster_node_ip_start -%}
+  {%- set network_address = start_ip_address | regex_replace('(.*)\\.\\d+$', '\\1.') %}
+  {%- set host_address = start_ip_address | regex_replace('(.*)\\.(\\d+)$', '\\2') | int %}
+  {%- if beegfs_ha_cluster_node_ip_start | length > 1 -%}
+    {%- set host_address = host_address - 1 + node_id -%}
+    {{ beegfs_ha_cluster_node_ip_network.append(network_address ~ host_address) }}
+  {%- elif beegfs_ha_cluster_node_ip_start | length == 1 -%}
+    {%- set host_address_1 = host_address + (2 * (node_id - 1)) -%}
+    {%- set host_address_2 = host_address + 1 + (2 * (node_id - 1)) -%}
+    {%- if beegfs_ha_cluster_node_ip_network.append(network_address ~ host_address_1) %}{% endif %}
+    {%- if beegfs_ha_cluster_node_ip_network.append(network_address ~ host_address_2) %}{% endif %}
+  {%- endif -%}
+{%- endfor -%}
+
+{% set mgmt_ip = hostvars[resource_group_name]['ansible_host'] %}
+{% if mgmt_ip is defined -%}
+ansible_host: {{ mgmt_ip -}}
+{% elif mgmt_ip_start is defined -%}
+ansible_host: {{ template_macros.calc_ip_address(mgmt_ip_start, node_id) }}
+{%- else -%}
+ansible_host: <SSH_IP_ADDRESS_OR_HOSTNAME>
+{% endif %}
+
+{% raw -%}
+ansible_ssh_user: "{{ ssh_ha_user }}"
+ansible_become_password: "{{ ssh_ha_become_pass }}"
+{% endraw %}
+
+
+# Defines an order list of IP addresses or hostnames with the first having the highest priority.
+# When there are no listed IPs then node name will be used. Node names are defined in /etc/hosts.
+# Cluster node IPs for Pacemaker to communicate with each other.
+beegfs_ha_cluster_node_ips:
+{%- raw %}
+  - "{{ ansible_host }}"
+{% endraw %}
+{% for cluster_node_ip_address in beegfs_ha_cluster_node_ip_network %}
+  - {{ cluster_node_ip_address }}
+{% endfor %}
+
+{%- if resource_group_name in file_node_names %}
+
+{%- if protocol == "fc" %}
+# FCP storage communication protocol information
+# No required variables!
+# Reference https://github.com/netappeseries/host/blob/master/roles/fc/README.md for other available options.
+
+{%- elif protocol == "ib_iser" %}
+
+{% include 'cluster_node_protocol/cluster_node_ib_iser_template.j2' %}
+
+{%- elif protocol == "ib_srp" %}
+# InfiniBand SRP storage communication protocol information
+# No required variables!
+# Reference https://github.com/netappeseries/host/blob/master/roles/ib_srp/README.md for other available options.
+
+{%- elif protocol == "iscsi" %}
+
+{% include 'cluster_node_protocol/cluster_node_iscsi_template.j2' %}
+
+{%- elif protocol == "nvme_fc" %}
+# NVMe over Fibre Channel storage communication protocol information
+# No required variables!
+# Reference https://github.com/netappeseries/host/blob/master/roles/nvme_fc/README.md for other available options.
+
+{%- elif protocol == "nvme_ib" %}
+
+{% include 'cluster_node_protocol/cluster_node_nvme_ib_template.j2' %}
+
+{%- elif protocol == "nvme_roce" %}
+
+{% include 'cluster_node_protocol/cluster_node_nvme_roce_template.j2' %}
+
+{%- else %}
+
+{% include 'cluster_node_protocol/cluster_node_undefined_protocol_template.j2' %}
+
+{% endif %}
+{% endif %}

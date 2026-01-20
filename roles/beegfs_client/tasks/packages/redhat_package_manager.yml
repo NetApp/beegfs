@@ -1,0 +1,28 @@
+- name: "Add public BeeGFS yum repo"
+  ansible.builtin.yum_repository:
+    name: beegfs
+    description: "BeeGFS Public yum Repo"
+    file: beegfs_rhel
+    baseurl: "{{ beegfs_ha_rhel_repository_base_url }}"
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: "{{ beegfs_ha_rhel_repository_gpgkey }}"
+  when: yum_repos is not defined
+
+- name: "Add custom yum repositories"
+  ansible.builtin.yum_repository:
+    name:           "{{ item.key }}"
+    file:           "{{ item.key }}"
+    description:    "{{ item.value.description  | default(item.key) }}"
+    baseurl:        "{{ item.value.url }}"
+    enabled:        "{{ item.value.enabled      | default(true) }}"
+    gpgcheck:       "{{ item.value.gpgcheck     | default(true) }}"
+    gpgkey:         "{{ item.value.gpgkey       | default(omit) }}"
+    sslverify:      "{{ item.value.sslverify    | default(true) }}"
+    repo_gpgcheck:  "{{ item.value.repo_gpgcheck | default(false) }}"
+    priority:       "{{ item.value.priority     | default(1) }}"
+  loop: "{{ yum_repos | dict2items }}"
+  when: yum_repos is defined
+
+- name: yum-clean-metadata
+  ansible.builtin.command: yum clean metadata

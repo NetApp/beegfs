@@ -1,0 +1,56 @@
+# BeeGFS client inventory. 
+
+all:
+  children:
+    beegfs_clients:
+      hosts:
+        dgx_01:     # dgx_01 is a hostname.
+        # dgx_XX:
+      vars:
+        beegfs_ha_mgmtd_floating_ip: 100.1.10.1
+        beegfs_version: beegfs_7.4.5
+        eseries_ip_manager_tools:
+          - ifupdown
+
+        # # Uncomment this parameter to add local repo base URL.
+        # repo_base_url: http://10.11.13.15/Internal    # example
+        # repo_base_url: <USER_INPUT>
+
+        # # Uncomment this parameter to add local repo for OS distro.
+        # local_debian_repo_url: "{{ repo_base_url }}/os_distro/ubuntu_22.04/"   # example.
+        # local_debian_repo_url: <USER_INPUT>
+
+        # # Uncomment this block to add local repo for BeeGFS distro.
+        # beegfs_ha_debian_repository_base_url: "{{ repo_base_url }}/beegfs/{{ beegfs_version }}"       # example
+        # beegfs_ha_debian_repository_base_url: <USER_INPUT>
+        # beegfs_ha_debian_repository_gpgkey: "{{ beegfs_ha_debian_repository_base_url }}/gpg/GPG-KEY-beegfs"
+
+        # OPTION 1: If you're using the Mellanox OFED drivers and they are already installed.
+        eseries_ib_skip: true                     # Skip installing inbox OFED drivers. Use currently installed OFED.
+        beegfs_client_ofed_enable: true           # Default: False
+
+        # # Path of installed MOFED
+        beegfs_client_ofed_include_path: "/usr/src/ofa_kernel/default/include"
+
+        beegfs_client_mounts:
+          - sysMgmtdHost: "{{ beegfs_ha_mgmtd_floating_ip }}"
+            mounted: true          
+            mount_point: /mnt/beegfs              # Can be set to another mount point.
+            connAuthFile_src: |-
+              {{ playbook_dir | dirname }}/beegfs_cluster_building_blocks/playbooks/files/beegfs/{{ beegfs_ha_mgmtd_floating_ip }}_connAuthFile
+            connInterfaces:
+              - ibp170s0f0                  # Name of Infiniband interface designated for BeeGFS communication.
+              - ibp48s0f0
+            beegfs_client_config:
+              connClientPortUDP: 8004
+              connMaxInternodeNum: 128      # Maximum number of connections to the same node.
+              connMaxConcurrentAttempts: 4  # Maximum number of simultaneous connections to the same node.
+              connRDMABufNum: 36            # Allocates the number of buffers for transferring IO.
+              connRDMABufSize: 65536        # Size of each allocated RDMA buffer 
+              tuneFileCacheType: native
+              tuneFileCacheBufSize: "2097152"
+              connFallbackExpirationSecs: 90
+              connCommRetrySecs: 600
+              sysSessionChecksEnabled: false    # Set to 'false' when deploying in shared disk HA environments.
+              connRDMAInterfacesFile: "/etc/beegfs/{{ beegfs_ha_mgmtd_floating_ip }}_8004_connInterfaces.conf"
+              sysMountSanityCheckMS: 11000

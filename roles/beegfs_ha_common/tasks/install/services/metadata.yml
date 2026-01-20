@@ -90,6 +90,7 @@
       {%- set metadata_directory = item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/data" -%}
       {%- set required_options = {"sysMgmtdHost": management_info["resource_group"],
                                   "storeMetaDirectory": metadata_directory,
+                                  "storeFsUUID": item["volumes"][0]["fs_uuid"],
                                   "connInterfacesFile": item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/metadata_config/connInterfacesFile.conf",
                                   "connDisableAuthentication": not beegfs_ha_conn_auth_enabled,
                                   "logStdFile": "/var/log/beegfs-meta-" ~ item["volumes"][0]["name"] ~ ".log"} -%}
@@ -172,7 +173,7 @@
   ansible.builtin.systemd:
     name: "beegfs-meta@{{ item['volumes'][0]['name'] }}"
     enabled: false
-    daemon_reload: "{% if beegfs_meta_service_override['changed'] %}true{% else %}false{% endif %}"
+    daemon_reload: "{% if beegfs_meta_service_override['changed'] | bool %}true{% else %}false{% endif %}"
   loop: "{{ node_info['metadata'] }}"
   become: true
 
@@ -181,5 +182,5 @@
     name: "beegfs-meta@{{ item['volumes'][0]['name'] }}"
     state: restarted
   loop: "{{ node_info['metadata'] }}"
-  when: beegfs_ha_force_restart_services
+  when: beegfs_ha_force_restart_services | bool
   become: true

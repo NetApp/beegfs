@@ -1,4 +1,4 @@
-{% for host in groups[beegfs_ha_ansible_cluster_group] if (hostvars[host]["beegfs_ha_pacemaker_cluster_node"] | default(beegfs_ha_pacemaker_cluster_node)) == False %}
+{% for host in groups[beegfs_ha_ansible_cluster_group] if (hostvars[host].get("beegfs_ha_pacemaker_cluster_node", beegfs_ha_pacemaker_cluster_node)) is not truthy %}
 <primitive class="ocf" id="{{ host }}" provider="pacemaker" type="remote">
   <operations>
     <op id="remote-node-{{ host }}-migrate_from" interval="0s" name="migrate_from" timeout="60"/>

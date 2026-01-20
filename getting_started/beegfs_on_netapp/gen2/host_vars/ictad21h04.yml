@@ -1,9 +1,0 @@
-# BeeGFS Client
-ansible_host: "<MANAGEMENT_IP>"
-
-# OPTIONAL: If you want to use the NetApp E-Series Host Collection’s IPoIB role to configure InfiniBand interfaces for clients to connect to BeeGFS file systems:
-eseries_ipoib_interfaces:
-  - name: ibs1f0
-    address: 100.127.1.4/16
-  - name: ibs4f0
-    address: 100.128.1.4/16

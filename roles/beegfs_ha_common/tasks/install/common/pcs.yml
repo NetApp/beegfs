@@ -35,3 +35,9 @@
     state: '{%- if pcs_cluster_password["changed"] == true or pcs_users_conf["changed"] == true or pcs_known_hosts["changed"] == true -%}restarted{%- else -%}started{% endif %}'
     enabled: true
   become: true
+
+- name: Authenticate cluster nodes with pcsd service.
+  ansible.builtin.command:
+    cmd: pcs host auth {{ groups[beegfs_ha_ansible_cluster_group] | join(' ') }} -u {{ beegfs_ha_cluster_username }} -p {{ beegfs_ha_cluster_password }}
+  become: true
+  no_log: true

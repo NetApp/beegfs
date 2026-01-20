@@ -1,0 +1,22 @@
+##- BeeGFS Client Server 1
+
+##- Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+# ansible_host: 10.25.12.1    # Example
+ansible_host: <USER_INPUT>
+
+ansible_ssh_user: "{{ ssh_client_user }}"
+ansible_become_password: "{{ ssh_client_become_pass }}"
+
+##- Configure the following sections depending on the protocol used for BeeGFS services.
+##- For example: IPoIB protocol is used for the following sections.
+
+##- Uncomment to set IP addresses for client Infiniband interfaces to communicate with BeeGFS services.
+# eseries_ipoib_interfaces:
+#   - name: ibp170s0f0                # Name of Infiniband interface designated for BeeGFS communication.
+#     address: "100.1.1.1/16"
+#   - name: ibp48s0f0
+#     address: "100.1.2.1/16"
+
+
+# Reference https://github.com/netappeseries/host/blob/master/roles/nvme_ib/README.md for other available options.

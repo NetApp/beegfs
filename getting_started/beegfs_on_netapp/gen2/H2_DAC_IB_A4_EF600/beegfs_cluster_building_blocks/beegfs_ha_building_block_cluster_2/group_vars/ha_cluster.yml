@@ -1,0 +1,160 @@
+### ha_cluster Ansible group inventory file. Place all default/common variables for BeeGFS HA cluster resources below.
+
+### Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+
+
+########################
+### General settings ###
+########################
+
+### Set eseries_common_allow_host_reboot to True to instruct Ansible to auto-reboot nodes when required.
+eseries_common_allow_host_reboot: true
+
+### BeeGFS management service IP address.
+beegfs_ha_mgmtd_floating_ip: 100.1.10.1
+
+### (Optional) Constrains the BeeGFS subnet.
+# beegfs_ha_filter_ip_ranges:
+#   - 192.168.2.0/24
+
+
+
+###########################
+### Infiniband settings ###
+###########################
+
+### This is required when configuring additional static IPs when multiple IB ports are in the same IPoIB subnet.
+### i.e: use case such as cluster IPs, multirail, single subnet, etc.
+eseries_ipoib_default_hook_templates:
+  - 99-multihoming.j2
+
+eseries_common_reboot_test_command: "! systemctl status eseries_nvme_ib.service || systemctl --state=exited | grep eseries_nvme_ib.service"
+
+### Enable virtual connections between BeeGFS servers and storage array.
+### This feature is only available in opensm package from MOFED.
+### These files can be downloaded from: https://linux.mellanox.com/public/repo/mlnx_ofed/
+### Install the following packages if using inbox OFED. ex: 
+###   - opensm-libs-5.9.0.MLNX20210617.c9f2ade-0.1.54103.x86_64.rpm
+###   - opensm-5.9.0.MLNX20210617.c9f2ade-0.1.54103.x86_64.rpm
+eseries_ib_opensm_options:
+  virt_enabled: "2"
+  virt_max_ports_in_process: "0"
+
+
+
+#################################
+### Performance Configuration ###
+#################################
+
+beegfs_ha_enable_performance_tuning: true
+
+tune_performance_sysctl:
+  vm.swappiness: 0
+
+tune_performance_sysctl_rhel_amd:
+  type: sysctl
+  uname_regex: x86_64
+  cpuinfo_regex: ${amd_cpuinfo_regex}
+
+
+
+##############################
+### Security Configuration ###
+##############################
+
+### firewalld ports automatically opened for all deployed services if set beegfs_ha_firewall_configure to True.
+beegfs_ha_firewall_configure: true
+eseries_beegfs_ha_disable_selinux: true
+eseries_selinux_state: disabled
+beegfs_ha_conn_auth_enabled: true
+
+
+
+#############################
+### Fencing configuration ###
+#############################
+
+beegfs_ha_cluster_crm_config_options:
+  ##- Determines if fencing (STONITH) is globally enabled or disabled.
+  stonith-enabled: true
+
+
+### To discover the fencing agent parameters:
+###   1) Search the BeeGFS HA node's package manager for fence- for your device and install it.
+###   2) Run 'man -w -I --wildcard fence_*' to get the manual page name for the need fencing agent.
+###   3) Use man to view the manual entry which contains the needed parameters (ie man fence_apc).
+###   4) Define any required parameters from the section entitled 'STDIN PARAMETERS'.
+
+### To enable fencing using the Redfish APIs provided by the Lenovo XCC (and other BMCs):
+redfish: &redfish
+  username: "{{ bmc_username }}"
+  password: "{{ bmc_password }}"
+  ssl_insecure: 1
+
+beegfs_ha_fencing_agents:
+  fence_redfish:
+    - pcmk_host_list: beegfs_07
+      ip: 10.25.9.94
+      <<: *redfish
+    - pcmk_host_list: beegfs_08
+      ip: 10.25.9.95
+      <<: *redfish
+    - pcmk_host_list: beegfs_09
+      ip: 10.25.9.96
+      <<: *redfish
+    - pcmk_host_list: beegfs_10
+      ip: 10.25.9.97
+      <<: *redfish
+    - pcmk_host_list: beegfs_11
+      ip: 10.25.9.98
+      <<: *redfish
+    - pcmk_host_list: beegfs_12
+      ip: 10.25.9.99
+      <<: *redfish
+    
+
+
+####################################
+### BeeGFS service configuration ###
+####################################
+
+### How to override default BeeGFS service configuration: 
+### Except configuration specified elsewhere (sysMgmtdHost, connInterfacesFile, and connNetFilterFile), any options
+### found in the beegfs-*.conf files that should apply to all services in the file system can be specified here.
+###
+### For example: `tuneTargetChooser=randomrobin` as `tuneTargetChooser: randomrobin`
+
+beegfs_ha_beegfs_mgmtd_conf_ha_group_options:
+  ### Format: <OPTION>: <VALUE>
+  quotaEnableEnforcement: false
+
+beegfs_ha_beegfs_meta_conf_ha_group_options:
+  ### Format: <OPTION>: <VALUE>
+  connMaxInternodeNum: 16
+  tuneNumWorkers: 128
+  tuneTargetChooser: randomrobin
+  quotaEnableEnforcement: false
+
+beegfs_ha_beegfs_storage_conf_ha_group_options:
+  ### Format: <OPTION>: <VALUE>
+  connMaxInternodeNum: 128
+  tuneNumWorkers: 14
+  quotaEnableEnforcement: false
+
+beegfs_ha_service_volume_configuration:
+  management:
+    format_type: ext4
+    format_options: "-i 2048 -I 512 -J size=400 -Odir_index,filetype"
+    mount_options: "sync,noatime,nodiratime,nobarrier"
+    mount_dir: /mnt/
+  metadata:
+    format_type: ext4
+    format_options: "-i 2048 -I 512 -J size=400 -Odir_index,filetype"
+    mount_options: "sync,noatime,nodiratime,nobarrier"
+    mount_dir: /mnt/
+  storage:
+    format_type: xfs
+    format_options: "-d su=VOLUME_SEGMENT_SIZE_KBk,sw=VOLUME_STRIPE_COUNT -l version=2,su=256k"
+    mount_options: "sync,noatime,nodiratime,logbufs=8,logbsize=256k,largeio,inode64,swalloc,allocsize=131072k"
+    mount_dir: /mnt/

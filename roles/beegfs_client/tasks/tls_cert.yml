@@ -1,0 +1,46 @@
+---
+- name: TLS configuration on beegfs client nodes.
+  vars:
+    tls_ca_cert_src: |-
+      {%- if item['beegfs_tls_ca_cert_src'] is defined -%}
+        {{- item['beegfs_tls_ca_cert_src'] -}}
+      {%- endif -%}
+    tls_ca_cert_dest: |-
+      {%- if item['beegfs_client_config']['tls_ca_cert_file'] is defined -%}
+        {{- item['beegfs_client_config']['tls_ca_cert_file'] -}}
+      {%- else -%}
+        /etc/beegfs/
+      {%- endif -%}
+    connAuthFile_dest: |-
+      {%- if item['beegfs_client_config']['connAuthFile'] is defined -%}
+        {{- item['beegfs_client_config']['connAuthFile'] -}}
+      {%- else -%}
+        /etc/beegfs/{{ item['sysMgmtdHost'] }}_connAuthFile
+      {%- endif -%}
+
+  block:
+    # If your TLS CA certificate is already trusted by all machines in your organization, you do not need to distribute
+    # a CA certificate to each machine. Instead configure clients to use the system certificate pool by specifying
+    # tls-cert-file = "" in their command line flags or configuration file.
+    - name: Copy TLS CA certificate from ansible control node to beegfs client node.
+      ansible.builtin.copy:
+        src: "{{ tls_ca_cert_src }}"
+        dest: "{{ tls_ca_cert_dest }}"
+      register: tls_ca_cert_copied
+      when: (tls_ca_cert_src | length) > 0
+
+    - name: Create symlink for TLS CA cert file for beegfs CLI.
+      vars:
+        src_path: "{{ tls_ca_cert_copied.dest }}"
+        dest_path: /etc/beegfs/cert.pem
+      ansible.builtin.include_role:
+        name: netapp_eseries.beegfs.beegfs_ha_common
+        tasks_from: common/create_symlink.yml
+      when:
+        - (src_path | realpath) != (dest_path | realpath)
+        - (tls_ca_cert_src | length) > 0
+
+    - name: Validate the beegfs cli can communicate with beegfs mgmtd.
+      ansible.builtin.command: "beegfs health check"
+
+  tags: beegfs_tls_cert

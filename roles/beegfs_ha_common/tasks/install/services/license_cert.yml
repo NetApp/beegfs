@@ -1,0 +1,42 @@
+# This file configures BeeGFS license file
+- name: Set facts for license_cert.yml
+  ansible.builtin.set_fact:
+    beegfs_license_src_path: |-
+      {#- Check whether beegfs_license_src is a relative path. Prepend playbook_dir if it is. -#}
+      {%- if beegfs_license_src == beegfs_license_src | realpath -%}
+        {{- playbook_dir + '/' + beegfs_license_src }}
+      {%- else -%}
+        {{- beegfs_license_src }}
+      {%- endif -%}
+
+- name: Ensure expected BeeGFS license file exists on Ansible control node.
+  delegate_to: localhost
+  run_once: true
+  block:
+    - name: Get the stat of {{ beegfs_license_src_path }} on the Ansible control node.
+      ansible.builtin.stat:
+        path: "{{ beegfs_license_src_path }}"
+      register: license_src_stat
+
+    - name: Fail if BeeGFS license cert file is missing.
+      ansible.builtin.fail:
+        msg: "Unable to locate BeeGFS license file on Ansible control node at {{ beegfs_license_src_path | dirname }}."
+      when: not (license_src_stat["stat"]["exists"] | bool)
+
+- name: Ensure the directory exists for BeeGFS license file on the the BeeGFS cluster nodes.
+  ansible.builtin.file:
+    state: directory
+    path: "{{ beegfs_license_dest | dirname }}"
+  become: true
+
+- name: Ensure BeeGFS cluster nodes have the expected BeeGFS license file.
+  ansible.builtin.copy:
+    src: "{{ beegfs_license_src_path }}"
+    dest: "{{ beegfs_license_dest }}"
+  become: true
+  register: beegfs_license_copied
+
+- name: Determine whether BeeGFS mgmtd service will needed to be restarted due to BeeGFS license changes.
+  ansible.builtin.set_fact:
+    beegfs_ha_force_restart_mgmtd_service: |-
+      {{ (beegfs_ha_force_restart_services or beegfs_license_copied['changed']) | bool }}

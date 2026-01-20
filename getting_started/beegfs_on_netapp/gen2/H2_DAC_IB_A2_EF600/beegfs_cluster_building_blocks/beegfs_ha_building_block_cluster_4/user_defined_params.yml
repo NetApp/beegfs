@@ -1,0 +1,120 @@
+### Cluster-Level Configuration Settings
+### This is a template. Review all comments and update with all expected values. 
+### IMPORTANT: All capitalized words in angled brackets must be updated.
+
+
+##########################
+### Pacemaker Settings ###
+##########################
+
+### Set cluster name in Pacemaker configuration.
+beegfs_ha_cluster_name: ha_cluster_4
+
+### Email Alerts Configuration ###
+### Set to true to enable email alerts.
+beegfs_ha_enable_alerts: true
+
+###  1) high-level node activity
+###  3) high-level node activity + fencing action information + resources (filter on X-monitor)
+###  5) high-level node activity + fencing action information + resources
+beegfs_ha_alert_verbosity: 3
+
+### E-mail recipient list for notifications when BeeGFS HA resources change or fail.
+beegfs_ha_alert_email_list:
+  # - "user@netapp.com"           # example
+  - "<USER_INPUT>"
+
+### This dictionary is used to configure postfix service (/etc/postfix/main.cf) which is required to set email alerts.
+beegfs_ha_alert_conf_ha_group_options:
+  ### This parameter specifies the local internet domain name. This is optional when the cluster nodes have fully
+  ### qualified hostnames (i.e. hostname.netapp.com)
+  # mydomain: netapp.com          # example
+  mydomain: <USER_INPUT>
+
+
+
+######################################
+### Network Time Protocol Settings ###
+######################################
+
+### BeeGFS requires time synchronization.
+### NTP or Chrony can be configured using `beegfs_ha_ntp_enabled` or `beegfs_ha_chrony_enabled` respectively.
+### Chrony and NTP tools conflict with each other. Enable only one to activate the NTP service on file nodes.
+### Disable both of these flags if this requirement is already handled.
+beegfs_ha_chrony_enabled: true
+beegfs_ha_ntp_enabled: false
+
+### Time synchronization tool configuration parameters (Chrony/NTP)
+beegfs_ha_ntp_server_pools:
+  - "pool 0.pool.ntp.org"
+  - "pool 1.pool.ntp.org"
+
+
+
+##########################
+### File Node Settings ###
+##########################
+
+### Set the OS version for file nodes.
+# os_version: rhel_9.4      # example
+os_version: <USER_INPUT>
+
+### Set the BeeGFS version for file nodes.
+# beegfs_version: beegfs_7.4.6    # example
+beegfs_version: <USER_INPUT>
+
+### Filename designated for storing udev rules for eseries_ip_udev_rules.
+eseries_ip_udev_name: 99-eseries_ip_udev.rules
+
+### Maps interface PCI slots to interface names for ensuring persistent interface names.
+### This information can be polled with "lshw -class network -businfo".
+eseries_ip_udev_rules:
+  # "0000:01:00.0": i1a           # example
+  # "0000:01:00.1": i1b
+  # "0000:41:00.0": i2a
+  # "0000:41:00.1": i2b
+  # "0000:81:00.0": i3a
+  # "0000:81:00.1": i3b
+  # "0000:a1:00.0": i4a
+  # "0000:a1:00.1": i4b
+  "<PCI_ID>": <INTERFACE_NAME>
+
+
+
+#################################
+### Local Repository Settings ###
+#################################
+
+### Set the URL domain for local repositories utilized during system deployment.
+# repo_base_url: http://10.11.13.15/Internal       # example
+repo_base_url: <USER_INPUT>
+
+
+### Uncomment yum_repos block to add local YUM repository to server.
+### Any repo listed under yum_repos will be added to the server.
+### Add/remove repo from yum_repos dictionary.
+###
+### Be sure to review the parameters for the provided yum repos and update them as needed
+yum_repos:
+  custom_yum_repo:
+    url: "{{ repo_base_url }}/os_distro/{{ os_version }}/repo_update"
+    name: InstallMediaUpdate
+    description: Red Hat Enterprise Linux {{ os_version }} Update
+    filename: media
+    enabled: true
+  app_stream_yum_repo:
+    url: "{{ repo_base_url }}/os_distro/{{ os_version }}/AppStream"
+    name: InstallMediaAppStream
+    description: Red Hat Enterprise Linux {{ os_version }} AppStream
+    filename: media
+    enabled: false
+  base_os_yum_repo:
+    url: "{{ repo_base_url }}/os_distro/{{ os_version }}/BaseOS"
+    name: InstallMediaBaseOS
+    description: Red Hat Enterprise Linux {{ os_version }} BaseOS
+    filename: media
+    enabled: false
+
+### Uncomment the block to use local BeeGFS repository.
+beegfs_ha_rhel_repository_base_url: "{{ repo_base_url }}/beegfs/{{ beegfs_version }}/dists/{{ os_version | regex_replace('\\..*$', '') | regex_replace('_', '') }}"
+beegfs_ha_rhel_repository_gpgkey: "{{ repo_base_url }}/beegfs/{{ beegfs_version }}/gpg/GPG-KEY-beegfs"

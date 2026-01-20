@@ -6,7 +6,7 @@
       src: beegfs-client-build.mk.j2
       dest: "/etc/beegfs/beegfs-client-build.mk"
       mode: 0644
-    when: beegfs_client_dkms_install
+    when: beegfs_client_dkms_install | bool
     # register: beegfs_client_build_mk_result
     # TODO: Reinstall DKMS packages or otherwise force rebuilding/reloading the module if this changes.
 
@@ -16,7 +16,7 @@
 
       # BeeGFS connection authentication is not required for beegfs-helperd since it is only used locally for the
       #   beegfs-client services.
-      - name: Ensure BeeGFS Helperd connection authentication is disabled.
+      - name: Ensure BeeGFS Helperd connection authentication is disabled and started/enabled.
         block:
           - name: Ensure connDisableAuthentication is true in the beegfs-helperd.conf file.
             ansible.builtin.lineinfile:
@@ -26,6 +26,7 @@
               regexp: "^connDisableAuthentication.*=.*"
               state: present
             register: beegfs_helperd_conn_auth
+
           - name: Ensure there is no connAuthFile specified in the beegfs-helperd.conf file.
             ansible.builtin.lineinfile:
               create: true
@@ -35,11 +36,12 @@
               state: present
             register: beegfs_helperd_conn_auth_file
 
-      - name: Ensure beegfs-helperd is started/enabled.
-        ansible.builtin.systemd:
-          name: beegfs-helperd
-          enabled: true
-          state: "{{ 'restarted' if beegfs_helperd_conn_auth['changed'] or beegfs_helperd_conn_auth_file['changed'] else 'started' }}"
+          - name: Ensure beegfs-helperd is started/enabled.
+            ansible.builtin.systemd:
+              name: beegfs-helperd
+              enabled: true
+              state: "{{ 'restarted' if beegfs_helperd_conn_auth['changed'] or beegfs_helperd_conn_auth_file['changed'] else 'started' }}"
+        when: beegfs_tls_enabled is not defined
 
       # The following task is required until the beegfs-ctl help is changed since the tool does not allow help to be
       #   viewed until connection authentication is handled. With the defaults /etc/beegfs/beegfs-client.conf file where
@@ -67,7 +69,7 @@
           group: root
           mode: '0644'
         register: install_beegfs_client_udev
-        when: beegfs_client_udev_rule_install
+        when: beegfs_client_udev_rule_install | bool
 
       - name: Reload udev rules.
         ansible.builtin.command: udevadm control --reload
@@ -105,7 +107,7 @@
           - name: Set the path for GDS support library.
             ansible.builtin.set_fact:
               beegfs_client_gds_nvfs_h_dir: "{{ gds_nvfs_h_paths['stdout'] | ansible.builtin.dirname }}"
-        when: beegfs_client_gds_support
+        when: beegfs_client_gds_support | bool
 
       - name: Update /etc/beegfs/beegfs-client-autobuild.conf to include support for the Mellanox OFED drivers if requested.
         ansible.builtin.template:
@@ -116,9 +118,9 @@
 
       - name: Force a rebuild of the client kernel module if requested or the source/configuration changed.
         ansible.builtin.command: "/etc/init.d/beegfs-client rebuild"
-        when: beegfs_client_autobuild.changed or beegfs_client_force_rebuild == True or package_mgr_result.changed == True
+        when: beegfs_client_autobuild.changed == True or beegfs_client_force_rebuild == True or package_mgr_result.changed == True
         notify: Restart BeeGFS Client
-    when: not beegfs_client_dkms_install
+    when: not (beegfs_client_dkms_install | bool)
     tags: beegfs_client_install
 
   - name: Complete DKMS Client Tasks
@@ -135,7 +137,7 @@
           block: |
             # Load the BeeGFS client module at boot
             beegfs
-    when: beegfs_client_dkms_install
+    when: beegfs_client_dkms_install | bool
     tags: beegfs_client_install
 
   - name: Include tasks to mount BeeGFS if requested.
@@ -153,7 +155,9 @@
   - name: Verify all expected BeeGFS mounts are present/unmounted when using the non-DKMS client.
     ansible.builtin.include_tasks: mount_check.yml
     loop: "{{ beegfs_client_mounts }}"
-    when: beegfs_client_mounts is defined and not beegfs_client_dkms_install
+    when:
+      - beegfs_client_mounts is defined
+      - not (beegfs_client_dkms_install | bool)
     tags: beegfs_client_mount
 
   - name: Flush handlers to restart the non-DKMS BeeGFS client if any BeeGFS mounts are missing.
@@ -165,7 +169,9 @@
       name: beegfs-client
       state: started
       enabled: true
-    when: beegfs_client_mounts is defined and not beegfs_client_dkms_install
+    when:
+      - beegfs_client_mounts is defined
+      - not (beegfs_client_dkms_install | bool)
     tags: beegfs_client_mount
 
   - name: Validate the BeeGFS client supports NVIDIA GPUDirect Storage (GDS).
@@ -181,7 +187,7 @@
           msg: |
             The installed BeeGFS client package does not support NVIDIA GPUDirect Storage (GDS)! Please update
             BeeGFS client version or set beegfs_client_gds_support=False.
-        when: not beegfs_supported
+        when: not (beegfs_supported | bool)
         vars:
           beegfs_supported: |-
             {%- set scratch = {"found": False} -%}
@@ -191,4 +197,12 @@
               {%- endif -%}
             {%- endfor -%}
             {{- scratch["found"] -}}
-    when: beegfs_client_gds_support
+    when: beegfs_client_gds_support | bool
+
+  - name: Validate TLS configuration for beegfs command.
+    ansible.builtin.include_tasks: tls_cert.yml
+    loop: "{{ beegfs_client_mounts }}"
+    when:
+      - beegfs_tls_enabled is defined
+      - beegfs_tls_enabled | bool
+    tags: beegfs_tls_cert

@@ -1,0 +1,168 @@
+{% import 'template_macros.j2' as template_macros %}
+{% import 'cluster_group.macros' as macros %}
+
+{%- set resource_group_name = item -%}
+# {{ resource_group_name }} - BeeGFS HA Metadata Resource Group
+
+# This is a template for BeeGFS HA metadata resource group. Review all comments and update with all expected values.
+# IMPORTANT: All capitalized words in angled brackets must be updated.
+
+
+{#- =============================================================================
+   Define Meta Identifier and Volume Parameters
+   -----------------------------------------------------------------------------
+   - Extract numeric meta_id from resource_group_name.
+   - Retrieve metadata volume parameters.
+============================================================================= #}
+{% set meta_id = resource_group_name | regex_search('\d+$') | int -%}
+{% set meta_volume_params = eseries_storage_settings['beegfs_target_settings']['converged_bb']['meta'] %}
+{% set volumes_per_beegfs_service = meta_volume_params['volumes_per_beegfs_service'] %}
+{%- set storage_pools_per_beegfs_service = meta_volume_params.get('storage_pools_per_beegfs_service', 1) %}
+
+
+{#- =============================================================================
+   Extract HA settings and floating IP start information.
+============================================================================= #}
+{%- set beegfs_ha_settings = file_node_settings['beegfs_ha_settings'] %}
+{%- set beegfs_ha_floating_ip_start = beegfs_ha_settings['floating_ip_start'] %}
+
+
+{#- =============================================================================
+   Iterate through cluster facts to find building block data that has
+     defined beegfs_services for the current resource group.
+============================================================================= #}
+{%- set building_block = {} %}
+{%- for building_block_name, building_block_data in cluster_facts[cluster_name].items() %}
+{%    if building_block_data['beegfs_services'][resource_group_name] is defined %}
+{%      if building_block.update(building_block_data) %}{% endif %}
+{%    endif %}
+{%  endfor %}
+
+
+{#- =============================================================================
+   Extract BeeGFS Services and Associated Settings
+   -----------------------------------------------------------------------------
+   - Retrieve the complete beegfs_services structure.
+   - Extract meta service entries for the resource group.
+   - Determine the number of controllers per block node.
+   - Get the storage pool configuration for eSeries storage.
+============================================================================= #}
+{%- set beegfs_services = building_block['beegfs_services'] %}
+{%- set meta_entries = beegfs_services[resource_group_name] %}
+{%- set controllers_per_array = building_block['attributes']['controllers_per_block_node'] %}
+{%- set file_nodes = meta_entries['file_nodes'] %}
+{%- set file_nodes_per_storage_pool = meta_volume_params.get('file_nodes_per_storage_pool', file_nodes | length) %}
+
+
+{#- =============================================================================
+   Organize BeeGFS Services by Block Node
+   -----------------------------------------------------------------------------
+   - Use a custom macro to sort and arrange services on a per block node basis.
+   - Convert the result from a string to JSON.
+============================================================================= #}
+{%- set beegfs_services_by_block_node = macros.beegfs_services_by_block_node(beegfs_services, resource_group_name, file_nodes_per_storage_pool)  | replace("'", '"') | from_json -%}
+
+
+{#- =============================================================================
+   6. Map Floating IP Interfaces to Meta Network Addresses
+   -----------------------------------------------------------------------------
+   - Identify the primary floating IP interface.
+   - Sort the list of floating IP interfaces from meta_entries.
+   - For each network in meta_network, compute the network address and construct
+     a mapping with the interface assigned to the meta network address concatenated
+     with meta_id.
+============================================================================= #}
+{%- set primary_floating_ip_interface = meta_entries['floating_ip_interfaces'] | first %}
+{%- set floating_ip_interfaces = {} -%}
+{%- set sorted_floating_ip_interfaces = meta_entries['floating_ip_interfaces'] | sort %}
+{%- for network_name, start_ip_address in beegfs_ha_floating_ip_start["meta_network"].items() -%}
+{%-   set network_address = template_macros.calc_ip_address(start_ip_address, meta_id) %}
+{%-   set floating_ips_interface = sorted_floating_ip_interfaces[loop.index0] %}
+{%    if floating_ip_interfaces.update({floating_ips_interface: network_address}) %}{% endif %}
+{% endfor %}
+
+
+# Type of BeeGFS service the HA resource group will manage. Choices: management, metadata, storage.
+beegfs_service: metadata
+
+
+beegfs_ha_beegfs_meta_conf_resource_group_options:
+  # BeeGFS HA resource service port. 8005 is the default BeeGFS metadata service port number; Each BeeGFS HA metadata
+  # service resource must have a unique port number.
+{% if beegfs_supports_tls is true %}
+  connMetaPort: 8{{ '{:02d}'.format(meta_id) }}5
+{% else %}
+  connMetaPortTCP: 8{{ '{:02d}'.format(meta_id) }}5
+  connMetaPortUDP: 8{{ '{:02d}'.format(meta_id) }}5
+{% endif %}
+
+  # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be
+  # applied whenever and wherever the BeeGFS service resides. This can provide significant performance increases by
+  # avoiding the cache misses between NUMA nodes.
+  tuneBindToNumaZone: {{ file_node_settings['beegfs_service_settings']['floating_ip_interfaces'][primary_floating_ip_interface]['numa_zone'] }}
+
+
+# List of metadata floating IP definitions in the form host_interface:ip_address/cidr_subnet_mask.
+# This information is used to communicate with the BeeGFS management resource. Therefore, these definitions must
+# be on the same subnet as beegfs_ha_mgmtd_floating_ip value in group_vars/ha_cluster.yml. Any unusable definitions
+# will be ignored which is specially useful when the definitions differ based on the host.
+floating_ips:
+  # - <IFACE>:<IP_ADDRESS>/<CIDR_MASK>
+{# i.e: replace 11.22.33.0 to 11.22.33 -#}
+{% for floating_ips_interface in meta_entries['floating_ip_interfaces'] %}
+  - {{ floating_ips_interface }}:{{ floating_ip_interfaces[floating_ips_interface] }}/16
+{% endfor %}
+
+
+beegfs_targets:
+  # E-Series storage target. Change this to any desired E-Series storage.
+{% for block_node in meta_entries['block_nodes'] %}
+  {{ block_node }}:
+    eseries_storage_pool_configuration:
+{% for storage_pool in range(storage_pools_per_beegfs_service) %}
+
+{%- set storage_pool_name = macros.storage_pool_name(
+      beegfs_services_by_block_node[block_node],
+      [beegfs_mgmt_basename, beegfs_meta_basename],
+      meta_volume_params,
+      loop.index0,
+      storage_pools_per_beegfs_service,
+      file_nodes_per_storage_pool
+    ) | from_yaml %}
+
+{%- set ddp_raid_levels = ['raid1_DiskPool', 'raid6_DiskPool'] %}
+{%- set storage_pool_raid_level = meta_volume_params['raid_level'] | default('raid1') %}
+
+      {#- storage pool name: beegfs_m1_m2_m5_m6 #}
+      - name: {{ storage_pool_name }}
+        # Storage pool/volume group RAID type. Choices: raid0, raid1, raid5, raid6, raidDiskPool
+        # RAID 1 mirrors the data between two drives which is the recommended storage type for management and metadata
+        # services. If this storage pool is shared with other services this value must be the same on all definitions.
+        raid_level: {{ 'raidDiskPool' if storage_pool_raid_level in ddp_raid_levels else storage_pool_raid_level }}
+
+        # Total drive count for the storage pool. RAID 1 requires even number of drives. If this storage pool is shared
+        # with other services this value must be the same on all definitions.
+        criteria_drive_count: {{ meta_volume_params['criteria_drive_count'] | default(4) }}
+
+        secure_pool: {{ meta_volume_params['secure_pool'] | default(true) | lower }}
+        common_volume_configuration:
+          segment_size_kb: {{ meta_volume_params['segment_size_kb'] | default(128) }}
+
+        # BeeGFS metadata service requires only one volume.
+        volumes:
+          # Size of the BeeGFS metadata service volume in percentage of total storage pool capacity.
+          # This percentage is shown as an example.  Depending on your configuration, adjust the percentage to account 
+          # for overprovisioning.
+{% for count in range(volumes_per_beegfs_service) %}
+          - owning_controller: {{ meta_entries['owning_controller'] }}
+            size: {{ meta_volume_params['volume_size'] | default(23.75) }}
+{% if storage_pool_raid_level in ddp_raid_levels %}
+            raid_level: {{ storage_pool_raid_level.split('_')[0] }}
+{% endif %}
+            read_cache_enable: true
+            read_ahead_enable: false
+{% endfor %}
+
+{% endfor %}
+
+{%- endfor %}

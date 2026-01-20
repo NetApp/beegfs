@@ -1,0 +1,74 @@
+- name: Load the upgrade packages file from the control node
+  set_fact:
+    upgrade_packages: "{{ lookup('file', upgrade_file) | split('\n') }}"
+
+- name: Gather installed packages using rpm query
+  command: rpm -qa --queryformat='%{NAME}\n'
+  register: installed_packages
+  changed_when: false
+
+- name: Convert installed packages output to a list.
+  set_fact:
+    installed_packages_list: "{{ installed_packages.stdout_lines }}"
+
+- name: Determine which installed packages are on the upgrade list.
+  set_fact:
+    common_packages: |-
+      {%- set common_packages = [] %}
+      {%- for package_name in installed_packages_list %}
+        {%- set escaped_name = package_name | regex_escape -%}
+        {%- set pattern = '^' ~ escaped_name ~ '-' -%}
+        {%- set _ = common_packages.append(upgrade_packages | select('search', pattern)) %}
+      {%- endfor %}
+      {{- common_packages | flatten | unique -}}
+
+- name: Build list of dictionaries with base name and full rpm file
+  set_fact:
+    rpm_items: "{{ rpm_items | default([]) + [ {(item | regex_replace('^(.*?)-\\d.*$', '\\1')): item} ] }}"
+  loop: "{{ common_packages }}"
+
+- name: Initialize an empty grouping dictionary
+  set_fact:
+    grouped_rpms: {}
+
+- name: Group RPM items based on key
+  set_fact:
+    grouped_rpms: |-
+      {{-
+        grouped_rpms | combine({
+          item_key: (grouped_rpms[item_key] | default([])) + [ item[item_key] ]
+        })
+      -}}
+  loop: "{{ rpm_items }}"
+  vars:
+    item_key: "{{ item.keys() | list | first }}"
+
+- name: Generate final upgrade list.
+  set_fact:
+    final_upgrade_list: "{{ (final_upgrade_list | default([])) + [item.value | first] }}"
+  loop: "{{ grouped_rpms | dict2items }}"
+
+- name: Upgrade all packages using appropriate repository.
+  yum:
+    name: "{{ item | regex_replace('\\.rpm', '')}}"
+    state: present
+    update_cache: yes
+  register: upgrade_result
+  loop: "{{ final_upgrade_list }}"
+
+- name: Set fact with only packages that were updated
+  set_fact:
+    updated_packages: "{{ upgrade_result.results | selectattr('changed', 'equalto', true) | list }}"
+
+- name: Show upgrade result
+  debug:
+    msg: "Packages updated: {{ updated_packages | map(attribute='item') | list }}"
+
+- name: Reboot host to apply new changes.
+  ansible.builtin.reboot:
+    test_command: "systemctl is-active default.target"
+    reboot_timeout: 3600
+    post_reboot_delay: 120
+  when: upgrade_result.changed
+  notify:
+    - Validate kernel

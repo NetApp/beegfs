@@ -1,0 +1,175 @@
+# Forces upgrade of beegfs-sync package if set to true.
+# Type: boolean
+# Example: true
+beegfs_sync_force_upgrade: false
+
+# Path where beegfs_sync configurations are stored.
+# Type: string
+# Example: /etc/beegfs/beegfs_sync/
+beegfs_sync_config_path: /etc/beegfs/beegfs_sync/
+
+# Enables TLS encryption for beegfs-client, beegfs-sync, beegfs-remote in BeeGFS v8.
+# Type: boolean
+# Example: true
+beegfs_tls_enabled: true
+
+# Path to the CA certificate used for BeeGFS TLS encryption.
+# Type: string
+# Example: files/beegfs/beegfs_sync/local_ca_cert.pem
+beegfs_ca_cert_src_path: files/beegfs/beegfs_sync/local_ca_cert.pem
+
+# Path to the CA private key used for BeeGFS TLS encryption.
+# Type: string
+# Example: files/beegfs/beegfs_sync/local_ca_key.pem
+beegfs_ca_key_src_path: files/beegfs/beegfs_sync/local_ca_key.pem
+
+# Source directory for TLS certificate files.
+# Type: string
+# Example: files/beegfs/
+beegfs_sync_tls_cert_src_path: files/beegfs/
+
+# Source directory for TLS private key files.
+# Type: string
+# Example: files/beegfs/
+beegfs_sync_tls_key_src_path: files/beegfs/
+
+# Options to override beegfs_sync_tls_config_defaults.
+# Type: dict
+# Example: { common_name: "custom.example.com" }
+beegfs_sync_tls_config_options: {}
+
+# Default TLS configuration parameters.
+# Type: dict
+# Example:
+# beegfs_sync_tls_config_defaults:
+#   common_name: netapp.com
+#   alt_names:
+#     - beegfs-mgmt.example.com
+#     - 192.168.1.100
+beegfs_sync_tls_config_defaults:
+  # Common Name (CN) to be used in the TLS certificate.
+  # Type: string
+  # Example: netapp.com
+  common_name: beegfs_sync.netapp.com
+
+  # List of Subject Alternative Names (SANs) such as IP or DNS.
+  # Type: list
+  # Example:
+  #   - beegfs-mgmt.example.com
+  #   - 192.168.1.100
+  # NOTE: If the alt_names list contains any values, a self-signed certificate and key will be generated.
+  # The generated files will be named according to beegfs_tls_cert_src_path and beegfs_tls_key_src_path.
+  # If alt_names is empty, files specified by beegfs_tls_cert_src_path and beegfs_tls_key_src_path must already exist.
+  alt_names:
+    - "{{ ansible_host }}"
+
+# BeeGFS version to install.
+# Type: string
+# Example: "beegfs_8.1"
+beegfs_version: "beegfs_8.2"
+
+# RHEL/CentOS version for repository URLs.
+# Type: string
+# Example: "rhel9"
+rhel_version: "rhel9"
+
+# SUSE version for repository URLs.
+# Type: string
+# Example: "sles15"
+sles_version: "sles15"
+
+# Debian / Ubuntu repository base URL.
+# Type: string
+# Example: "https://www.beegfs.io/release/beegfs_8.1.0"
+beegfs_ha_debian_repository_base_url: "https://www.beegfs.io/release/{{ beegfs_version }}"
+
+# Debian / Ubuntu repository GPG key URL.
+# Type: string
+# Example: "https://www.beegfs.io/release/beegfs_8.1.0/gpg/GPG-KEY-beegfs"
+beegfs_ha_debian_repository_gpgkey: "https://www.beegfs.io/release/{{ beegfs_version }}/gpg/GPG-KEY-beegfs"
+
+# RedHat / CentOS repository base URL.
+# Type: string
+# Example: "https://www.beegfs.io/release/beegfs_8.1.0/dists/rhel9"
+beegfs_ha_rhel_repository_base_url: "https://www.beegfs.io/release/{{ beegfs_version }}/dists/{{ rhel_version }}"
+
+# RedHat / CentOS repository GPG key URL.
+# Type: string
+# Example: "https://www.beegfs.io/release/beegfs_8.1.0/gpg/GPG-KEY-beegfs"
+beegfs_ha_rhel_repository_gpgkey: "https://www.beegfs.io/release/{{ beegfs_version }}/gpg/GPG-KEY-beegfs"
+
+# Allow unsupported SUSE modules.
+# Type: boolean
+# Example: true
+beegfs_ha_suse_allow_unsupported_module: true
+
+# SUSE repository base URL.
+# Type: string
+# Example: "https://www.beegfs.io/release/beegfs_8.1.0/dists/sles15"
+beegfs_ha_suse_repository_base_url: "https://www.beegfs.io/release/{{ beegfs_version }}/dists/{{ sles_version }}"
+
+# SUSE repository GPG key URL.
+# Type: string
+# Example: "https://www.beegfs.io/release/beegfs_8.1.0/gpg/GPG-KEY-beegfs"
+beegfs_ha_suse_repository_gpgkey: "https://www.beegfs.io/release/{{ beegfs_version }}/gpg/GPG-KEY-beegfs"
+
+# Override beegfs_sync_config_defaults parameters.
+# Type: dict
+# Example: { mount-point: "/mnt/custom_beegfs" }
+beegfs_sync_config_options: {}
+
+# Defines the default configuration for beegfs-sync service.
+# Type: dict
+# Example:
+# beegfs_sync_config_defaults:
+#   mount-point: /mnt/beegfs
+#   log:
+#     level: 3
+#     type: syslog
+#   server:
+#     address: 0.0.0.0:9011
+#     tls-cert-file: /etc/beegfs/beegfs_sync/beegfs_sync_cert.pem
+#     tls-key-file: /etc/beegfs/beegfs_sync_key.pem
+#     tls-disable: false
+#   manager:
+#     journal-db: /var/lib/beegfs/sync/journal.badger
+#     job-db: /var/lib/beegfs/sync/job.badger
+#   remote:
+#     tls-cert-file: /etc/beegfs/cert.pem
+#     tls-disable-verification: false
+#     tls-disable: false
+beegfs_sync_config_defaults:
+  # Local mount point for BeeGFS.
+  mount-point: /mnt/beegfs_remote_sync
+
+  # Logging configuration.
+  log:
+    level: 3
+    type: syslog
+
+  # Define configuration for beegfs-sync server.
+  server:
+    # IP address and port where the server will listen, formatted as 0.0.0.0:0000.
+    address: "{{ ansible_host }}:9011"
+    # Certificate file for beegfs-sync service.
+    tls-cert-file: /etc/beegfs/beegfs_sync/beegfs_sync_cert.pem
+    # Key file for beegfs-sync service.
+    tls-key-file: /etc/beegfs/beegfs_sync/beegfs_sync_key.pem
+    # Disable TLS for the sync server.
+    tls-disable: "{{ not beegfs_tls_enabled }}"
+
+  # Settings for tracking and storing work requests by the Sync node.
+  manager:
+    # Journal of all work requests assigned to this node.
+    journal-db: /var/lib/beegfs/sync/journal.badger
+    # Database of all jobs with active work requests on this node.
+    job-db: /var/lib/beegfs/sync/job.badger
+
+  # Remote service connection settings.
+  remote:
+    # CA certificate file for beegfs-remote service certificate.
+    tls-cert-file: /etc/beegfs/cert.pem
+    # Disable verification of TLS certificates.
+    tls-disable-verification: "{{ not beegfs_tls_enabled }}"
+    # Disable TLS for remote connection.
+    tls-disable: "{{ not beegfs_tls_enabled }}"

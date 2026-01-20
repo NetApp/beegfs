@@ -13,4 +13,6 @@
 
 - name: "Ensure cluster configuration tool ({{ beegfs_ha_management_tool }}) is configured (Cluster and remote nodes)."
   include_tasks: "common/{{ beegfs_ha_management_tool }}.yml"
-  when: beegfs_ha_management_tool is defined and beegfs_ha_management_tool
+  when:
+    - beegfs_ha_management_tool is defined
+    - beegfs_ha_management_tool != ''

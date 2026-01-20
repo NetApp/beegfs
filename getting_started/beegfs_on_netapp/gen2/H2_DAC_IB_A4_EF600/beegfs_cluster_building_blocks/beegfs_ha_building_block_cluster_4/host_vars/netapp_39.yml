@@ -1,0 +1,45 @@
+# netapp_39 - BeeGFS HA E-Series storage target resource
+
+# Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+
+eseries_system_name: netapp_39
+
+# Management IP of one of the controllers in the array.
+ansible_host: 10.25.9.71
+
+# Storage system's admin password.
+eseries_system_password: "{{ eseries_password }}"
+
+# Verify that this is the correct SANtricity Web Services REST API.
+eseries_system_api_url: "https://{{ ansible_host }}:8443/devmgr/v2/"
+
+# Whether to validate SSL certificates.
+eseries_validate_certs: false
+
+
+# Protocol utilized for communication between the E-series array and the file node.
+# Choices: fc, ib_iser, ib_srp, iscsi, nvme_fc, nvme_ib, nvme_roce
+eseries_initiator_protocol: nvme_ib
+
+# IP addresses used for communication between the storage array and the file node.
+eseries_controller_nvme_ib_port:
+  # controller_a:    # Ordered list of controller A channel address definition.
+  #   -              # Port IPv4 address for channel 1
+  #   - (...)        # So on and so forth
+  # controller_b:    # Ordered list of controller B channel address definition.
+  controller_a:
+    - 192.168.9.101   # Port 2a (virtual)
+    - 192.168.10.101   # Port 2b (virtual)
+    - 192.168.9.100   # Port 2a (physical)
+    - 192.168.10.100   # Port 2b (physical)
+  controller_b:
+    - 192.168.11.101   # Port 2a (virtual)
+    - 192.168.12.101   # Port 2b (virtual)
+    - 192.168.11.100   # Port 2a (physical)
+    - 192.168.12.100   # Port 2b (physical)
+
+
+# See https://github.com/netappeseries/santricity/blob/master/roles/nar_santricity_host/README.md for all available parameters. 
+
+# See https://github.com/netappeseries/santricity/blob/master/README.md for all parameters that can be configured on E-Series storage systems.

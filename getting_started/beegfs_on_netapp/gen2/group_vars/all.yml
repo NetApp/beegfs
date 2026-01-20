@@ -1,5 +1,0 @@
-ansible_python_interpreter: /usr/bin/python3
-
-beegfs_ha_ntp_server_pools: # Modify the NTP server addresses if desired.
-  - "pool 0.pool.ntp.org iburst maxsources 3"
-  - "pool 1.pool.ntp.org iburst maxsources 3"

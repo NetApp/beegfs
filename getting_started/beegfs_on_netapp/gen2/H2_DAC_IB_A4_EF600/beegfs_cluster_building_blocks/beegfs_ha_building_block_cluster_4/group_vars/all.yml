@@ -1,0 +1,6 @@
+### all Ansible group inventory file. Place all universally common or default variable values below.
+
+### This is a template. Review all comments and update with all expected values. 
+### IMPORTANT: All capitalized words in angled brackets must be updated.
+
+ansible_python_interpreter: /usr/bin/python3

@@ -1,0 +1,32 @@
+---
+# This file configures local CA (Certificate Authority) cert and key file
+- name: Determine the facts for CA certificate.
+  ansible.builtin.set_fact:
+    ca_cert_path: |-
+      {#- Check whether beegfs_ha_ca_cert_src_path is a relative path. Prepend playbook_dir if it is. -#}
+      {% if not beegfs_ha_ca_cert_src_path.startswith('/') %}
+        {{- playbook_dir + '/' + beegfs_ha_ca_cert_src_path }}
+      {%- else -%}
+        {{- beegfs_ha_ca_cert_src_path }}
+      {%- endif -%}
+    ca_key_path: |-
+      {#- Check whether beegfs_ha_ca_key_src_path is a relative path. Prepend playbook_dir if it is. -#}
+      {% if not beegfs_ha_ca_key_src_path.startswith('/') %}
+        {{- playbook_dir + '/' + beegfs_ha_ca_key_src_path }}
+      {%- else -%}
+        {{- beegfs_ha_ca_key_src_path }}
+      {%- endif -%}
+    ca_subj: "/C=US/ST=KS/L=Wichita/O=Eseries/CN=LocalNetappCA"
+
+- name: Generate CA private key
+  command: openssl genrsa -out "{{ ca_key_path }}" 4096
+  args:
+    creates: "{{ ca_key_path }}"
+
+- name: Generate local CA certificate
+  command: >
+    openssl req -x509 -new -nodes -key "{{ ca_key_path }}"
+    -sha256 -days 36500 -out "{{ ca_cert_path }}"
+    -subj "{{ ca_subj }}"
+  args:
+    creates: "{{ ca_cert_path }}"

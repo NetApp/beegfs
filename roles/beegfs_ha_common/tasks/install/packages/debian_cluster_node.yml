@@ -1,26 +1,28 @@
 - name: Ensure the required HA packages are installed (Debian/Ubuntu - Cluster Nodes).
   ansible.builtin.apt:
-    state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+    state: "{% if beegfs_ha_force_upgrade | bool %}latest{% else %}present{% endif %}"
     name:
-      - "corosync{% if beegfs_ha_corosync_version is defined and beegfs_ha_corosync_version %}={{ beegfs_ha_corosync_version }}{% endif %}"
-      - "pacemaker={% if beegfs_ha_pacemaker_version is defined and beegfs_ha_pacemaker_version %}{{ beegfs_ha_pacemaker_version }}{% endif %}"
-      - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined and beegfs_ha_fence_agents_all_version %}={{ beegfs_ha_fence_agents_all_version }}{% endif %}"
-      - "resource-agents{% if beegfs_ha_resource_agent_version is defined and beegfs_ha_resource_agent_version -%}={{ beegfs_ha_resource_agent_version }}{% endif %}"
+      - "corosync{% if beegfs_ha_corosync_version is defined and beegfs_ha_corosync_version != '' %}={{ beegfs_ha_corosync_version }}{% endif %}"
+      - "pacemaker{% if beegfs_ha_pacemaker_version is defined and beegfs_ha_pacemaker_version != '' %}={{ beegfs_ha_pacemaker_version }}{% endif %}"
+      - "fence-agents-all{% if beegfs_ha_fence_agents_all_version is defined and beegfs_ha_fence_agents_all_version != '' %}={{ beegfs_ha_fence_agents_all_version }}{% endif %}"
+      - "resource-agents{% if beegfs_ha_resource_agent_version is defined and beegfs_ha_resource_agent_version != '' -%}={{ beegfs_ha_resource_agent_version }}{% endif %}"
   become: true
 
 - name: Ensure pcs management tool is installed and configured (Debian/Ubuntu - Remote nodes).
   block:
     - name: Ensure pcs management tool is installed (Debian/Ubuntu - Remote nodes).
       ansible.builtin.apt:
-        state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
-        name: "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version %}={{ beegfs_ha_pcs_version }}{% endif %}"
+        state: "{% if beegfs_ha_force_upgrade | bool %}latest{% else %}present{% endif %}"
+        name: "pcs{% if beegfs_ha_pcs_version is defined and beegfs_ha_pcs_version != '' %}={{ beegfs_ha_pcs_version }}{% endif %}"
 
     - name: Ensure pcsd daemon is running and enabled (Debian/Ubuntu - Remote Nodes)..
       ansible.builtin.systemd:
         name: pcsd
         state: started
         enabled: true
-  when: beegfs_ha_management_tool is defined and beegfs_ha_management_tool
+  when:
+    - beegfs_ha_management_tool is defined
+    - beegfs_ha_management_tool != ''
   become: true
 
 - name: Ensure mail packages are installed for alerts (Debian/Ubuntu - Cluster Nodes).
@@ -43,7 +45,7 @@
         state: absent
         name: chrony
       become: true
-  when: beegfs_ha_ntp_enabled
+  when: beegfs_ha_ntp_enabled | bool
 
 - name: Ensure Chrony is installed (Debian/Ubuntu - Cluster Nodes).
   block:
@@ -57,11 +59,11 @@
         state: absent
         name: ntp
       become: true
-  when: beegfs_ha_chrony_enabled
+  when: beegfs_ha_chrony_enabled | bool
 
 # - name: Ensure the ufw is installed (Debian/Ubuntu - Cluster Nodes).
 #   ansible.builtin.apt:
-#     state: "{% if beegfs_ha_force_upgrade %}latest{% else %}present{% endif %}"
+#     state: "{% if beegfs_ha_force_upgrade | bool %}latest{% else %}present{% endif %}"
 #     name: ufw
-#   when: beegfs_ha_firewall_start_and_enable
+#   when: beegfs_ha_firewall_start_and_enable | bool
 #   become: true

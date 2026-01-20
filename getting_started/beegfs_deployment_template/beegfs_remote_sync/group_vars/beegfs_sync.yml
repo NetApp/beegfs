@@ -1,0 +1,33 @@
+### Enables TLS encryption for secure communication in BeeGFS v8 between clients,
+### remote storage targets, and the mgmtd service. Set to 'false' to disable TLS.
+beegfs_tls_enabled: true
+
+# beegfs_ca_cert_src_path: "{{ beegfs_tls_ca_cert_src }}"        # Example
+beegfs_ca_cert_src_path: <USER_INPUT>
+
+# beegfs_ca_key_src_path: "{{ beegfs_tls_ca_cert_src | dirname }}/local_ca_key.pem"          # Example
+beegfs_ca_key_src_path: <USER_INPUT>
+
+# beegfs_sync_tls_cert_src_path: files/beegfs/beegfs_sync/sync_cert.pem      # Example
+beegfs_sync_tls_cert_src_path: <USER_INPUT>
+
+# beegfs_sync_tls_key_src_path: files/beegfs/beegfs_sync/sync_key.pem        # Example
+beegfs_sync_tls_key_src_path: <USER_INPUT>
+
+beegfs_sync_tls_config_options:
+  common_name: beegfs_sync.netapp.com
+  alt_names:
+    - "{{ ansible_host }}"
+
+
+beegfs_sync_config_options:
+  mount-point: /mnt/beegfs_remote_sync
+  server:
+    address: "{{ ansible_host }}:9011"
+    tls-cert-file: /etc/beegfs/beegfs_sync/{{ beegfs_sync_tls_cert_src_path | basename}}
+    tls-key-file: /etc/beegfs/beegfs_sync/{{ beegfs_sync_tls_key_src_path | basename }}
+    tls-disable: false
+  remote:
+    tls-cert-file: /etc/beegfs/cert.pem
+    tls-disable-verification: false
+    tls-disable: false

@@ -1,0 +1,213 @@
+all:
+  children:
+    ha_cluster:
+      children:
+        ###################################
+        #####    building_block_01    #####
+        ###################################
+
+        mgmt:
+          hosts:
+            beegfs_01:
+            beegfs_02:
+
+        meta_01:
+          hosts:
+            beegfs_01:
+            beegfs_02:
+
+        meta_02:
+          hosts:
+            beegfs_01:
+            beegfs_02:
+
+        meta_03:
+          hosts:
+            beegfs_01:
+            beegfs_02:
+
+        meta_04:
+          hosts:
+            beegfs_01:
+            beegfs_02:
+
+        meta_05:
+          hosts:
+            beegfs_02:
+            beegfs_01:
+
+        meta_06:
+          hosts:
+            beegfs_02:
+            beegfs_01:
+
+        meta_07:
+          hosts:
+            beegfs_02:
+            beegfs_01:
+
+        meta_08:
+          hosts:
+            beegfs_02:
+            beegfs_01:
+
+        stor_01:
+          hosts:
+            beegfs_01:
+            beegfs_02:
+
+        stor_02:
+          hosts:
+            beegfs_01:
+            beegfs_02:
+
+        stor_03:
+          hosts:
+            beegfs_01:
+            beegfs_02:
+
+        stor_04:
+          hosts:
+            beegfs_01:
+            beegfs_02:
+
+        stor_05:
+          hosts:
+            beegfs_02:
+            beegfs_01:
+
+        stor_06:
+          hosts:
+            beegfs_02:
+            beegfs_01:
+
+        stor_07:
+          hosts:
+            beegfs_02:
+            beegfs_01:
+
+        stor_08:
+          hosts:
+            beegfs_02:
+            beegfs_01:
+
+
+
+        ###################################
+        #####    building_block_02    #####
+        ###################################
+
+        stor_09:
+          hosts:
+            beegfs_03:
+            beegfs_04:
+
+        stor_10:
+          hosts:
+            beegfs_03:
+            beegfs_04:
+
+        stor_11:
+          hosts:
+            beegfs_03:
+            beegfs_04:
+
+        stor_12:
+          hosts:
+            beegfs_03:
+            beegfs_04:
+
+        stor_13:
+          hosts:
+            beegfs_04:
+            beegfs_03:
+
+        stor_14:
+          hosts:
+            beegfs_04:
+            beegfs_03:
+
+        stor_15:
+          hosts:
+            beegfs_04:
+            beegfs_03:
+
+        stor_16:
+          hosts:
+            beegfs_04:
+            beegfs_03:
+
+
+
+        ###################################
+        #####    building_block_03    #####
+        ###################################
+
+        stor_17:
+          hosts:
+            beegfs_05:
+            beegfs_06:
+
+        stor_18:
+          hosts:
+            beegfs_05:
+            beegfs_06:
+
+        stor_19:
+          hosts:
+            beegfs_05:
+            beegfs_06:
+
+        stor_20:
+          hosts:
+            beegfs_05:
+            beegfs_06:
+
+        stor_21:
+          hosts:
+            beegfs_06:
+            beegfs_05:
+
+        stor_22:
+          hosts:
+            beegfs_06:
+            beegfs_05:
+
+        stor_23:
+          hosts:
+            beegfs_06:
+            beegfs_05:
+
+        stor_24:
+          hosts:
+            beegfs_06:
+            beegfs_05:
+
+
+
+    # NetApp E-Series storage systems Ansible group
+    eseries_storage_systems:
+      hosts:
+        ###################################
+        #####    building_block_01    #####
+        ###################################
+        netapp_01:
+        netapp_02:
+        netapp_03:
+        netapp_04:
+
+        ###################################
+        #####    building_block_02    #####
+        ###################################
+        netapp_05:
+        netapp_06:
+        netapp_07:
+        netapp_08:
+
+        ###################################
+        #####    building_block_03    #####
+        ###################################
+        netapp_09:
+        netapp_10:
+        netapp_11:
+        netapp_12:

@@ -1,0 +1,43 @@
+---
+- name: Install BeeGFS Remote packages.
+  ansible.builtin.include_tasks: packages/{{ ansible_facts['os_family'] | lower }}_packages.yml
+
+- name: Collect facts for beegfs-remote service.
+  ansible.builtin.include_tasks: collect_facts.yml
+
+- name: Ensure TLS cert and key files exist.
+  vars:
+    beegfs_ha_tls_config_defaults: "{{ beegfs_remote_tls_config_defaults }}"
+    beegfs_ha_tls_config_options: "{{ beegfs_remote_tls_config_options }}"
+    beegfs_ha_tls_cert_src_path: "{{ beegfs_remote_tls_cert_src_path }}"
+    beegfs_ha_tls_cert_dest_path: "{{ beegfs_remote_tls_cert_dest_path }}"
+    beegfs_ha_tls_key_src_path: "{{ beegfs_remote_tls_key_src_path }}"
+    beegfs_ha_tls_key_dest_path: "{{ beegfs_remote_tls_key_dest_path }}"
+    beegfs_ha_ca_cert_src_path: "{{ beegfs_ca_cert_src_path}}"
+    beegfs_ha_ca_key_src_path: "{{ beegfs_ca_key_src_path }}"
+    beegfs_ha_force_restart_services: false
+  ansible.builtin.include_role:
+    name: netapp_eseries.beegfs.beegfs_ha_common
+    tasks_from: install/services/tls_cert.yml
+
+- name: Update configuration file for beegfs-remote service.
+  ansible.builtin.include_tasks: services/beegfs_remote.yml
+
+- name: Ensure beegfs-remote service is running (restart if already started)
+  ansible.builtin.service:
+    name: beegfs-remote
+    state: restarted
+    enabled: true
+
+- name: Restart beegfs-sync.
+  block:
+    - name: Check if beegfs-sync systemd unit exists.
+      stat:
+        path: /etc/systemd/system/beegfs-sync.service
+      register: beegfs_sync_unit
+
+    - name: Restart beegfs-sync if unit exists.
+      ansible.builtin.service:
+        name: beegfs-sync
+        state: restarted
+      when: beegfs_sync_unit.stat.exists

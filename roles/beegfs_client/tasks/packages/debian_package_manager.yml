@@ -1,0 +1,41 @@
+- name: Add public BeeGFS apt repository and gpgkey (Debian/Ubuntu).
+  block:
+    - name: Download BeeGFS apt key (Debian/Ubuntu).
+      ansible.builtin.get_url:
+        url: "{{ beegfs_ha_debian_repository_gpgkey }}"
+        dest: /etc/apt/trusted.gpg.d/beegfs.asc
+      become: true
+
+    - name: Add BeeGFS apt repository (Debian/Ubuntu).
+      ansible.builtin.apt_repository:
+        state: present
+        repo: "deb {{ beegfs_ha_debian_repository_base_url }} {{ ansible_distribution_release }} non-free"
+        update_cache: true
+      become: true
+  when: apt_repos is not defined
+
+- name: Add local apt repository and gpgkey (Debian/Ubuntu) and remove public Debian repo.
+  block:
+    - name: Add apt gpgkey (Debian/Ubuntu).
+      ansible.builtin.apt_key:
+        state: present
+        url: "{{ item.value['gpgkey'] }}"
+      loop: "{{ apt_repos | dict2items }}"
+      when: item.value['gpgkey'] | length > 0
+
+    - name: Add apt repository (Debian/Ubuntu).
+      ansible.builtin.apt_repository:
+        state: present
+        repo: >-
+          deb [{{ item.value['options'] | join(' ') }}]
+          {{ item.value['url'] }}
+          {{ ansible_distribution_release }}
+          {{ item.value['component'] }}
+        update_cache: true
+      loop: "{{ apt_repos | dict2items }}"
+
+    - name: Rename sources.list to use local Debian repo.
+      ansible.builtin.command:
+        cmd: mv /etc/apt/sources.list /etc/apt/sources.list.disabled
+        removes: /etc/apt/sources.list
+  when: apt_repos is defined

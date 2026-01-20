@@ -1,0 +1,12 @@
+# BeeGFS client inventory. 
+
+all:
+  children:
+    beegfs_clients:
+      hosts:
+        client_01:     # client_01 is an alias for the actual hostname.
+        # client_XX:
+
+    beegfs_remote:
+      children:
+        beegfs_clients:

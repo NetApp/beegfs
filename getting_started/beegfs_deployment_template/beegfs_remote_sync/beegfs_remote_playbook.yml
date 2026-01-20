@@ -1,0 +1,22 @@
+# BeeGFS client playbook. 
+
+# Playbook objective
+#
+# 1. Add local debian repo if applicable.
+# 2. Configure multihoming on Infiniband interfaces.
+# 3. Configure BeeGFS client services to communicate with BeeGFS clusters.
+# 4. Remove unnecessary package and service such as libbeegfs-ib, ibacm.
+# 5. Create symlink for beegfs-client.conf
+# 6. Configure BeeGFS sync services for Remote Storage Target feature.
+
+- import_playbook: beegfs_client_playbook.yml
+
+- name: Configure beegfs-remote service.
+  hosts: beegfs_remote
+  gather_facts: true
+  any_errors_fatal: true
+  become: true
+  vars_files:
+    - "{{ playbook_dir | dirname }}/global_params/passwords.yml"
+  roles:
+    - role: netapp_eseries.beegfs.beegfs_remote

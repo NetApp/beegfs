@@ -16,7 +16,7 @@
     - name: Configure postfix service
       netapp_eseries.host.update_conf:
         path: "{{ beegfs_ha_alert_conf }}"
-        options: "{{ beegfs_ha_alert_conf_default_options | combine(beegfs_ha_alert_conf_ha_group_options) | combine(beegfs_ha_alert_conf_options) | combine(beegfs_ha_alerts_conf_required_options) }}"
+        options: "{{ beegfs_ha_alert_conf_default_options | combine(beegfs_ha_alert_conf_ha_group_options) | combine(beegfs_ha_alert_conf_options) | combine(beegfs_ha_alerts_conf_required_options) | default({}, true) }}"
         mode: "0644"
       register: postfix_config
       vars:
@@ -26,8 +26,8 @@
 
     - name: Ensure postfix service is started and enabled.
       ansible.builtin.systemd:
-        state: '{% if postfix_config["changed"] %}restarted{% else %}started{% endif %}'
+        state: '{% if postfix_config["changed"] | bool %}restarted{% else %}started{% endif %}'
         enabled: true
         name: postfix.service
       become: true
-  when: beegfs_ha_enable_alerts
+  when: beegfs_ha_enable_alerts | bool

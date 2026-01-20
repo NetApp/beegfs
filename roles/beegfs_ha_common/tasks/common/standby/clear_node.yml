@@ -17,6 +17,6 @@
       changed_when: false
       ignore_errors: true
       timeout: "{{ beegfs_ha_common_pacemaker_wait_timeout }}"
-  when: standby_query["stdout"] | regex_search(beegfs_ha_common_pacemaker_true_regex, ignorecase=true)
+  when: (standby_query["stdout"] | regex_search(beegfs_ha_common_pacemaker_true_regex, ignorecase=true)) is not none
   delegate_to: "{{ cluster_automation_node }}"
   become: true

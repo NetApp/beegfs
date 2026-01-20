@@ -1,0 +1,82 @@
+# Playbook objective
+#
+# 1. Set host name to match hostname defined in inventory.
+# 2. Upgrade base OS to desired package version defined in rhel_9.3_upgrade_packages.yml file.
+# 3. Reboot host to apply changes.
+# 4. Install MOFED to specified version.
+# 5. Update HCA FW to default version defined in MOFED or specified HCA FW version.
+
+
+### Comment out any tasks in this play if it's not applicable to your environment.
+- hosts: ha_cluster
+  gather_facts: false
+  become: true
+  any_errors_fatal: true
+  vars_files:
+    - ../../global_params/passwords.yml
+    - "{{ ansible_inventory_sources[0] | dirname }}/user_defined_params.yml"
+  vars:
+    ### Define the expected kernel version extracted from the package name.
+    ### Package: kernel-5.14.0-427.42.1.el9_4.x86_64.rpm
+    # expected_kernel: "5.14.0-427.42.1.el9_4.x86_64"
+    expected_kernel: <USER_INPUT>
+
+    ### A file that lists all the operating system packages eligible for upgrade.
+    # upgrade_file: "{{ playbook_dir }}/files/rhel_9.4_upgrade_packages.txt"
+    upgrade_file: <USER_INPUT>
+
+    nvidia_driver_settings:
+      ### MOFED example:
+      # driver_fw_url: "{{ repo_base_url }}/vendor/nvidia/MOFED/MOFED_23.10"
+      # filenames:
+      #   - MLNX_OFED_LINUX-23.10-3.2.2.0-rhel9.3-5.14.0-362.24.1.x86_64.tgz
+
+      # ### DOCA example:
+      # driver_fw_url: "{{ repo_base_url }}/vendor/nvidia/DOCA/DOCA_25.04"
+      # filenames:
+      #   - doca-host-3.0.0-058000_25.04_rhel94.x86_64.rpm
+      #   - doca-kernel-repo-25.04.0.6.1.0-1.kver.5.14.0.427.42.1.el9.4.x86.64.x86_64.rpm
+
+      driver_fw_url: <USER_INPUT>
+      filenames:
+        - <USER_INPUT>
+
+    nvidia_hca_settings:
+      # hca_url: "{{ repo_base_url }}/vendor/lenovo/hca_fw"                  # example
+      hca_url: <USER_INPUT>
+
+      hca_firmwares:
+        # - fw-ConnectX6Dx-rel-22_41_1000-SN37A28326_SN37A28327_Ax-UEFI-14.34.12-FlexBoot-3.7.400.signed.bin
+        # - fw-ConnectX7-rel-28_43_1014-SN37B06010_SN37B06011_Ax-UEFI-14.36.16-FlexBoot-3.7.500.signed.bin
+        - <USER_INPUT>
+
+  tasks:
+    - name: Set hostname on BeeGFS servers
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname | replace('_', '-') }}"
+
+    - name: Configure package repository.
+      include_tasks: "tasks/configure_package_repo.yml"
+
+    - name: Upgrade RHEL OS packages.
+      include_tasks: "tasks/upgrade_rhel_os.yml"
+      when: upgrade_file is defined
+
+    - name: Install NVIDIA driver firmware (MOFED) and HCA FW.
+      include_tasks: "tasks/nvidia_driver_fw/install_mofed.yml"
+      when:
+        - nvidia_driver_settings is defined
+        - "'mlnx' in (nvidia_driver_settings.filenames[0] | lower)"
+
+    - name: Install NVIDIA driver firmware (DOCA) and HCA FW.
+      include_tasks: "tasks/nvidia_driver_fw/install_doca.yml"
+      when:
+        - nvidia_driver_settings is defined
+        - "'doca' in (nvidia_driver_settings.filenames[0] | lower)"
+
+  handlers:
+    - name: Validate kernel
+      include_tasks: "tasks/validate_kernel.yml"
+
+    - name: Validate OFED modules
+      include_tasks: "tasks/nvidia_driver_fw/validate_ofed_modules.yml"

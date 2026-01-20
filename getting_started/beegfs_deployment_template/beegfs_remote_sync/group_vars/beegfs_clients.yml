@@ -1,0 +1,29 @@
+beegfs_client_conn_interfaces:
+  # - ibp170s0f0      # Example
+  - <USER_INPUT>
+
+### Enables TLS encryption for secure communication in BeeGFS v8 between clients,
+### remote storage targets, and the mgmtd service. Set to 'false' to disable TLS.
+beegfs_tls_enabled: true
+
+beegfs_client_mounts:
+  - sysMgmtdHost: "{{ beegfs_ha_mgmtd_floating_ip }}"
+    mounted: true
+    mount_point: /mnt/beegfs_remote_sync
+    connAuthFile_src: "{{ beegfs_files_dir }}/{{ beegfs_ha_mgmtd_floating_ip }}_connAuthFile"
+    beegfs_tls_ca_cert_src: "{{ beegfs_tls_ca_cert_src }}"
+    connInterfaces: "{{ beegfs_client_conn_interfaces }}"
+    connRDMAInterfaces: "{{ beegfs_client_conn_interfaces }}"
+    beegfs_client_config:
+      connClientPort: 8104
+      connMaxInternodeNum: 128
+      connMaxConcurrentAttempts: 2
+      connRDMABufNum: 36
+      connRDMABufSize: 65536
+      tuneFileCacheType: native
+      tuneFileCacheBufSize: "2097152"
+      connFallbackExpirationSecs: 90
+      connCommRetrySecs: 600
+      sysSessionChecksEnabled: false
+      sysMountSanityCheckMS: 11000
+      sysBypassFileAccessCheckOnMeta: true  # Set to true for beegfs-sync and beegfs-remote to work.

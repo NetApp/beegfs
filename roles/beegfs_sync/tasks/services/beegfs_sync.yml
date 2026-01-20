@@ -1,0 +1,32 @@
+---
+- name: Create directory for beegfs-sync service.
+  ansible.builtin.file:
+    path: "{{ beegfs_sync_config_path }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Create beegfs-sync.toml configuration file.
+  ansible.builtin.template:
+    src: beegfs_sync_toml.j2
+    dest: "{{ beegfs_sync_config_path }}beegfs-sync.toml"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Copy beegfs-sync.service to /etc/systemd/system.
+  ansible.builtin.copy:
+    src: /lib/systemd/system/beegfs-sync.service
+    dest: /etc/systemd/system/beegfs-sync.service
+    remote_src: yes
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Update systemd unit file for beegfs-sync service.
+  ansible.builtin.replace:
+    path: /etc/systemd/system/beegfs-sync.service
+    regexp: '^ExecStart=.*--cfg-file=/etc/beegfs/beegfs-sync\.toml'
+    replace: 'ExecStart=/opt/beegfs/sbin/beegfs-sync --cfg-file={{ beegfs_sync_config_path }}beegfs-sync.toml'
+  notify: Reload systemd

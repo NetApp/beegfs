@@ -1,0 +1,32 @@
+- name: Define OFED modules.
+  set_fact:
+    ofed_modules:
+      - nvme_fabrics
+      - nvme_rdma
+
+- name: Retrieve module information.
+  command: "modinfo {{ item }}"
+  register: modinfo_output
+  changed_when: false
+  loop: "{{ ofed_modules }}"
+
+- name: Determine if modules are an inbox module.
+  set_fact:
+    inbox_modules: |-
+      {%- set inbox_modules = [] -%}
+      {%- set pattern = 'Red\\s+Hat\\s+Enterprise' -%}
+      {%- for module in modinfo_output.results -%}
+        {%- for line in module.stdout_lines -%}
+          {%- if line | regex_search(pattern) -%}
+            {%- set _ = inbox_modules.append(module.item) -%}
+          {%- endif -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{- inbox_modules -}}
+
+- name: Validate that the running kernel is the expected version
+  assert:
+    that:
+      - (inbox_modules | length) == 0
+    fail_msg: "The server is running with inbox module: {{ inbox_modules }}."
+    success_msg: "The server is running with NVIDIA OFED modules."

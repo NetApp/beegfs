@@ -1,0 +1,94 @@
+# BeeGFS client with NFS service playbook.
+
+# Playbook objective
+#
+# 1. Configure IPs on Ethenet ports if eseries_ip_interfaces defined.
+# 2. Install BeeGFS client service on defined host.
+# 3. Install BeeGFS NFSv4 service on defined host.
+# 4. Disable beegfs-client service from starting on boot.
+
+
+- hosts: <USER_INPUT>                       # i.e: hosts: beegfs_05
+  gather_facts: true
+  any_errors_fatal: true
+  become: true
+  vars_files:
+    - ../../global_params/passwords.yml
+  vars:
+    beegfs_nfs_server_uninstall: false
+    mount_point: /mnt/beegfs
+
+    ##- Uncomment this block to configure the interface for the in-band network if it has not already been set up.
+    # eseries_ip_udev_rules:
+    #   "0000:61:00.0": inband_eth0
+    # eseries_ip_interfaces:
+    #   - name: inband_eth0
+    #     address: "10.25.13.15/26"
+    #     zone: public
+
+    ##- Comment out this block if MOFED is installed. Path of installed MOFED
+    eseries_ib_skip: true                     # Skip installing inbox OFED drivers. Use currently installed OFED.
+    beegfs_client_ofed_enable: true           # Default: false
+    # beegfs_client_ofed_include_path: "/usr/src/ofa_kernel/default/include"    # example
+    beegfs_client_ofed_include_path: <USER_INPUT>
+
+    ##- Permit the in-band interface within the firewall zone to support the NFS service.
+    nfs_firewall_rule:
+      zone: <USER_INPUT>                      # i.e: zone: public.
+      service: nfs
+      permanent: true
+
+    beegfs_nfs_server_exports:
+      - path: "{{ mount_point }}"
+        options: "rw,async,fsid=0,crossmnt,no_subtree_check,no_root_squash"
+        mode: 2770
+        owner: root
+        group: root
+        subnet_permissions:
+          ##- In-band subnet where any device can connect to the NFS server.
+          - 10.25.0.0/16
+
+    beegfs_client_mounts:
+      - sysMgmtdHost: "{{ beegfs_ha_mgmtd_floating_ip }}"
+        mounted: true
+        mount_point: "{{ mount_point }}"
+        connInterfaces:
+          - i1b                             # Name of Infiniband interface designated for BeeGFS communication.
+          - i2b
+        beegfs_client_config:
+          connClientPortUDP: 8004             
+          connMaxInternodeNum: 4            # Maximum number of simultaneous connections to the same node.
+          connRDMABufNum: 36                # Allocates the number of buffers for transferring IO.
+          connRDMABufSize: 65536            # Size of each allocated RDMA buffer 
+          tuneFileCacheType: native
+          tuneFileCacheBufSize: "2097152"
+          connFallbackExpirationSecs: 90
+          connCommRetrySecs: 600
+          sysSessionChecksEnabled: false    # Set to 'false' when deploying in shared disk HA environments.
+          connAuthFile: "/etc/beegfs/{{ beegfs_ha_mgmtd_floating_ip }}_connAuthFile"
+          sysMountSanityCheckMS: 11000
+          tuneRefreshOnGetAttr: true        # Set to 'true' if using the NFSv4 service through BeeGFS client. 
+  tasks:
+    - name: Configure IPs on Ethenet ports for in-band network
+      import_role:
+        name: netapp_eseries.host.ip
+      when:
+        - not (beegfs_nfs_server_uninstall | bool)
+        - eseries_ip_interfaces is defined
+
+    - name: Install BeeGFS client services on HA cluster
+      import_role:
+        name: netapp_eseries.beegfs.beegfs_client
+      when: not (beegfs_nfs_server_uninstall | bool)
+
+    - name: Install/Uninstall BeeGFS NFSv4 service on HA cluster
+      import_role:
+        name: netapp_eseries.beegfs.beegfs_nfs_server
+
+    - name: Create symlink for beegfs-client.conf
+      ansible.builtin.command: ln -sf /etc/beegfs/{{ beegfs_ha_mgmtd_floating_ip }}_8004_beegfs-client.conf /etc/beegfs/beegfs-client.conf
+
+    - name: Disable beegfs-client service from starting on boot
+      ansible.builtin.service:
+        name: beegfs-client
+        enabled: false

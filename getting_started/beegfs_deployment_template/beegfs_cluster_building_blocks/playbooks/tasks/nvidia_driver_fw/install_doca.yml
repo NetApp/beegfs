@@ -1,0 +1,62 @@
+- name: Set DOCA facts.
+  set_fact:
+    basename: "{{ nvidia_driver_settings.filenames[0] | regex_replace('(\\.[^.]+)$','') }}"
+  changed_when: true
+
+- name: Get stats of {{ basename }}
+  ansible.builtin.stat:
+    path: /tmp/{{ basename }}
+  register: stat_result
+  changed_when: true
+  notify:
+    - Validate kernel
+
+- name: Set local path for DOCA packages.
+  set_fact:
+    doca_dir: "/tmp/{{ basename }}"
+
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ doca_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Uninstall existing OFED packages.
+  ansible.builtin.command: ofed_uninstall.sh --quiet --force
+  ignore_errors: true
+
+- name: Download DOCA packages to server.
+  ansible.builtin.get_url:
+    url: "{{ nvidia_driver_settings.driver_fw_url }}/{{ item }}"
+    dest: "{{ doca_dir }}/{{ item }}"
+    mode: '0440'
+  loop: "{{ nvidia_driver_settings.filenames }}"
+
+- name: Install DOCA repository if not already installed.
+  ansible.builtin.command: rpm -U {{ doca_dir }}/{{ item }}
+  loop: "{{ nvidia_driver_settings.filenames }}"
+  ignore_errors: true
+
+- name: Refresh repo cache.
+  ansible.builtin.command: dnf makecache
+
+- name: Install OFED packages. This will take a while to complete.
+  ansible.builtin.dnf:
+    name:
+      - doca-ofed
+      - kmod-mlnx-nvme
+      - knem
+    state: present
+
+- name: Start NVIDIA HCA FW upgrade tasks.
+  include_tasks: "tasks/nvidia_driver_fw/upgrade_nvidia_hca_fw.yml"
+  when: nvidia_hca_settings is defined
+
+- name: Reboot host to apply new changes.
+  ansible.builtin.reboot:
+    test_command: "systemctl is-active default.target"
+    reboot_timeout: 3600
+    post_reboot_delay: 120
+  notify:
+    - Validate kernel
+    - Validate OFED modules

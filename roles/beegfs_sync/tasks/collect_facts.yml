@@ -1,0 +1,9 @@
+---
+- name: Set facts for BeeGFS configurations.
+  ansible.builtin.set_fact:
+    beegfs_sync_config: "{{ beegfs_sync_config_defaults | combine(beegfs_sync_config_options) }}"
+
+- name: Set facts for BeeGFS TLS configurations.
+  ansible.builtin.set_fact:
+    beegfs_sync_tls_cert_dest_path: "{{ beegfs_sync_config['server']['tls-cert-file'] }}"
+    beegfs_sync_tls_key_dest_path: "{{ beegfs_sync_config['server']['tls-key-file'] }}"

@@ -110,11 +110,14 @@
     dest: "{{ item['volumes'][0]['metadata']['mount_dir'] }}{{ item['volumes'][0]['name'] }}/storage_config/beegfs-storage.conf"
     options: |-
       {%- set storeStorageDirectory = [] -%}
+      {%- set storeFsUUID = [] -%}
       {%- for volume in item["volumes"] -%}
         {%- if storeStorageDirectory.append(volume["metadata"]["mount_dir"] ~ volume["name"] ~ "/data") -%}{%- endif -%}
+        {%- if storeFsUUID.append(volume["fs_uuid"]) -%}{%- endif -%}
       {%- endfor -%}
       {%- set required_options = {"sysMgmtdHost": management_info["resource_group"],
                                   "storeStorageDirectory": storeStorageDirectory | join(","),
+                                  "storeFsUUID": storeFsUUID | join(","),
                                   "connInterfacesFile": item["volumes"][0]["metadata"]["mount_dir"] ~ item["volumes"][0]["name"] ~ "/storage_config/connInterfacesFile.conf",
                                   "connDisableAuthentication": not beegfs_ha_conn_auth_enabled,
                                   "logStdFile": "/var/log/beegfs-storage-" ~ item["volumes"][0]["name"] ~ ".log"} -%}
@@ -213,7 +216,7 @@
   ansible.builtin.systemd:
     name: "beegfs-storage@{{ item['volumes'][0]['name'] }}"
     enabled: false
-    daemon_reload: "{% if beegfs_storage_service_override['changed'] %}true{% else %}false{% endif %}"
+    daemon_reload: "{% if beegfs_storage_service_override['changed'] | bool %}true{% else %}false{% endif %}"
   loop: "{{ node_info['storage'] }}"
   become: true
 
@@ -222,5 +225,5 @@
     name: "beegfs-storage@{{ item['volumes'][0]['name'] }}"
     state: restarted
   loop: "{{ node_info['storage'] }}"
-  when: beegfs_ha_force_restart_services
+  when: beegfs_ha_force_restart_services | bool
   become: true

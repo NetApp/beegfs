@@ -30,13 +30,14 @@
       changed_when: false
 
     - name: Ensure BeeGFS HA cluster is not in maintenance mode.
-      ansible.builtin.command: "crm_attribute --name maintenance-mode --delete"
+      ansible.builtin.command: "crm_attribute --name maintenance-mode --update false"
 
     - name: Wait for cluster changes to complete.
       ansible.builtin.command: "crm_resource --wait"
       changed_when: false
-  when: "maintenance_query['rc'] in [0, 105] and maintenance_query['stdout']
-         | regex_search(beegfs_ha_common_pacemaker_true_regex, ignorecase=true)"
+  when:
+    - maintenance_query['rc'] in [0, 105]
+    - (maintenance_query['stdout'] | regex_search(beegfs_ha_common_pacemaker_true_regex, ignorecase=true)) is not none
   delegate_to: "{{ cluster_automation_node }}"
   become: true
 

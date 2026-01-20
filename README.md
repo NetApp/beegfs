@@ -23,39 +23,45 @@ availability (HA) or non-HA mode of operation.
 
 ## Compatibility
 
-This collection version has been tested with Ansible core **2.16**.
+This collection version has been tested with ansible-core **2.19**.
 
 ### Tested BeeGFS Configuration
 
 | BeeGFS Service | BeeGFS Version | Operating System |
 | -------------- | -------------- | ---------------- |
-| beegfs-mgmtd   | 7.4.3          | RedHat 9.3       |
-| beegfs-meta    | 7.4.3          | RedHat 9.3       |
-| beegfs-storage | 7.4.3          | RedHat 9.3       |
-| beegfs-helperd | 7.4.3          | Ubuntu 22.04 LTS |
-| beegfs-client  | 7.4.3          | Ubuntu 22.04 LTS |
+| beegfs-mgmtd   | 8.2            | RedHat 9.4       |
+| beegfs-meta    | 8.2            | RedHat 9.4       |
+| beegfs-storage | 8.2            | RedHat 9.4       |
+| beegfs-client  | 8.2            | Ubuntu 22.04 LTS, Ubuntu 24.04 LTS |
+| beegfs-tools   | 8.2            | Ubuntu 22.04 LTS, Ubuntu 24.04 LTS |
+| beegfs-utils   | 8.2            | Ubuntu 22.04 LTS, Ubuntu 24.04 LTS |
 
 ### Tested Block Node Configuration
 
-| Platform     | SANtricity OS version | Protocol |
+| Platform     | SANtricity OS version | Protocol  |
 | -------------| --------------------- | --------- |
-| EF600        | 11.80 or newer        | NVMe/IB   |
+| EF600        | 11.90 or newer        | NVMe/IB   |
 
 Additional information about tested configurations can be found in the [test matrix](docs/beegfs_ha/test_matrix.md).
 
 ## Requirements
 
 - The Ansible control node must have the following installed:
-  - Python 3.9 or later
-  - Python3 pip
+  - python3: 3.12 or later
+  - pip3: 25.1 or later
   - NetApp E-Series Ansible Collections:
-    - [netapp_eseries.santricity](https://galaxy.ansible.com/ui/repo/published/netapp_eseries/santricity/) 1.4.0 or
+    - [netapp_eseries.santricity](https://galaxy.ansible.com/ui/repo/published/netapp_eseries/santricity/) 2.0.0 or
     later.
-    - [netapp_eseries.host](https://galaxy.ansible.com/ui/repo/published/netapp_eseries/host/) 1.3.2 or later.
+    - [netapp_eseries.host](https://galaxy.ansible.com/ui/repo/published/netapp_eseries/host/) 2.0.0 or later.
   - The following Python packages must be installed via pip:
+    - ansible-core
+    - cryptography
+    - jinja2
     - ipaddr
     - netaddr
-    - cryptography
+    - passlib
+    - pyyaml
+    - resolvelib
 - Passwordless SSH must be configured from the Ansible control node to all BeeGFS HA nodes and client nodes. Do not set
 up passwordless SSH to the block nodes. This is neither supported nor required. To set up passwordless SSH, follow these
 steps:

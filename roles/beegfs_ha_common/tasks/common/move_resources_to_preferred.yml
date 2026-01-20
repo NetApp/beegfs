@@ -15,7 +15,9 @@
     - name: Move resources back to their preferred cluster nodes.
       ansible.builtin.command: "crm_resource --resource {{ item }} --restart"
       loop: "{{ non_preferred_resources }}"
-      when: beegfs_ha_force_resource_move and non_preferred_resources | length > 0
+      when:
+        - beegfs_ha_force_resource_move | bool
+        - non_preferred_resources | length > 0
       vars:
         non_preferred_resources: |-
           {#- Create a dictionary of the preferred cluster node for each resource monitor -#}

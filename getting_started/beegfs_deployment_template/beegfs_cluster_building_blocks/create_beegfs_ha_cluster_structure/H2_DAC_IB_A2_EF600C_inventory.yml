@@ -1,0 +1,457 @@
+all:
+  vars:
+    #########################################
+    ### Create Cluster Structure Settings ###
+    #########################################
+
+    ### Set to True to replace any existing files in the inventories.
+    overwrite_existing_inventories: true
+
+    ### Set to True if the BeeGFS version supports TLS.
+    ### TLS support was introduced in BeeGFS v8.
+    beegfs_supports_tls: true
+
+    ### Defines the architecture of the building block being deployed.
+    ### For instance, "H2_DAC_IB_A4_EF600" denotes:
+    ###   - H2: 2 file nodes
+    ###   - DAC: direct attach connection
+    ###   - IB: direct attach connection is over Infiniband 
+    ###   - A4: 4 block nodes
+    ###   - EF600: block node model
+    ###
+    ### Options: H2_DAC_IB_A2_EF600, H2_DAC_IB_A4_EF600, H2_DAC_IB_A2_EF600C
+    building_block_architecture: H2_DAC_IB_A2_EF600C
+
+    ### Set to True if all file nodes in the cluster have the same hardware configuration.
+    identical_file_node_hardware: true
+
+    ### Set to True to use a local YUM repository for package management.
+    local_yum_repo: true
+
+
+
+    ##########################
+    ### File Node Settings ###
+    ##########################
+
+    file_node_settings:
+      ### The starting IP address for the management access network.
+      ###
+      ### NOTE: use this only when the IP addresses are assigned sequentially. Otherwise, comment it out.
+      mgmt_ip_start: 10.25.13.11
+
+      ### The starting IP address in the BMC (Baseboard Management Controller) network designated for the BMC service.
+      ###
+      ### NOTE: use this only when the IP addresses are assigned sequentially. Otherwise, comment it out.
+      bmc_ip_start: 10.25.9.88
+
+      ### The starting IP address in the cluster network used by Corosync to monitor file node heartbeats.
+      ###
+      ### NOTE: use this only when the IP addresses are assigned sequentially. Otherwise, comment it out.
+      cluster_node_ip_start:
+        - 100.1.10.10
+
+      ### A network for BeeGFS clients and servers to communicate with each other.
+      ###
+      ### Options: ipoib
+      beegfs_network_protocol: ipoib
+
+      ### This section defines the host bus adapter settings, which are used for both cluster communications and
+      ### connecting to the eseries storage system.
+      ###
+      ### Make sure to review and adjust these settings according to your specific deployment requirements.
+      host_bus_adapter:
+        ### These ports are dedicated to Pacemaker/cluster connectivity.
+        cluster_comm_interfaces:
+          - i2b
+          - i4b
+
+        floating_ip_interfaces:
+          block_node_1:
+            - i1b
+            - i2b
+          block_node_2:
+            - i3b
+            - i4b
+
+        ### This subsection defines the mapping between each block node and the specific file node interfaces used for
+        ### eseries storage connectivity. The identifiers (e.g., i1a, i5a) refer to the file node's ports that connect
+        ### with the corresponding block node.
+        eseries_storage_interfaces:
+          block_node_1:
+            - i1a
+            - i2a
+          block_node_2:
+            - i3a
+            - i4a
+
+      beegfs_ha_settings:
+        ### The starting IP address in the BeeGFS HA network designated for floating IPs.
+        ###
+        ### NOTE: use this only when the IP addresses are assigned sequentially. Otherwise, comment it out.
+        floating_ip_start:
+          ### network_1 designated for odd-numbered interfaces (e.g., i1b, i3b)
+          ### network_2 designated for even-numbered interfaces (e.g., i2b, i4b)
+          meta_network:
+            network_1: 100.1.11.1
+            network_2: 100.1.12.1
+          stor_network:
+            network_1: 100.1.13.1
+            network_2: 100.1.14.1
+          mgmt_network: 100.1.10.1
+
+        ### Pacemaker fencing agent type
+        ###
+        ### Options: fence_apc, fence_redfish
+        ###   - fence_apc: to enable fencing using APC Power Distribution Units (PDUs)
+        ###   - fence_redfish: to enable fencing using the Redfish APIs provided by the Lenovo XCC (and other BMCs).
+        beegfs_ha_fencing_agent: fence_redfish
+
+      beegfs_service_settings:
+        ### floating_ips_interfaces defines the configuration for each network interface used by BeegFS services.
+        ### Each interface is mapped to:
+        ###   - numa_zone: the associated NUMA node identifier, which helps optimize memory locality.
+        ###   - mgmt_count: the number of management service instances running on that interface.
+        ###   - meta_count: the number of metadata service instances running on that interface.
+        ###   - stor_count: the number of storage service instances running on that interface.
+        ###
+        ### Make sure to review and adjust these settings according to your specific deployment requirements.
+        floating_ip_interfaces:
+          i1b:
+            numa_zone: 0
+            mgmt_count: 1
+            meta_count: 1
+            stor_count: 1
+          i2b:
+            numa_zone: 0
+            meta_count: 1
+            stor_count: 1
+          i3b:
+            numa_zone: 1
+            meta_count: 1
+            stor_count: 1
+          i4b:
+            numa_zone: 1
+            meta_count: 1
+            stor_count: 1
+
+        ### Enable quota enforcement on BeeGFS services if quota_enable_enforcement set to True.
+        quota_enable_enforcement: false
+
+      ### BeeGFS requires time synchronization.
+      ### Chrony and NTP tools conflict with each other. Enable only one to activate the NTP service on file nodes.
+      beegfs_ha_chrony_enabled: true
+      beegfs_ha_ntp_enabled: false
+
+
+
+    #######################################
+    ### E-series Storage Array Settings ###
+    #######################################
+
+    eseries_storage_settings:
+      ### The starting IP address for the management access network.
+      ###
+      ### NOTE: use this only when the IP addresses are assigned sequentially. Otherwise, comment it out.
+      mgmt_ip_start:
+        controller_a: 10.25.9.33
+        controller_b: 10.25.9.76
+
+      ### Communication protocol used between the block node (E-series array) and the file node.
+      ###
+      ### Options: fc, ib_iser, ib_srp, iscsi, nvme_fc, nvme_ib, nvme_roce
+      eseries_initiator_protocol: nvme_ib
+
+      ### IP addresses used for communication between the storage array and the file node.
+      ###
+      ### controller_a:    # Ordered list of controller A channel address definition.
+      ###   -              # Port IPv4 address for channel 1
+      ###   - (...)        # So on and so forth
+      ### controller_b:    # Ordered list of controller B channel address definition.
+      eseries_controller_hic_ports:
+        block_node_1:
+          controller_a:
+            - 192.168.1.101   # Port 2a (virtual)
+            - 192.168.2.101   # Port 2b (virtual)
+            - 192.168.1.100   # Port 2a (physical)
+            - 192.168.2.100   # Port 2b (physical)
+          controller_b:
+            - 192.168.3.101   # Port 2a (virtual)
+            - 192.168.4.101   # Port 2b (virtual)
+            - 192.168.3.100   # Port 2a (physical)
+            - 192.168.4.100   # Port 2b (physical)
+        block_node_2:
+          controller_a:
+            - 192.168.5.101   # Port 2a (virtual)
+            - 192.168.6.101   # Port 2b (virtual)
+            - 192.168.5.100   # Port 2a (physical)
+            - 192.168.6.100   # Port 2b (physical)
+          controller_b:
+            - 192.168.7.101   # Port 2a (virtual)
+            - 192.168.8.101   # Port 2b (virtual)
+            - 192.168.7.100   # Port 2a (physical)
+            - 192.168.8.100   # Port 2b (physical)
+
+      ### Configuration for volumes provisioned on the E-series storage array to serve as BeeGFS targets.
+      beegfs_target_settings:
+        ### Converged building block: Home to volumes for BeeGFS services such as management, metadata, and storage.
+        converged_bb:
+          mgmt:
+            secure_pool: true                     # Set to False if the drive/array is not configured with encryption.
+            raid_level: raidDiskPool               # Options: raid0, raid1, raid5, raid6, raid1_DiskPool, raid6_DiskPool
+            storage_pool_names:                    # Overrides default storage pool naming if set.
+              - DefaultDiskPool                    # Recommended when mgmt and meta share storage pool with stor.
+            criteria_drive_count: 24               # Number of drive per storage pool (volume group)
+            segment_size_kb: 128                   # Segment size of a volume
+            volume_size: 0.1                       # eseries_volume_size_unit is set as a percentage
+            file_nodes_per_storage_pool: 2         # Number of file nodes with volumes assigned to a storage pool
+            storage_pools_per_beegfs_service: 1    # Number of storage pools allocated to each BeeGFS service
+            volumes_per_beegfs_service: 1          # Number of volumes assigned to each BeeGFS service
+          meta:
+            secure_pool: true
+            raid_level: raidDiskPool
+            storage_pool_names:
+              - DefaultDiskPool
+            criteria_drive_count: 24
+            segment_size_kb: 128
+            volume_size: 1
+            file_nodes_per_storage_pool: 2
+            storage_pools_per_beegfs_service: 1
+            volumes_per_beegfs_service: 1
+          stor:
+            secure_pool: true
+            raid_level: raidDiskPool
+            storage_pool_names:
+              - DefaultDiskPool
+            criteria_drive_count: 24
+            segment_size_kb: 128
+            volume_size: 11.98
+            file_nodes_per_storage_pool: 2
+            storage_pools_per_beegfs_service: 1
+            volumes_per_beegfs_service: 2
+
+        ### Storage-only building block: Contains volumes exclusively for BeeGFS storage service.
+        storage_only_bb:
+          stor:
+            secure_pool: true
+            raid_level: raidDiskPool
+            storage_pool_names:
+              - DefaultDiskPool
+            criteria_drive_count: 24
+            segment_size_kb: 128
+            volume_size: 12.49
+            file_nodes_per_storage_pool: 2
+            storage_pools_per_beegfs_service: 1
+            volumes_per_beegfs_service: 2
+
+      ### By default, all block nodes in a converged building block are configured for beegfs-mgmtd, beegfs-meta, and
+      ### beegfs-storage. To specify a custom list of block nodes within converged building blocks for these services,
+      ### use this variable.
+      override_default_converged_block_nodes: []
+
+  children:
+    ####################
+    ### ha_cluster_1 ###
+    ####################
+    ha_cluster_1:
+      children:
+        building_block_01:
+          children:
+            file_node:
+              hosts:
+                beegfs_01:
+                beegfs_02:
+            block_node:
+              hosts:
+                netapp_01:
+                netapp_02:
+
+        building_block_02:
+          children:
+            file_node:
+              hosts:
+                beegfs_03:
+                beegfs_04:
+            block_node:
+              hosts:
+                netapp_03:
+                netapp_04:
+
+        building_block_03:
+          children:
+            file_node:
+              hosts:
+                beegfs_05:
+                beegfs_06:
+            block_node:
+              hosts:
+                netapp_05:
+                netapp_06:
+
+        beegfs_services:
+          children:
+            mgmt:
+              children:
+                building_block_01:
+            meta:
+              children:
+                building_block_01:
+            stor:
+              children:
+                building_block_01:
+                building_block_02:
+                building_block_03:
+
+
+    ### Adding additional clusters to the namespace that shares the same mgmt service.
+    ###
+    ### Example:
+
+    ####################
+    ### ha_cluster_2 ###
+    ####################
+    ha_cluster_2:
+      children:
+        building_block_04:
+          children:
+            file_node:
+              hosts:
+                beegfs_07:
+                beegfs_08:
+            block_node:
+              hosts:
+                netapp_07:
+                netapp_08:
+
+        building_block_05:
+          children:
+            file_node:
+              hosts:
+                beegfs_09:
+                beegfs_10:
+            block_node:
+              hosts:
+                netapp_09:
+                netapp_10:
+
+        building_block_06:
+          children:
+            file_node:
+              hosts:
+                beegfs_11:
+                beegfs_12:
+            block_node:
+              hosts:
+                netapp_11:
+                netapp_12:
+
+        beegfs_services:
+          children:
+            meta:
+              children:
+                building_block_04:
+            stor:
+              children:
+                building_block_04:
+                building_block_05:
+                building_block_06:
+
+
+    ####################
+    ### ha_cluster_3 ###
+    ####################
+    ha_cluster_3:
+      children:
+        building_block_07:
+          children:
+            file_node:
+              hosts:
+                beegfs_13:
+                beegfs_14:
+            block_node:
+              hosts:
+                netapp_13:
+                netapp_14:
+
+        building_block_08:
+          children:
+            file_node:
+              hosts:
+                beegfs_15:
+                beegfs_16:
+            block_node:
+              hosts:
+                netapp_15:
+                netapp_16:
+
+        building_block_09:
+          children:
+            file_node:
+              hosts:
+                beegfs_17:
+                beegfs_18:
+            block_node:
+              hosts:
+                netapp_17:
+                netapp_18:
+
+        beegfs_services:
+          children:
+            meta:
+              children:
+                building_block_07:
+            stor:
+              children:
+                building_block_07:
+                building_block_08:
+                building_block_09:
+
+
+    ####################
+    ### ha_cluster_4 ###
+    ####################
+    ha_cluster_4:
+      children:
+        building_block_10:
+          children:
+            file_node:
+              hosts:
+                beegfs_19:
+                beegfs_20:
+            block_node:
+              hosts:
+                netapp_19:
+                netapp_20:
+
+        building_block_11:
+          children:
+            file_node:
+              hosts:
+                beegfs_21:
+                beegfs_22:
+            block_node:
+              hosts:
+                netapp_21:
+                netapp_22:
+
+        building_block_12:
+          children:
+            file_node:
+              hosts:
+                beegfs_23:
+                beegfs_24:
+            block_node:
+              hosts:
+                netapp_23:
+                netapp_24:
+
+        beegfs_services:
+          children:
+            meta:
+              children:
+                building_block_10:
+            stor:
+              children:
+                building_block_10:
+                building_block_11:
+                building_block_12:

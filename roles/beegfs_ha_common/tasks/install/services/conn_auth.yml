@@ -2,7 +2,6 @@
 - name: Ensure expected BeeGFS connection authentication file exists on Ansible control node.
   delegate_to: localhost
   run_once: true
-  no_log: true
   vars:
     conn_auth_path: |-
       {#- Check whether beegfs_ha_conn_auth_src_path is a relative path. Prepend playbook_dir if it is. -#}
@@ -16,8 +15,6 @@
       ansible.builtin.stat:
         path: "{{ conn_auth_path }}"
       register: conn_auth_path_stats
-      delegate_to: localhost
-      run_once: true
 
     - name: Determine the BeeGFS connection authentication file's source.
       ansible.builtin.set_fact:
@@ -54,13 +51,14 @@
       register: conn_auth_src_stat
 
     - name: Determine the BeeGFS connection authentication secret on the Ansible control node.
-      ansible.builtin.command: "cat {{ beegfs_ha_conn_auth_src }}"
+      ansible.builtin.slurp:
+        src: "{{ beegfs_ha_conn_auth_src }}"
       register: conn_auth_secret
       changed_when: false
-      when: conn_auth_src_stat["stat"]["exists"]
+      when: conn_auth_src_stat["stat"]["exists"] | bool
 
-    - name: Generate secret for BeeGFS connection authentication file.
-      ansible.builtin.command: "dd if=/dev/random bs=128 count=1"
+    - name: Generate a connection authentication secret in memory (base64).
+      ansible.builtin.shell: dd if=/dev/urandom bs=128 count=1 | base64
       register: conn_auth_random_secret
       changed_when: false
 
@@ -71,15 +69,16 @@
         mode: "0400"
       vars:
         secret: |-
-          {%- if beegfs_ha_conn_auth_secret -%}
+          {%- if (beegfs_ha_conn_auth_secret | default('')) != '' -%}
             {{- beegfs_ha_conn_auth_secret -}}
-          {%- elif beegfs_ha_conn_auth_force_new is defined and beegfs_ha_conn_auth_force_new -%}
-            {{- conn_auth_random_secret["stdout"] -}}
-          {%- elif conn_auth_secret["stdout"] | default("") != "" -%}
-            {{- conn_auth_secret["stdout"] -}}
+          {%- elif (beegfs_ha_conn_auth_force_new | default(false)) | bool -%}
+            {{- conn_auth_random_secret.stdout | b64decode -}}
+          {%- elif (conn_auth_secret.content | default('')) != '' -%}
+            {{- conn_auth_secret.content | b64decode -}}
           {%- else -%}
-            {{- conn_auth_random_secret["stdout"] -}}
+            {{- conn_auth_random_secret.stdout | b64decode -}}
           {%- endif -%}
+
 
 - name: Ensure the directory exists for BeeGFS connection authentication file on the the BeeGFS cluster nodes.
   ansible.builtin.file:

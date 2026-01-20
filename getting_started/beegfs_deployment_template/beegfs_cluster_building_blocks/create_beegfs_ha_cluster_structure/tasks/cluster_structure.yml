@@ -1,0 +1,136 @@
+- name: Define variables for cluster {{ cluster_structure.key }}.
+  ansible.builtin.set_fact:
+    cluster_name: "{{ cluster_structure.key }}"
+    cluster_id: "{{ cluster_structure.key | regex_search('[0-9]+$') }}"
+    cluster_definition: "{{ cluster_structure.value['children'] }}"
+    file_node_basename: "{{ groups['file_node'][0] | regex_replace('[_0-9]+$', '') }}"
+    eseries_storage_basename: "{{ groups['block_node'][0] | regex_replace('[_0-9]+$', '') }}"
+
+- name: Set building block facts for cluster {{ cluster_name }}.
+  ansible.builtin.set_fact:
+    building_block_directory_path: "{{ playbook_dir | dirname }}/beegfs_ha_building_block_cluster_{{ cluster_id }}"
+    building_block_names: |-
+      {%- set building_block_names = [] -%}
+      {#- groups[beegfs_service_group] retrieves every host assigned to the beegfs_services from all clusters. -#}
+      {%- set beegfs_services_groups_names = groups[beegfs_service_group] | map('extract', hostvars, 'group_names') | flatten(1) | unique -%}
+      {%- for group, hosts in cluster_definition.items() -%}
+        {%- if building_block_basename in group and group in beegfs_services_groups_names -%}
+          {%- if building_block_names.append(group) -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{- building_block_names -}}
+
+
+- name: Create tmp folder for debug data.
+  ansible.builtin.file:
+    state: directory
+    path: "{{ playbook_dir | dirname }}/tmp/"
+
+- name: Create cluster_facts_{{ cluster_name }} file.
+  ansible.builtin.template:
+    src: "templates/cluster_facts/cluster_facts_template.j2"
+    dest: "{{ playbook_dir | dirname }}/tmp/cluster_facts_{{ cluster_name }}.yml"
+
+- name: Render cluster_facts template.
+  set_fact:
+    cluster_facts: "{{ lookup('template', 'templates/cluster_facts/cluster_facts_template.j2') | from_yaml }}"
+
+
+- name: Create building block directory for cluster {{ cluster_name }}.
+  ansible.builtin.file:
+    state: directory
+    path: "{{ building_block_directory_path }}"
+    force: "{{ overwrite_existing_inventories }}"
+
+- name: Create user_defined_params.yml if not exist.
+  ansible.builtin.template:
+    src: "templates/common/user_defined_params_template.j2"
+    dest: "{{ building_block_directory_path }}/user_defined_params.yml"
+    force: false
+
+- name: Create cluster inventory.
+  ansible.builtin.template:
+    src: "templates/common/inventory_layout_template.j2"
+    dest: "{{ building_block_directory_path }}/beegfs_ha_inventory.yml"
+    force: "{{ overwrite_existing_inventories }}"
+
+
+- name: Set cluster resource group facts.
+  ansible.builtin.set_fact:
+    beegfs_ha_resource_groups: |-
+      {%- set beegfs_ha_resource_groups = [] -%}
+      {%- for building_block_components in cluster_facts[cluster_name].values() -%}
+        {%- if beegfs_ha_resource_groups.append(building_block_components['beegfs_services'].keys() ) -%}{%- endif -%}
+      {%- endfor -%}
+      {{- beegfs_ha_resource_groups | map('list') | flatten -}}
+    file_node_names: |-
+      {%- set file_node_names = [] -%}
+      {%- for building_block_components in cluster_facts[cluster_name].values() -%}
+        {%- if file_node_names.append(building_block_components['file_nodes'] ) -%}{%- endif -%}
+      {%- endfor -%}
+      {{- file_node_names | flatten -}}
+    block_node_names: |-
+      {%- set block_node_names = [] -%}
+      {%- for building_block_components in cluster_facts[cluster_name].values() -%}
+        {%- if block_node_names.append(building_block_components['block_nodes'] ) -%}{%- endif -%}
+      {%- endfor -%}
+      {{- block_node_names | flatten -}}
+
+
+- name: Create inventory directories when applicable.
+  ansible.builtin.file:
+    state: directory
+    path: "{{ building_block_directory_path }}/{{ item }}"
+    force: "{{ overwrite_existing_inventories }}"
+  loop: ["group_vars", "host_vars"]
+
+- name: Create or overwrite all group inventory files when applicable.
+  ansible.builtin.template:
+    src: "templates/common/all_group_template.j2"
+    dest: "{{ building_block_directory_path }}/group_vars/all.yml"
+    force: "{{ overwrite_existing_inventories }}"
+
+- name: Create or overwrite E-Series storage system group inventory file when applicable.
+  ansible.builtin.template:
+    src: "templates/eseries/eseries_storage_system_group_template.j2"
+    dest: "{{ building_block_directory_path }}/group_vars/{{ beegfs_ha_ansible_storage_group }}.yml"
+    force: "{{ overwrite_existing_inventories }}"
+
+- name: Create or overwrite ha_cluster inventory file when applicable.
+  ansible.builtin.template:
+    src: "templates/ha_cluster_group/ha_cluster_group_template.j2"
+    dest: "{{ building_block_directory_path }}/group_vars/{{ beegfs_ha_ansible_cluster_group }}.yml"
+    force: "{{ overwrite_existing_inventories }}"
+
+
+- name: Create or overwrite BeeGFS cluster group resource inventory files when applicable.
+  ansible.builtin.template:
+    src: |-
+      {%- set group_name = item -%}
+      {%- if 'mgmt' in group_name -%}
+        templates/cluster_group/cluster_group_management_resource_template.j2
+      {%- elif 'meta' in group_name -%}
+        templates/cluster_group/cluster_group_metadata_resource_template.j2
+      {%- elif 'stor' in group_name -%}
+        templates/cluster_group/cluster_group_storage_resource_template.j2
+      {%- else -%}
+        templates/cluster_group/cluster_group_resource_template.j2
+      {%- endif -%}
+    dest: "{{ building_block_directory_path }}/group_vars/{{ item }}.yml"
+    force: "{{ overwrite_existing_inventories }}"
+  loop: "{{ beegfs_ha_resource_groups }}"
+
+
+- name: Generate BeeGFS host inventory files.
+  ansible.builtin.template:
+    src: "templates/cluster_node/cluster_node_template.j2"
+    dest: "{{ building_block_directory_path }}/host_vars/{{ item }}.yml"
+    force: "{{ overwrite_existing_inventories }}"
+  loop: "{{ file_node_names }}"
+
+- name: Generate E-Series storage host inventory files.
+  ansible.builtin.template:
+    src: "templates/eseries/eseries_storage_system_template.j2"
+    dest: "{{ building_block_directory_path }}/host_vars/{{ item }}.yml"
+    force: "{{ overwrite_existing_inventories }}"
+  loop: "{{ block_node_names }}"

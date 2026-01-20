@@ -1,0 +1,35 @@
+all:
+  children:
+    {{ beegfs_ha_ansible_cluster_group }}:
+      children:
+
+{%- for building_block, building_block_components in cluster_facts[cluster_name].items() %}
+
+        ###################################
+        #####{{ building_block | center(25) }}#####
+        ###################################
+
+{% for beegfs_service, beegfs_service_values in building_block_components['beegfs_services'].items() %}
+        {{ beegfs_service }}:
+          hosts:
+{%   for hostname in beegfs_service_values['file_nodes'] %}
+            {{ hostname }}:
+{%   endfor %}
+
+{% endfor %}
+
+{% endfor %}
+
+    # NetApp E-Series storage systems Ansible group
+    eseries_storage_systems:
+      hosts:
+
+{%- for building_block in building_block_names %}
+
+        ###################################
+        #####{{ building_block | center(25) }}#####
+        ###################################
+{%   for array in cluster_definition[building_block]['children']['block_node']['hosts'].keys() %}
+        {{ array }}:
+{%    endfor %}
+{% endfor %}

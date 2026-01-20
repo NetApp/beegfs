@@ -1,0 +1,83 @@
+# Playbook objective
+#
+# 1. Generate drive security key on storage array.
+# 2. Save drive security key to "files/drive_security/" directory on ansible node.
+# 3. Validate drive security key file with array.
+
+
+- hosts: eseries_storage_systems
+  gather_facts: false
+  become: true
+  any_errors_fatal: true
+  vars_files:
+    - ../../global_params/passwords.yml
+  vars:
+    lock_key_id: "{{ inventory_hostname }}"
+    drive_security_pass: "{{ eseries_drive_security_pass }}"
+  tasks:
+    - name: Configure security key for drives on array.
+      delegate_to: localhost
+      block:
+        - name: Define drive security filename.
+          ansible.builtin.set_fact:
+            drive_security_filename: "{{ lock_key_id }}_drivesecurity.slk"
+
+        - name: Create files directory to save security key file.
+          ansible.builtin.file:
+            state: directory
+            path: files/drive_security
+
+        - name: Generate drive security key on array.
+          ansible.builtin.uri:
+            url: https://{{ ansible_host }}/devmgr/v2/storage-systems/1/security-key
+            method: POST
+            body_format: json
+            body: "{  \"lockKeyId\": \"{{ lock_key_id }}\",  \"passPhrase\": \"{{ drive_security_pass }}\",  \"setLockKey\": true}"
+            return_content: true
+            validate_certs: false
+            user: admin
+            password: "{{ eseries_password }}"
+          register: output
+
+        - name: Save drive security key to files directory.
+          ansible.builtin.get_url:
+            url: https://{{ ansible_host }}/devmgr/v2/files/{{ output['json']['fileName'] }}
+            dest: "files/drive_security/{{ drive_security_filename }}"
+            mode: '0440'
+            validate_certs: false
+            username: admin
+            password: "{{ eseries_password }}"
+
+        - block:
+            - name: Validate drive security key file with array.
+              ansible.builtin.command:
+                argv:
+                  - /usr/bin/curl
+                  - -k
+                  - -X
+                  - POST
+                  - "https://{{ ansible_host }}/devmgr/v2/storage-systems/1/security-key/validate"
+                  - -H
+                  - "accept: application/json" 
+                  - -H
+                  - "Content-Type: multipart/form-data"
+                  - -F
+                  - "keyfile=@files/drive_security/{{ drive_security_filename }}"
+                  - -F
+                  - "securePassPhrase={{ drive_security_pass  }}"
+                  - -u
+                  - "admin:{{ eseries_password }}"
+              register: output
+              failed_when: "output.msg | bool"
+          rescue:
+            - name: Drive security key validation failed.
+              ansible.builtin.fail:
+                msg: "{{ output.stderr }}"
+
+        - name:  "ls files/drive_security/{{ drive_security_filename }}"
+          command: "ls files/drive_security/{{ drive_security_filename }}"
+          register: dir_out
+
+        - name: Save drive security key files to a safe place. You need these files to unlock locked drives.
+          debug:
+            msg: "{{ dir_out.stdout_lines }}"

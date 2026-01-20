@@ -1,0 +1,19 @@
+galaxy_info:
+  author: "Vu Tran (@VuTran007)"
+  description: Set up the beegfs-remote service to enable file synchronization with one or more remote storage targets.
+  company: NetApp
+  license: GPL-2.0-or-later
+  min_ansible_version: "2.13"
+
+  platforms:
+    - name: EL
+      versions:
+        - "9"
+
+  galaxy_tags:
+    - eseries
+    - beegfs
+    - ha
+    - storage
+
+dependencies: []

@@ -1,0 +1,306 @@
+# This is a config file for BeeGFS Remote.
+# http://www.beegfs.com
+
+
+# --- [Table of Contents] ---
+#
+# 1) Settings
+# 2) Command Line Arguments
+# 3) Basic Settings Documentation
+# 4) Worker Settings Documentation
+# 5) Remote Storage Target Settings Documentation
+
+# BEGIN ANSIBLE NETAPP_ESERIES MANAGED BLOCK
+
+{% for section_key, section_value in beegfs_remote_config.items() %}
+{#  If the section is a list of dicts (repeated section) #}
+{%  if section_value | type_debug == 'list' %}
+
+#
+# --- Section 1: [{{ section_key }} settings] ---
+#
+
+{%      for item in section_value %}
+[[{{ section_key[:-1] if section_key.endswith('s') else section_key }}]]
+{%          for k, v in item.items() %}
+{%              if v is boolean %}
+{{ k }} = {{ v | lower }}
+{%              elif v is string or k in ['id'] %}
+{{ k }} = "{{ v }}"
+{%              elif (v | type_debug) == 'dict' %}
+{{ k }} = { {% for key, value in v.items() %}{{ key }} = {{ value }}{% if not loop.last %}, {% endif %}{% endfor %} }
+{%              else %}
+{{ k }} = {{ v }}
+{%              endif %}
+{%          endfor %}
+
+{%      endfor %}
+{#  If the section is a dict (single section) #}
+{%  elif (section_value | type_debug) == 'dict' %}
+[{{ section_key[:-1] if section_key.endswith('s') else section_key }}]
+{%      for k, v in section_value.items() %}
+{%          if v is boolean %}
+{{ k }} = {{ v | lower }}
+{%          elif v is string %}
+{{ k }} = "{{ v }}"
+{%          else %}
+{{ k }} = {{ v }}
+{%          endif %}
+{%      endfor %}
+
+{#  If the section is a single value #}
+{%  else %}
+
+#
+# --- Section 1: [basic settings] ---
+#
+
+{{ section_key }} = "{{ section_value }}"
+
+{%  endif %}
+{% endfor %}
+
+# END ANSIBLE NETAPP_ESERIES MANAGED BLOCK
+
+
+#
+# --- Section 2: [Command Line Arguments] ---
+#
+
+# Use the command line argument "--cfg-file=/etc/another-config.conf" to specify a different config
+# file. All other options in this file can also be used as command line arguments, or set using
+# environment variables, overriding the corresponding config file values. See `--help` for details
+# on how to configure using flags and/or environment variables.
+
+
+#
+# --- Section 3: [Basic Settings Documentation] ---
+#
+
+# mount-point: The path where BeeGFS is mounted.
+
+
+#
+# --- Section 3.1: [Management Settings] ---
+#
+
+# Configuration for the BeeGFS management node must be specified under [management]. This
+# configuration is used to verify licensing and cannot be updated after the application is started.
+
+# address: The IP address and gRPC port for the BeeGFS management node. 
+
+# tls-disable-verification: Set to true to skip verifying the management TLS certificate. This
+# allows traffic to be encrypted, but puts the client at risk of a man-in-the-middle attack since it
+# cannot verify the management node is the expected one.
+
+# tls-cert-file: Specify the path to a certificate used to verify the identity of the Management
+# node and to encrypt communication. If this parameter is left empty, the application will use the
+# system's default certificate pool. This parameter is ignored if tls-disable is set. 
+# Example: /etc/beegfs/cert.pem
+
+# tls-disable: Set to disable TLS encryption and send all gRPC messages in clear text over the
+# network. Discouraged for production as it exposes data to potential interception and tampering.
+
+# auth-file: The file containing the shared secret for BeeGFS connection authentication.
+
+# auth-disable: Disable BeeGFS connection authentication (not recommended).
+
+
+#
+# --- Section 3.2: [Logging Settings] ---
+#
+
+# Logging configuration must be specified under [log].
+
+# level: Adjust the logging verbosity. Supported levels:
+# 0 - Fatal Only (not recommended).
+# 1 - Fatal + Error
+# 2 - Warn + Error + Fatal
+# 3 - Info + Warn + Error + Fatal
+# 4, 5 - Debug, Info, Warn, Error, Fatal
+# Note: Levels above 3 might decrease performance.
+
+# type: Defines the logger type. This can either be "syslog" to send log messages to the general
+# system logger, "logfile", "stderr", or "stdout". If set to "logfile" logs will be written to the
+# below file and rotated based on the provided settings. 
+
+# file: The path to the desired log file when logType is "logfile". As needed the directory and all
+# parent directories will be created.
+
+# max-size: When type is set to "logfile" this is the maximum size of the file in megabytes before
+# it is rotated.
+
+# num-rotated-files: When type is "logfile" the maximum number old file(s) to keep when max-size is
+# reached and the log is rotated.
+
+
+#
+# --- Section 3.3: [Server Settings] ---
+#
+
+# Server configuration must be specified under [server]. These setting affect how the BeeGFS
+# command-line tool (CTL) and worker nodes connect to the the Remote service to submit and
+# manage jobs and work requests.
+
+# address: The IP address and port where the server will listen formatted like 0.0.0.0:0000.
+
+# tls-cert-file: The PEM encoded X509 certificate that provides the identity of the server.
+
+# tls-key-file: The private key file belonging to tls-cert-file.
+
+# tls-disable: Set to disable TLS encryption and send all gRPC messages in clear text over the
+# network. Discouraged for production as it exposes data to potential interception and tampering.
+
+
+#
+# --- Section 3.4: [Job Settings] ---
+#
+
+# Job configuration must be specified under [job]. These settings affect how jobs are tracked and
+# stored internally by Remote.
+
+# path-db: Path where the database tracking jobs for each path will be created/maintained.
+
+# request-queue-depth: Number of requests that can be made to before new requests are blocked until
+# the existing requests have been assigned to worker nodes.
+
+# min-job-entries-per-rst: This many jobs for each RST configured for a particular path is
+# guaranteed to be retained. At minimum this should be set to 1 so we always know the last sync
+# result for an RST.
+
+# max-job-entries-per-rst: Once this threshold is exceeded, older jobs will be deleted
+# (oldest-to-newest) until the number of jobs equals the min-job-entries-per-rst.
+
+
+#
+# --- Section 4: [Worker Settings] ---
+#
+
+# Configuration for each worker should be specified under [[worker]] and includes all configuration
+# that should apply to a particular worker. Multiple workers can be specified by adding additional
+# [[worker]] sections.
+
+# id: A unique identifier that should not be changed after the worker node first starts. This is
+# used internally to track what work is assigned to a particular node.
+
+# name: User-friendly name used to help identify the worker in logs and other output. This can be
+# changed at any time.
+
+# type: The type of worker node, currently the only supported worker type is 'beesync'.
+
+# address:  The IP/hostname and port where the worker node is listening for work requests.
+
+# tls-cert-file: Specify the path to a certificate used to verify the identity of the worker node
+# and to encrypt communication. If this parameter is left empty, the application will use the
+# system's default certificate pool. This parameter is ignored if tls-disable is set. 
+# Example: /etc/beegfs/cert.pem
+
+# tls-disable-verification: Set to true to skip verifying the worker's TLS certificate. This allows
+# traffic to be encrypted, but puts the client at risk of a man-in-the-middle attack since it cannot
+# verify the worker is the expected one.
+
+# tls-disable: Set to disable TLS encryption and send all gRPC messages in clear text over the
+# network. Discouraged for production as it exposes data to potential interception and tampering.
+
+
+#
+# --- Section 4.1: [Advanced Worker Settings] ---
+#
+
+# The following optional configuration can also be specified in a [[worker]] section, but does not
+# typically need to be modified. Worker nodes like BeeGFS Sync receive most of their configuration
+# from the Remote node and the parameters in this section primarily affect Remote and worker node
+# synchronization. Generally the default settings are acceptable for most environments, and simply
+# affect how the system recovers from various error conditions, and do not affect performance when
+# the system is optimal.
+
+# max-reconnect-back-off: When a worker node is not available, the Remote node will try to reconnect
+# to the worker node with an exponential backoff to avoid spamming connection attempts. This is the
+# maximum time to wait before attempting to reconnect. Setting this too low will waste CPU cycles
+# trying to reconnect while a worker is offline. Setting this too high will add extra delay
+# reconnecting and bringing a worker node back online after it restarts.
+
+# disconnect-timeout: When attempting to disconnect from a node, such as when the Remote node is
+# shutting down, how long to wait for outstanding RPCs to gracefully complete before any remaining
+# requests are forcibly cancelled. This primarily affects how long it may take to stop the Remote
+# node in a worst case scenario where a worker node is not responding. If this is increased the
+# TimeoutStopSec in the BeeGFS remote system unit may also need to be increased.
+
+# send-retries: When sending work requests to a worker node, how many times to retry if the node is
+# not yet in a state where it is able to accept requests. This typically only happens immediately
+# after a worker node is restarted, if the Remote node has not yet detected the node has restarted
+# and the worker node has not yet received configuration from the Remote node.
+
+# retry-interval: When sending a work request to a worker and it is not ready, how long to wait
+# before resending the request. In total the Remote node will wait send-retries*retry-interval
+# before giving up and retrying the work request on a different worker.
+
+# heartbeat-interval: There are two ways the Remote node detects a worker node is offline. The first
+# is when it attempts to send a worker node a work request, if there is an error it will
+# automatically place the node offline and attempt to reconnect and/or apply its configuration. The
+# second is by sending periodic heartbeats to the worker to verify it is online, has received the
+# latest configuration, and is ready to accept work requests. The heartbeat mechanism is primarily
+# used to detect issues with a worker node when the system is otherwise idle so the worker is able
+# to resume existing work requests. This is because after a worker restarts it waits for the Remote
+# node to first check in, assign it configuration, and tell it what to do with any outstanding work
+# requests. Without the heartbeat mechanism the worker node would remain idle and not resume any of
+# its outstanding work requests.
+
+
+#
+# --- Section 6: [General Remote Storage Target Settings] ---
+#
+
+# Configuration for each Remote Storage Target (RST) should be specified under
+# [[remote-storage-target]] and includes all configuration that should apply to a particular RST.
+# Multiple RSTs can be specified by adding additional [[remote-storage-target]] sections.
+
+# id: A unique identifier for the RST. This is the ID that is set on entries in BeeGFS to indicate
+# they should be synchronized with this target. It is also how to indicate a specific RST when
+# pushing or pulling a file to that RST as a one time operation. Generally IDs should not be changed
+# after they are initially set unless there are no remaining jobs or entries referencing the old ID.
+
+# name: User-friendly name used to help identify the RST in logs and other output. This can be
+# changed at any time.
+
+# policies: A map of policies that determines how jobs for this RST are executed regardless of type.
+#
+# FastStartMaxSize: The number of bytes after which push/pull operations are split into multiple
+# parts and distributed across multiple worker nodes (if available). For example when uploading to
+# an S3 bucket, Amazon generally recommends as object sizes approach 100MB, a multipart upload
+# should be used instead of uploading the object in a single operation, thus 104857600 is a
+# reasonable policy to set (https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpuoverview.html).
+
+
+#
+# --- Section 6.1: [S3 Remote Storage Target Settings] ---
+#
+
+# Configuration for RSTs that are backed by an S3 bucket should be specified using "s3.<key-name>"
+# under a [[remote-storage-target]] section. Mixing configuration for different RST types in the
+# same RST section will result in an error.
+
+# s3.endpoint-url: The full endpoint URL for the S3 bucket. The URL format depends on the S3
+# provider. For example:
+#
+# * Minio: http://<hostname>:<port>
+# * Amazon Web Services: https://<BUCKET_NAME>.s3.<REGION>.amazonaws.com
+# * Oracle Cloud (OCI): https://<ENDPOINT>.compat.objectstorage.<REGION>.oraclecloud.com
+
+# s3.region: The region where the S3 bucket is located. Valid options depend on the particular S3
+# provider. For example:
+#
+# * Minio: minio
+# * Amazon Web Services: us-east-1  
+# * Oracle Cloud: us-chicago-1
+
+# s3.bucket: The name of the S3 bucket.
+
+# s3.access-key: An access key that has permission to access the specified S3 bucket.
+
+# s3.secret-key: The secret key associated with the provided access key used together to
+# authenticate requests to the specified S3 provider.
+
+# s3.partitionid: Generally the partition ID does not need to specified and the default partition
+# for the S3 provider can be used. If your S3 bucket is in a specialized region such as AWS GovCloud
+# this may need to be specified/

@@ -1,0 +1,244 @@
+{% import 'cluster_facts.macros' as macros %}
+
+{#- =============================================================================
+   Block Node Specific Settings
+   -----------------------------------------------------------------------------
+   - Define the number of controllers per block node.
+   - Provide a list of converged block nodes that will supersede the default configuration settings.
+   - Set the topology for storage connections between file nodes and block nodes.
+     * Default topology is "direct".
+     * If the building block architecture matches 'FAB', use "fabric" topology.
+============================================================================= #}
+{%  set controllers_per_array = 2 %}
+{%  set override_default_converged_block_nodes = eseries_storage_settings.override_default_converged_block_nodes %}
+
+{%- set block_node_topology = "direct" %}
+{%  if (building_block_architecture | regex_search('FAB')) %}
+{%    set block_node_topology = "fabric" %}
+{%  endif %}
+
+
+{#- =============================================================================
+   File Node Settings and Floating IP Interfaces Management
+   -----------------------------------------------------------------------------
+   - Retrieve file node settings from unmerged inventory.
+   - Extract floating IP interfaces, their count, and related configurations.
+============================================================================= #}
+{%  set fip_ifaces = file_node_settings.beegfs_service_settings.floating_ip_interfaces -%}
+{%  set fip_ifaces_list = fip_ifaces.keys() | list -%}
+{%  set fip_ifaces_count = fip_ifaces | length -%}
+
+{#- Organize floating IP interfaces by NUMA zones #}
+{%- set fip_ifaces_by_numa_zones = {} %}
+{%-   for interface, value in fip_ifaces.items() %}
+{%-       set numa_zone = value['numa_zone'] %}
+{%-       if fip_ifaces_by_numa_zones.get(numa_zone) %}
+{%-           if fip_ifaces_by_numa_zones[numa_zone].append(interface) %}{% endif %}
+{%-       else %}
+{%-           if fip_ifaces_by_numa_zones.update({numa_zone: [interface]}) %}{% endif %}
+{%-       endif %}
+{%-   endfor -%}
+
+
+{#- ============================================================================
+   Accumulate BEEGFS Counts for File Nodes
+   -----------------------------------------------------------------------------
+   - Calculate management, metadata, and storage counts from each floating IP interface.
+============================================================================= #}
+{%- set file_node_beegfs_mgmt_counts = [] %}
+{%- set file_node_beegfs_meta_counts = [] %}
+{%- set file_node_beegfs_stor_counts = [] %}
+{%-   for interface, value in fip_ifaces.items() %}
+{%-       if file_node_beegfs_mgmt_counts.append(value.get('mgmt_count', 0)) %}{% endif %}
+{%-       if file_node_beegfs_meta_counts.append(value.get('meta_count', 0)) %}{% endif %}
+{%-       if file_node_beegfs_stor_counts.append(value.get('stor_count', 0)) %}{% endif %}
+{%-   endfor -%}
+
+{%- set file_node_beegfs_mgmt_count = file_node_beegfs_mgmt_counts | sum %}
+{%- set file_node_beegfs_meta_count = file_node_beegfs_meta_counts | sum %}
+{%- set file_node_beegfs_stor_count = file_node_beegfs_stor_counts | sum %}
+
+
+{#- =============================================================================
+   Current Cluster: Building Block IDs and BEEGFS Service Group
+   -----------------------------------------------------------------------------
+   - Sort the current building block names.
+   - Extract the minimum and maximum building block IDs.
+   - Define the list of BEEGFS services from the cluster definition.
+============================================================================= #}
+{%  set sorted_building_block_names = building_block_names | sort %}
+{%  set beegfs_services = cluster_definition[beegfs_service_group]['children'] -%}
+{%  set converged_bb = beegfs_services.get('meta', {}).get('children').keys() | list %}
+
+
+{#- =============================================================================
+   Cluster facts configuration: 
+============================================================================= -#}
+
+{{ cluster_name }}:
+
+{%- for building_block in building_block_names %}
+
+{#- =============================================================================
+   Extract File and Block Nodes from ansible inventory layout
+============================================================================= #}
+{%-   set file_nodes = cluster_definition[building_block]['children']['file_node']['hosts'].keys() | list %}
+{%-   set block_nodes = cluster_definition[building_block]['children']['block_node']['hosts'].keys() | list %}
+
+{#- =============================================================================
+   Filter Converged Block Nodes
+   -----------------------------------------------------------------------------
+   - Iterate over all block nodes discovered previously.
+   - Identify nodes that are present in the override default converged block nodes.
+============================================================================= #}
+{%-   set converged_block_nodes = [] %}
+{%-   if building_block in converged_bb %}
+{%-      for block_node in block_nodes %}
+{%-         if block_node in override_default_converged_block_nodes %}
+{%-            set _ = converged_block_nodes.append(block_node) %}
+{%-         endif %}
+{%-      endfor %}
+{%-   endif %}
+
+
+{#- =============================================================================
+   Organize Floating IP Interfaces By Block Node
+   -----------------------------------------------------------------------------
+   - Map file node interfaces to the corresponding block node.
+============================================================================= #}
+{%    set fip_ifaces_by_block_nodes = {} %}
+{%    for key, interfaces in file_node_settings.host_bus_adapter.floating_ip_interfaces.items() %}
+{%       set _ = fip_ifaces_by_block_nodes.update({block_nodes[loop.index0]: interfaces}) %}
+{%    endfor %}
+
+
+{#- =============================================================================
+   Map NUMA Zones for Each Block Node
+   -----------------------------------------------------------------------------
+   - For each block node, determine its primary floating IP interface.
+   - Retrieve the NUMA zone associated with that primary interface.
+============================================================================= #}
+{%-   set numa_zone_by_block_nodes = {} %}
+{%    for block_node, ifaces in fip_ifaces_by_block_nodes.items() %}
+{%       set primary_fip_iface = ifaces | first %}
+{%       set _ = numa_zone_by_block_nodes.update({block_node: fip_ifaces[primary_fip_iface]['numa_zone']}) %}
+{%     endfor %}
+
+
+{#- =============================================================================
+   Group Block Nodes By NUMA Zones
+   -----------------------------------------------------------------------------
+   - Aggregate block nodes based on their NUMA zone assignments.
+============================================================================= #}
+{%-   set block_nodes_by_numa_zones = {} %}
+{%    for block_node, numa_zone in numa_zone_by_block_nodes.items() %}
+{%       if block_nodes_by_numa_zones.get(numa_zone) %}
+{%          set _ = block_nodes_by_numa_zones[numa_zone].append(block_node) %}
+{%       else %}
+{%          set _ = block_nodes_by_numa_zones.update({numa_zone: [block_node]}) %}
+{%       endif %}
+{%     endfor %}
+
+
+{#- =============================================================================
+   Determine Converged Block Nodes for BeegFS Services
+   -----------------------------------------------------------------------------
+   - If BeegFS management or metadata services are present and no converged
+     block nodes have been set, select a minimum node from each NUMA zone.
+============================================================================= #}
+{%-   if building_block in converged_bb %}
+{%-      if not converged_block_nodes %}
+{%          for numa_zone, nodes in block_nodes_by_numa_zones.items() %}
+{%             set _ = converged_block_nodes.append(nodes[0]) %}
+{%          endfor %}
+{%       endif %}
+{%    endif %}
+
+
+{#- =============================================================================
+   Calculate block node counts in a cluster
+   -----------------------------------------------------------------------------
+   - Determine the total number of block nodes.
+   - Determine the total number of converged block nodes.
+============================================================================= #}
+{%-   set block_nodes_count = block_nodes | length %}
+{%-   set converged_block_nodes_count = converged_block_nodes | length %}
+
+
+{#- =============================================================================
+   Create Rotations for File Nodes
+   -----------------------------------------------------------------------------
+   - Generate rotated lists for file nodes to vary the order.
+============================================================================= #}
+{%-   set file_nodes_rotations = [] %}
+{%-   for i in range(file_nodes | length) %}
+{%-       if file_nodes_rotations.append(file_nodes[i:] + file_nodes[:i]) %}{% endif %}
+{%-   endfor %}
+
+
+{#- =============================================================================
+   Calculate File Node Related Counts and Storage/Metadata Totals
+   -----------------------------------------------------------------------------
+   - Count the number of file nodes in the building block.
+   - Calculate the total BeeGFS storage and metadata counts per building block.
+============================================================================= #}
+{%    set file_nodes_count = file_nodes | length %}
+{%    set beegfs_stor_count_per_bb = file_node_beegfs_stor_count * file_nodes_count %}
+{%    set beegfs_meta_count_per_bb = file_node_beegfs_meta_count * file_nodes_count %}
+
+
+{#- =============================================================================
+   Configure Building Block Identification
+   -----------------------------------------------------------------------------
+   - Generate a configuration string using the count of file and block nodes.
+============================================================================= #}
+{%-   set bb_configuration = "H" ~ file_nodes_count ~ "_A" ~ block_nodes_count %}
+
+
+{#- =============================================================================
+   Compute Offsets for Unique BeeGFS Service Names in Each Cluster
+   -----------------------------------------------------------------------------
+   - Extract the current building block ID from its name.
+   - Determine the building block index relative to the minimum building block ID.
+   - Compute the final building block service offset by adding an incremental offset.
+============================================================================= #}
+{%    set bb_id = building_block | regex_search('\d+$') | int %}
+{%    set bb_service_offset =  macros.bb_service_offset(building_block, stor_count_by_building_blocks) | int %}
+
+  ###################################
+  #####{{ building_block | center(25) }}#####
+  ###################################
+
+  {{ building_block }}:
+    attributes:
+      building_block_configuration: {{ bb_configuration }}
+      controllers_per_block_node: {{ controllers_per_array }}
+      block_node_topology: {{ block_node_topology }}
+      block_node_model: {{ building_block_architecture | regex_search('E(?:F)?F\\d+') }}
+      file_node_basename: {{ file_node_basename }}
+      block_node_basename: {{ eseries_storage_basename }}
+
+    file_nodes:
+      {{ file_nodes | to_nice_yaml(indent=2) | trim() | indent(width=6, first=false) }}
+
+    block_nodes:
+      {{ block_nodes | to_nice_yaml(indent=2) | trim() | indent(width=6, first=false) }}
+
+    converged_block_nodes:
+      {{ converged_block_nodes | to_nice_yaml(indent=2) | trim() | indent(width=6, first=false) }}
+
+    beegfs_services:
+
+{%-  if building_block in beegfs_services.get(beegfs_mgmt_basename, {}).get('children', {}) %}
+{%        include 'cluster_facts_management_resource_template.j2' %}
+{%   endif %}
+
+{%-  if building_block in beegfs_services.get(beegfs_meta_basename, {}).get('children', {}) %}
+{%        include 'cluster_facts_metadata_resource_template.j2' %}
+{%   endif %}
+
+{%-  if building_block in beegfs_services.get(beegfs_stor_basename, {}).get('children', {}) %}
+{%        include 'cluster_facts_storage_resource_template.j2' %}
+{%   endif %}
+
+{% endfor -%}

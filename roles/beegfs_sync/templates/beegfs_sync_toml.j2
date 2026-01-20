@@ -1,0 +1,136 @@
+# This is a config file for BeeGFS Sync.
+# http://www.beegfs.com
+
+
+# --- [Table of Contents] ---
+#
+# 1) Settings
+# 2) Command Line Arguments
+# 3) Basic Settings Documentation
+
+#
+# --- Section 1.1: [Basic Settings] ---
+#
+
+mount-point = "{{ beegfs_sync_config['mount-point'] }}"
+
+[log]
+level = {{ beegfs_sync_config['log']['level'] }}
+type = "{{ beegfs_sync_config['log']['type'] }}"
+
+[server]
+address = "{{ beegfs_sync_config['server']['address'] }}"
+tls-cert-file = "{{ beegfs_sync_config['server']['tls-cert-file'] }}"
+tls-key-file = "{{ beegfs_sync_config['server']['tls-key-file'] }}"
+tls-disable = {{ beegfs_sync_config['server']['tls-disable'] | lower }}
+
+[manager]
+journal-db = "{{ beegfs_sync_config['manager']['journal-db'] }}"
+job-db = "{{ beegfs_sync_config['manager']['job-db'] }}"
+
+[remote]
+tls-cert-file = "{{ beegfs_sync_config['remote']['tls-cert-file'] }}"
+tls-disable-verification = {{ beegfs_sync_config['remote']['tls-disable-verification'] | lower }}
+tls-disable = {{ beegfs_sync_config['remote']['tls-disable'] | lower }}
+
+#
+# --- Section 2: [Command Line Arguments] ---
+#
+
+# Use the command line argument "--cfg-file=/etc/another-config.conf" to specify a different config
+# file. All other options in this file can also be used as command line arguments, or set using
+# environment variables, overriding the corresponding config file values. See `--help` for details
+# on how to configure using flags and/or environment variables.
+
+
+#
+# --- Section 3: [Basic Settings Documentation] ---
+#
+
+# mount-point: The path where BeeGFS is mounted.
+
+
+#
+# --- Section 3.1: [Logging Settings] ---
+#
+
+# Logging configuration must be specified under [log].
+
+# level: Adjust the logging verbosity. Supported levels:
+# 0 - Fatal Only (not recommended).
+# 1 - Fatal + Error
+# 2 - Warn + Error + Fatal
+# 3 - Info + Warn + Error + Fatal
+# 4, 5 - Debug, Info, Warn, Error, Fatal
+# Note: Levels above 3 might decrease performance.
+
+# type: Defines the logger type. This can either be "syslog" to send log messages to the general
+# system logger, "logfile", "stderr", or "stdout". If set to "logfile" logs will be written to the
+# below file and rotated based on the provided settings. 
+
+# file: The path to the desired log file when logType is "logfile". As needed the directory and all
+# parent directories will be created.
+
+# max-size: When type is set to "logfile" this is the maximum size of the file in megabytes before
+# it is rotated.
+
+# num-rotated-files: When type is "logfile" the maximum number old file(s) to keep when max-size is
+# reached and the log is rotated.
+
+
+#
+# --- Section 3.2: [Server Settings] ---
+#
+
+# Server configuration must be specified under [server]. These setting affect how BeeGFS Remote
+# connects to this Sync node to apply configuration and assign work requests.
+
+# address: The IP address and port where the server will listen formatted like 0.0.0.0:0000.
+
+# tls-cert-file: The PEM encoded X509 certificate that provides the identity of the server.
+
+# tls-key-file: The private key file belonging to tls-cert-file.
+
+# tls-disable: Set to disable TLS encryption and send all gRPC messages in clear text over the
+# network. Discouraged for production as it exposes data to potential interception and tampering.
+
+
+#
+# --- Section 3.3: [Manager Settings] ---
+#
+
+# Manager configuration must be specified under [manager]. These settings affect how work requests
+# are tracked and stored internally by the Sync node.
+
+# journal-db: The path where a journal of all work requests assigned to this node will be kept. This
+# is used to resume outstanding work requests after the Sync node restarts or crashes.
+
+# job-db: The path where a database of all jobs with active work requests on this node is stored.
+
+# active-work-queue-size: The number of work requests to keep in memory. Set this as high as
+# possible, ideally large enough it can contain all active work requests assigned to this node.
+
+# num-workers: The number of workers used to execute work requests in parallel. By default this is
+# automatically set to the number of CPUs.
+
+
+#
+# --- Section 3.4: [Remote Settings] ---
+#
+
+# Configuration for the BeeGFS Remote node must be specified under [remote]. Most configuration such
+# as the address/port are synced automatically from the Remote node (see Worker node settings on the
+# Remote node), however some per-worker configuration such as TLS settings may need to be specified.
+# These settings affect how the Sync node connects to the Remote node to provide work results.
+
+# tls-cert-file: Specify the path to a certificate used to verify the identity of the BeeGFS Remote
+# node and to encrypt communication. If this parameter is left empty, the application will use the
+# system's default certificate pool. This parameter is ignored if tls-disable is set.
+# Example: /etc/beegfs/cert.pem
+
+# tls-disable-verification: Set to true to skip verifying the Remote TLS certificate. This allows
+# traffic to be encrypted, but puts the client at risk of a man-in-the-middle attack since it cannot
+# verify the Remote node is the expected one.
+
+# tls-disable: Set to disable TLS encryption and send all gRPC messages in clear text over the
+# network. Discouraged for production as it exposes data to potential interception and tampering.

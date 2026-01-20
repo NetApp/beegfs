@@ -1,0 +1,61 @@
+# stor_02 - BeeGFS HA Storage Resource Group
+
+# This is a template for BeeGFS HA storage resource group. Review all comments and update with all expected values.
+# IMPORTANT: All capitalized words in angled brackets must be updated.
+
+# Type of BeeGFS service the HA resource group will manage. Choices: management, metadata, storage.
+beegfs_service: storage
+
+
+beegfs_ha_beegfs_storage_conf_resource_group_options:
+  # BeeGFS HA resource service port. 8003 is the default BeeGFS storage service port number; Each BeeGFS HA
+  # storage service resource must have a unique port number.
+  connStoragePortTCP: 8023
+  connStoragePortUDP: 8023
+
+  # NUMA node binding for BeeGFS service. This should be defined at the resource group level. This NUMA policy will be
+  # applied whenever and wherever the BeeGFS service resides. This can provide significant performance increases by
+  # avoiding the cache misses between NUMA nodes.
+  tuneBindToNumaZone: 0
+
+
+# List of storage floating IP definitions in the form host_interface:ip_address/cidr_subnet_mask.
+# This information is used to communicate with the BeeGFS management resource. Therefore, these definitions must
+# be on the same subnet as beegfs_ha_mgmtd_floating_ip value in group_vars/ha_cluster.yml. Any unusable definitions
+# will be ignored which is specially useful when the definitions differ based on the host.
+floating_ips:
+  # - <IFACE>:<IP_ADDRESS>/<CIDR_MASK>
+  - i2b:100.1.14.2/16
+  - i1b:100.1.13.2/16
+
+
+beegfs_targets:
+  # E-Series storage target. Change this to any desired E-Series storage.
+  netapp_02:
+    eseries_storage_pool_configuration:
+      - name: beegfs_s2
+        # Storage pool/volume group RAID type. Choices: raid0, raid1, raid5, raid6, raidDiskPool
+        # RAID 6 stripes the data between across all drives with two parity stripes to allow for recovery of multiple
+        # drive failures which is the recommended storage type for BeeGFS storage services.
+        raid_level: raid6
+
+        # Total drive count for the storage pool.
+        criteria_drive_count: 12
+
+        secure_pool: false
+        common_volume_configuration:
+          segment_size_kb: 512
+
+        # BeeGFS storage service volume list. In order to get the best performance it is recommended that you use a
+        # minimum of two volumes per storage service.
+        volumes:
+          # Size of each BeeGFS storage service volume in percentage of total storage pool capacity.
+          # Depending on your configuration, adjust the percentage to account for overprovisioning.
+          - owning_controller: A
+            size: 49
+            read_cache_enable: true
+            read_ahead_enable: true
+          - owning_controller: A
+            size: 49
+            read_cache_enable: true
+            read_ahead_enable: true

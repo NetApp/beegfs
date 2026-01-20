@@ -1,0 +1,100 @@
+# Server FW update sequence: upload, validate payload, activate FW.
+# SimpleUpdate uploads the FW then return success status upon the upload completion.
+# It does not wait for the process to validate then activate the FW. However, if another FW is queued for upload,
+# then the upload will fail until the FW update of previous task is completed.
+- name: "Upload server FW: {{ item }}"
+  community.general.redfish_command:
+    category: Update
+    command: SimpleUpdate
+    baseuri: "{{ bmc_ip }}"
+    username: "{{ bmc_username }}"
+    password: "{{ bmc_password }}"
+    update_image_uri: "{{ server_fw['url'] }}/{{ item }}"
+    wait_timeout: 300
+    wait: true
+  register: upload_output
+  until: upload_output.changed
+  retries: 10
+  delay: 60
+
+- name: Setting TaskService handle for an update operation
+  ansible.builtin.set_fact:
+    task_service_handle: "{{ upload_output['return_values']['update_status']['handle'] }}"
+
+- name: Validate {{ item }} FW payload. task_service_handle is {{ task_service_handle }}
+  community.general.redfish_info:
+    category: Update
+    command: GetUpdateStatus
+    baseuri: "{{ bmc_ip }}"
+    username: "{{ bmc_username }}"
+    password: "{{ bmc_password }}"
+    update_handle: "{{ task_service_handle }}"
+  register: update_output
+  until: '"JobService" in update_output.redfish_facts.update_status.handle'
+  retries: 10
+  delay: 60
+
+- name: Setting JobService handle for an update operation
+  ansible.builtin.set_fact:
+    job_service_handle: "{{ update_output.redfish_facts.update_status.handle }}"
+
+- name: Activate new FW {{ item }}. job_service_handle is {{ job_service_handle }}
+  community.general.redfish_info:
+    category: Update
+    command: GetUpdateStatus
+    baseuri: "{{ bmc_ip }}"
+    username: "{{ bmc_username }}"
+    password: "{{ bmc_password }}"
+    update_handle: "{{ update_output.redfish_facts.update_status.handle }}"
+  register: job_service_status
+  until: '"Running" not in job_service_status.redfish_facts.update_status.status'
+  retries: 10
+  delay: 60
+
+- name: Print job_service_status
+  ansible.builtin.debug:
+    msg: "{{ job_service_status }}"
+  when: (enable_debug | default(false)) | bool
+
+- name: Warn if JobService hit exception. Please double check in BMC to ensure the FW updated correctly.
+  ansible.builtin.fail:
+    msg: "{{ job_service_status }}"
+  when: '"Exception" in job_service_status.redfish_facts.update_status.status'
+  ignore_errors: true
+
+- name: Sleep 30 seconds before proceeding to next task.
+  ansible.builtin.wait_for:
+    timeout: 30
+  delegate_to: localhost
+
+- name: Sleep additional 240 sec when an exception is detected, as FW update can still complete if given enough time.
+  ansible.builtin.wait_for:
+    timeout: 240
+  delegate_to: localhost
+  when: '"Exception" in job_service_status.redfish_facts.update_status.status'
+
+- block:
+    - name: Restart BMC service gracefully and wait for it to be available if applicable.
+      community.general.redfish_command:
+        category: Manager
+        command: GracefulRestart
+        baseuri: "{{ bmc_ip }}"
+        username: "{{ bmc_username }}"
+        password: "{{ bmc_password }}"
+        wait: true
+        wait_timeout: 600
+
+    - name: Sleep 120 seconds for redfish service to come up after BMC reset.
+      ansible.builtin.wait_for:
+        timeout: 120
+      delegate_to: localhost
+  when:
+    - '"lnvgy_fw_xcc" in item'
+
+- name: Reboot host to apply new FW if applicable.
+  ansible.builtin.reboot:
+    test_command: "systemctl is-active default.target"
+    reboot_timeout: 3600
+    post_reboot_delay: 120
+  when:
+    - '"lnvgy_fw_uefi" in item'

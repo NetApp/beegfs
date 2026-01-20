@@ -10,7 +10,7 @@
 
 - name: Ensure connAuthFile is installed.
   ansible.builtin.include_tasks: conn_auth.yml
-  when: beegfs_ha_conn_auth_enabled
+  when: beegfs_ha_conn_auth_enabled | bool
 
 - name: Determine all BeeGFS HA services.
   ansible.builtin.service_facts:
@@ -25,4 +25,4 @@
 
     - name: Ensure BeeGFS HA cluster nodes are started and in maintenance mode.
       ansible.builtin.include_tasks: ../common/maintenance/set.yml
-  when: eseries_beegfs_ha_disable_selinux
+  when: eseries_beegfs_ha_disable_selinux | bool

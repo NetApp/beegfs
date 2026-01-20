@@ -1,0 +1,68 @@
+{# =============================================================================
+   Calculates a cumulative offset for BeeGFS storage services across building blocks.
+   -----------------------------------------------------------------------------
+    - The offset is determined by summing the number of storage services in all building blocks with a lower index than the current one.
+============================================================================= #}
+{% macro bb_service_offset(current_building_block, stor_count_by_building_blocks) %}
+   {%- set bb_id = current_building_block | regex_search('\d+$') | int %}
+   {%- set ns = namespace(offset=1) %}
+
+   {%- for i in range(bb_id) %}
+      {%- if i < 10 %}
+         {%- set building_block_name = 'building_block_0' ~ i %}
+      {%- else %}
+         {%- set building_block_name = 'building_block_' ~ i %}
+      {%- endif %}
+      {%- set stor_count = stor_count_by_building_blocks.get(building_block_name, 0) %}
+
+      {%- if stor_count == 0 and i > 0 %}
+         {%- set stor_count = stor_count_by_building_blocks.get(current_building_block, 0) %}
+      {%- endif %}
+
+      {%- set ns.offset = ns.offset + stor_count %}
+   {%- endfor %}
+
+   {{- ns.offset -}}
+{% endmacro %}
+
+
+{# =============================================================================
+   Create a mapping between floating IP interfaces and their corresponding block node.
+   -----------------------------------------------------------------------------
+    - Return a string such as: {i1b: netapp_01, i2b: netapp_02}
+============================================================================= #}
+{% macro block_node_by_fip_ifaces(fip_ifaces_by_block_nodes, block_nodes) %}
+   {%- set block_node_by_fip_ifaces = {} %}
+   {%- for block_node, ifaces in fip_ifaces_by_block_nodes.items() %}
+      {%- if block_node in block_nodes %}
+         {%- for iface in ifaces %}
+            {%- set first_iface = true if loop.index0 == 0 else false %}
+            {%- if first_iface %}
+               {#- An interface name may appear in multiple block nodes. #}
+               {#- Assign the interface to the most recent block node from the provided block_nodes list. #}
+               {%- set _ = block_node_by_fip_ifaces.update({iface: block_node}) %}
+            {%- elif iface not in block_node_by_fip_ifaces.keys() %}
+               {%- set _ = block_node_by_fip_ifaces.update({iface: block_node}) %}
+            {%- endif %}
+         {%- endfor %}
+      {%- endif %}
+   {%- endfor %}
+
+   {{- block_node_by_fip_ifaces -}}
+{% endmacro %}
+
+
+{# =============================================================================
+   Determine the owning controller based on the building block configuration.
+   -----------------------------------------------------------------------------
+   - Return a string such as: A
+============================================================================= #}
+{% macro owning_controller(bb_configuration, controllers_per_array, host_index, resource_index) %}
+   {%- if bb_configuration in ["H2_A2"] %}
+      {%- set owning_controller = "B" if (resource_index % controllers_per_array) == 0 else "A" %}
+   {%- elif bb_configuration in ["H2_A4"] %}
+      {%- set owning_controller = "B" if host_index == 1 else "A" %}
+   {%- endif %}
+
+   {{- owning_controller -}}
+{% endmacro %}

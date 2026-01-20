@@ -23,7 +23,8 @@
       connAuthFile: "{{ beegfs_ha_conn_auth_dest | default(omit) }}"
       storeMgmtdDirectory: "{{ mgmt_data_path }}"
       connInterfacesFile: "{{ mgmt_config_path }}connInterfacesFile.conf"
-      connNetFilterFile: "{% if (filter_ip_ranges | default(beegfs_ha_filter_ip_ranges)) | length > 0 %}{{ mgmt_config_path }}connNetFilterFile.conf{% endif %}"
+      connNetFilterFile: >-
+        {{ (mgmt_config_path ~ 'connNetFilterFile.conf') if (filter_ip_ranges | default(beegfs_ha_filter_ip_ranges) | length > 0) else '' }}
 
 - name: "Create {{ mgmt_volume_mount }} directory as the mount point for the management volume."
   ansible.builtin.file:
@@ -110,7 +111,9 @@
       ansible.builtin.systemd:
         name: beegfs-mgmtd.service
         state: restarted
-      when: ansible_facts.services['beegfs-mgmtd.service']['state'] | default('') == 'running' and (mgmtd_interface_conf['changed'] or mgmtd_filter_conf['changed'] or mgmtd_service_conf['changed'])
+      when:
+        - ansible_facts.services['beegfs-mgmtd.service']['state'] | default('') == 'running'
+        - mgmtd_interface_conf['changed'] | bool or mgmtd_filter_conf['changed'] | bool or mgmtd_service_conf['changed'] | bool
 
     - name: Initialize management storage directory for beegfs-mgmtd server daemon and update the beegfs-mgmtd config file.
       ansible.builtin.command:
@@ -121,7 +124,7 @@
 
     - name: Unmount management volume.
       ansible.builtin.command: "umount {{ mgmt_volume_mount }}"
-      when: management_volume_mount['changed']
+      when: management_volume_mount['changed'] | bool
   # This works because there should only ever be one BeeGFS management service running per cluster.
   when: inventory_hostname == node_info['management'][0]['preferred_node_order'][0]
   become: true
@@ -139,7 +142,7 @@
   ansible.builtin.systemd:
     name: beegfs-mgmtd.service
     enabled: false
-    daemon_reload: "{% if beegfs_mgmtd_service_override['changed'] %}true{% else %}false{% endif %}"
+    daemon_reload: "{% if beegfs_mgmtd_service_override['changed'] | bool %}true{% else %}false{% endif %}"
   register: beegfs_mgmtd_service
   become: true
 
@@ -148,5 +151,5 @@
     name: beegfs-mgmtd.service
     state: restarted
   register: beegfs_mgmtd_service
-  when: beegfs_ha_force_restart_services
+  when: beegfs_ha_force_restart_services | bool
   become: true

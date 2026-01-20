@@ -1,0 +1,17 @@
+- name: Ensure software properties common package is installed (Debian/Ubuntu).
+  ansible.builtin.apt:
+    state: present
+    name: software-properties-common
+
+- name: Configure package manager (Debian/Ubuntu).
+  include_role:
+    name: netapp_eseries.beegfs.beegfs_client
+    tasks_from: packages/debian_package_manager.yml
+
+- name: Ensure BeeGFS Sync package is installed (Debian/Ubuntu).
+  ansible.builtin.apt:
+    state: |-
+      {%- if beegfs_sync_force_upgrade %}latest{%- else %}present{%- endif %}
+    name:
+      - beegfs-sync
+  register: package_mgr_result

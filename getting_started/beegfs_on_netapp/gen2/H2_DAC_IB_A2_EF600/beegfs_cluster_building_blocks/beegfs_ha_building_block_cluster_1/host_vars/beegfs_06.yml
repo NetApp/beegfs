@@ -1,0 +1,46 @@
+# beegfs_06 - BeeGFS HA node resource
+
+# Review all comments and update with all expected values. All capitalized words in angled brackets must be updated.
+
+
+ansible_host: 10.25.13.16
+ansible_ssh_user: "{{ ssh_ha_user }}"
+ansible_become_password: "{{ ssh_ha_become_pass }}"
+
+
+# Defines an order list of IP addresses or hostnames with the first having the highest priority.
+# When there are no listed IPs then node name will be used. Node names are defined in /etc/hosts.
+# Cluster node IPs for Pacemaker to communicate with each other.
+beegfs_ha_cluster_node_ips:
+  - "{{ ansible_host }}"
+  - 100.1.10.20
+  - 100.1.10.21
+
+
+# NVMe over InfiniBand storage communication protocol information between E-series and file nodes.
+eseries_nvme_ib_interfaces:
+  # - name: ib0                       # Host interface name used to communicate with E-Series storage system.
+  #   address: 192.168.1.100/24       # Host interface address and subnet (i.e. 192.168.1.100/24)
+  - name: i1a
+    address: 192.168.2.10/24
+    configure: true
+  - name: i2a
+    address: 192.168.4.10/24
+    configure: true
+  - name: i3a
+    address: 192.168.6.10/24
+    configure: true
+  - name: i4a
+    address: 192.168.8.10/24
+    configure: true
+
+# Cluster node IPs to communicate with other BeeGFS servers.
+# NOTE: do not configure IPs for i2b and i3b interface since it might cause conflict in Pacemaker communication.
+eseries_ipoib_interfaces:
+  - name: i2b
+    address: 100.1.10.20/16
+  - name: i4b
+    address: 100.1.10.21/16
+
+
+# Reference https://github.com/netappeseries/host/blob/master/roles/nvme_ib/README.md for other available options.

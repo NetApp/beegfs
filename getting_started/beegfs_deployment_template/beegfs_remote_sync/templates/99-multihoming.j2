@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+
+set -eu
+
+
+update_rt_tables() {
+  action=$1
+  table=$2
+
+  # Set rt_tables file lock
+  exec 100>/var/tmp/~rt_tables.lock || exit 1
+  flock 100 || exit 1
+
+  case $action in
+    up)
+      if ! grep -qE "[0-9]+ *$table" $rt_tables; then
+        rt_tables_numbers=$(grep "^[0-9]" $rt_tables | tr "\t" " " | cut -f 1 -d " ")
+        for proposed_number in $(seq 1 252); do
+          if ! echo $rt_tables_numbers | grep -qw "$proposed_number"; then
+            echo "$proposed_number $table" >> $rt_tables
+            break
+          fi
+        done
+      fi
+      ;;
+
+    down)
+      if grep -qE "[0-9]+ *$table" $rt_tables; then
+        sed -i "/^[0-9]* *$table$/d" $rt_tables
+      fi
+      ;;
+  esac
+
+  # Clear rt_tables file lock
+  flock -u 100
+}
+
+add_routes() {
+  routes=$1
+  table=$2
+
+  while read line; do
+    if ! ip route show table $table > /dev/null 2>&1 || ! ip route show table $table | grep -q "$line"; then
+      ip route add $line table $table
+    fi
+  done <<< $routes
+}
+
+delete_routes() {
+  routes=$1
+  table=$2
+
+  if ip route show table $table > /dev/null 2>&1; then
+    while read line; do
+      if ip route show table $table | grep -q "$line"; then
+        ip route del $line table $table
+      fi
+    done <<< $routes
+  fi
+}
+
+add_rules() {
+  rules=$1
+  while read line; do
+    if ! ip rule show all | grep -q "$line"; then
+      ip rule add $line
+    fi
+  done <<< $rules
+}
+
+delete_rules() {
+  rules=$1
+  while read line; do
+    if ip rule show all | grep -q "$line"; then
+      ip rule del $line
+    fi
+  done <<< $rules
+}
+
+configure_kernel() {
+  interface=$1
+  arp_announce=$2
+  arp_filter=$3
+  arp_ignore=$4
+  rp_filter=$5
+
+  sysctl -qw net.ipv4.conf.$interface.arp_announce=$arp_announce
+  sysctl -qw net.ipv4.conf.$interface.arp_filter=$arp_filter
+  sysctl -qw net.ipv4.conf.$interface.arp_ignore=$arp_ignore
+  sysctl -qw net.ipv4.conf.$interface.rp_filter=$rp_filter
+}
+
+rt_tables=/etc/iproute2/rt_tables
+interface_down_arp_announce=0
+interface_down_arp_filter=0
+interface_down_arp_ignore=0
+interface_down_rp_filter=0
+interface_up_arp_announce=2
+interface_up_arp_filter=1
+interface_up_arp_ignore=2
+interface_up_rp_filter=1
+
+{% if "network_manager" in eseries_ip_manager_tools %}
+interface=$1
+action=$2
+{% elif "networkd" in eseries_ip_manager_tools %}
+interface=$IFACE
+action=$STATE
+{% elif "ifupdown" in eseries_ip_manager_tools %}
+interface=$IFACE
+action=$MODE
+{% endif %}
+
+interface_name={{ item }}
+table=multihoming-{{ item }}
+address=$(ip -o -4 addr show $interface | grep brd | awk '{split($4,address,"/"); print address[1]}')
+network={{ ansible_facts[item]['ipv4']['network'] }}
+
+
+routes="default via $address dev $interface
+$network dev $interface scope link src $address"
+
+rules="from $address lookup $table
+from all to $address lookup $table"
+
+if [ "$interface" = "$interface_name" ]; then
+  case $action in
+    up|routable|start)
+      update_rt_tables up $table
+      add_routes "$routes" $table
+      add_rules "$rules"
+      configure_kernel $interface $interface_up_arp_announce $interface_up_arp_filter $interface_up_arp_ignore $interface_up_rp_filter
+      ;;
+    down|off|stop)
+      configure_kernel $interface $interface_down_arp_announce $interface_down_arp_filter $interface_down_arp_ignore $interface_down_rp_filter
+      delete_rules "$rules"
+      delete_routes "$routes" $table
+      update_rt_tables down $table
+      ;;
+  esac
+fi
+
+exit 0
